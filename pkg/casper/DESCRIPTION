@@ -1,0 +1,12 @@
+Package: casperBeta
+Version: 0.0.0
+Date: 2010-07-29
+Title: Characterization of Alternative Splicing based on Paired-End Reads
+Author: Manuel Kroiss, Camille Stephan-Otto, Almond Strocker, David Rossell
+Maintainer: David Rossell <david.rossell@irbbarcelona.org>
+Depends: R (>= 2.10.0), Biobase, IRanges, methods, gtools
+Suggests: multicore
+Description: The package provides methodology to infer alternative splicing patterns for paired-end based on high-throughput sequencing data. Both quantification of known splicing variants and de novo splice variant discovery are considered. The approach is based on a flexible Bayesian model which estimates the RNA fragment size distribution, allows the user to set part of the data to missing values to remove artifacts, and is computationally efficient. 
+License: GPL (>=2)
+LazyLoad: yes
+biocViews: Bioinformatics, GeneExpression, DifferentialExpression, Transcription, RNASeq, HighThroughputSequencing

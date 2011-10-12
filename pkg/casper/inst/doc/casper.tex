@@ -1,0 +1,65 @@
+\documentclass[a4paper,12pt]{article}
+%\VignetteIndexEntry{Manual for the casper library}
+%\VignettePackage{casper}
+
+
+
+\usepackage{amsmath}    % need for subequations
+\usepackage{amssymb}    %useful mathematical symbols
+\usepackage{bm}         %needed for bold greek letters and math symbols
+\usepackage{graphicx}   % need for PS figures
+%\usepackage{verbatim}   % useful for program listings
+%\usepackage{color}      % use if color is used in text
+\usepackage{hyperref}   % use for hypertext links, including those to external documents and URLs
+\usepackage{natbib}    %number and author-year style referencing
+%\usepackage{epsf} 
+%\usepackage{lscape} 
+%\bibpunct{(}{)}{;}{a}{,}{,}
+
+
+
+\pagestyle{empty} % use if page numbers not wanted
+
+\usepackage{Sweave}
+\begin{document}
+
+\title{Manual for the R \texttt{casper} package}
+\author{David Rossell \\
+\small{Bioinformatics \& Biostatistics Unit} \\
+\small{IRB Barcelona}}
+\date{}  %comment to include current date
+
+\maketitle
+
+
+\section{Introduction}
+\label{sec:intro}
+
+The package \texttt{casper} implements statistical methodology to infer
+gene alternative splicing patterns from next-generation sequencing data \citep{rossell:2010}.
+Although functions for single-end data are available, the emphasis is on
+paired-end data.
+
+In Section \ref{sec:quant_known} we show how to quantify known splicing variants.
+In Section \ref{sec:classes} we briefly describe some of the classes defined in
+package \texttt{casper} to store alternative splicing information.
+
+
+\section{Quantifying known splicing variants}
+\label{sec:quant_known}
+
+\subsection{Obtaining the alternative splicing information}
+
+The first thing to do is to obtain the alternative splicing information for all genes of interest,
+and format it into an object that \texttt{casper} can work with.
+To facilitate use, 
+we pre-computed the UCSC splicing information for all human genes for genome versions hg18 and hg19.
+The information is stored in an object of class \texttt{GWcodedVariant},
+and can be loaded using the \texttt{data} function.
+Information for any given chromosome or gene can be easily accessed, as illustrated below for gene ABCG1.
+
+\begin{Schunk}
+\begin{Sinput}
+> library(casper)
+> data(hg19GWcodedVariant)
+> hg19GWcodedVariant
