@@ -1,0 +1,28 @@
+﻿Build started 22.09.2011 13:09:54.
+     1>Project "\\fs-biostats.irb.pcb.ub.es\biostats\research\altsplice\routines\casper\src\qasper2c.vcxproj" on node 2 (build target(s)).
+     1>InitializeBuildStatus:
+         Touching "Debug\qasper2c.unsuccessfulbuild".
+       ClCompile:
+         All outputs are up-to-date.
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Yu"StdAfx.h" /Fp"Debug\qasper2c.pch" /Fo"Debug\\" /Fd"Debug\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
+         main.cpp
+       ManifestResourceCompile:
+         All outputs are up-to-date.
+       Link:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"\\fs-biostats.irb.pcb.ub.es\biostats\research\altsplice\routines\casper\src\Debug\qasper2c.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Debug\qasper2c.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"\\fs-biostats.irb.pcb.ub.es\biostats\research\altsplice\routines\casper\src\Debug\qasper2c.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"\\fs-biostats.irb.pcb.ub.es\biostats\research\altsplice\routines\casper\src\Debug\qasper2c.lib" /MACHINE:X86 Debug\qasper2c.exe.embed.manifest.res
+         Debug\casper.obj
+         Debug\cstat.obj
+         Debug\discretedf.obj
+         Debug\exon.obj
+         Debug\fragment.obj
+         Debug\main.obj
+         Debug\stdafx.obj
+         Debug\variant.obj
+     1>cstat.obj : error LNK2019: unresolved external symbol _REprintf referenced in function "void __cdecl _cstaterror(char const *,char const *,char const *)" (?_cstaterror@@YAXPBD00@Z)
+     1>cstat.obj : error LNK2019: unresolved external symbol _Rf_error referenced in function "void __cdecl _cstatfatal(void)" (?_cstatfatal@@YAXXZ)
+     1>\\fs-biostats.irb.pcb.ub.es\biostats\research\altsplice\routines\casper\src\Debug\qasper2c.exe : fatal error LNK1120: 2 unresolved externals
+     1>Done Building Project "\\fs-biostats.irb.pcb.ub.es\biostats\research\altsplice\routines\casper\src\qasper2c.vcxproj" (build target(s)) -- FAILED.
+
+Build FAILED.
+
+Time Elapsed 00:00:04.65
