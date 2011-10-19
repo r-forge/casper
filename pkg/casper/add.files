@@ -1,0 +1,13 @@
+svn add src-x86_64
+svn add src-i386
+svn add R/genePlot.R
+svn add data/chr2data.RData
+svn add man/procGenome.Rd
+svn add man/calcExp.Rd
+svn add man/procBam.Rd
+svn add man/genPlot.Rd
+svn add man/getDistrs.Rd
+svn add man/pathCounts.Rd
+svn add inst/extdata
+svn add inst/doc/casper.pdf
+svn add inst/doc/Rplots.pdf

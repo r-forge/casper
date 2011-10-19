@@ -1,0 +1,118 @@
+\documentclass[a4paper,12pt]{article}
+%\VignetteIndexEntry{Manual for the casper library}
+%\VignettePackage{casper}
+
+
+
+\usepackage{amsmath}    % need for subequations
+\usepackage{amssymb}    %useful mathematical symbols
+\usepackage{bm}         %needed for bold greek letters and math symbols
+\usepackage{graphicx}   % need for PS figures
+%\usepackage{verbatim}   % useful for program listings
+%\usepackage{color}      % use if color is used in text
+\usepackage{hyperref}   % use for hypertext links, including those to external documents and URLs
+\usepackage{natbib}    %number and author-year style referencing
+%\usepackage{epsf} 
+%\usepackage{lscape} 
+%\bibpunct{(}{)}{;}{a}{,}{,}
+
+
+
+\pagestyle{empty} % use if page numbers not wanted
+
+\begin{document}
+
+\title{Manual for the R \texttt{casper} package}
+\date{}  %comment to include current date
+
+\maketitle
+
+
+\section{Introduction}
+\label{sec:intro}
+
+The package \texttt{casper} implements statistical methodology to infer
+gene alternative splicing patterns from paired-end
+high-throughput sequencing data \citep{rossell:2010}.
+
+Currently, we assume that splicing variants are known.
+We plan to implement the case of {\it de novo} variant discovery 
+in the near future.
+
+\section{Estimating expression for a set of known variants}
+\label{sec:knownvar}
+
+Below we show the code needed to load and analyze some sample data 
+included with \texttt{casper}.
+Sample data was generated using real drosophila gene coordinates
+(ENTREZ id 43792) and preasigning the fraction of reads per variant to 
+\\
+
+\begin{tabular}{ l | c | r }
+tx & frac \\
+\hline
+99 & 0.0254 \\
+100 & 0.0708 \\ 
+101 & 0.1083 \\
+102 & 0.1453 \\
+103 & 0.1784 \\
+104 & 0.2202 \\
+105 & 0.2513 \\
+\end{tabular}
+
+and assuming a linear fragment length distribution.
+
+<<code1>>=
+.libPaths('/software/R_libs')
+library(casper)
+
+genomeName="dm3"
+mc.cores=8
+genomeDB<-procGenome(genomeName, mc.cores)
+load(chr2data)
+distrs<-getDistrs(genomeDB$txs,  genomeDB$exons, data$frags, mc.cores=mc.cores)
+
+datadir<-system.file("extdata", package="casper")
+
+bamFileName<-paste(datadir, "/simulated500K.sam", sep="")
+data<-procBam(bamFileName, samtools="", chrom="", bam=0, parallel=FALSE)
+pathCounts<-pathCounts(data$reads, genomeDB$exonsNI)
+exp<-calcExp(distrs, genomeDB, pathCounts)
+@ 
+
+<<label=fig1,include=FALSE>>=
+geneExp<-genPlot(43792, genomeDB, data$reads, exp)
+@ 
+\setkeys{Gin}{width=0.5\textwidth} 
+\begin{figure}
+\begin{center}
+<<label=fig1,fig=TRUE,echo=FALSE>>=
+<<fig1>>  
+@ 
+\end{center}
+\caption{Aligned reads to variants from gene of interest}
+\label{fig1}
+\end{figure}
+@
+<<label=fig2,include=FALSE>>=
+cols<-rep(rainbow(min(length(geneExp$exp), 10)), ceiling(length(geneExp$exp)/10))
+barplot(geneExp$exp, col=cols)
+@ 
+\setkeys{Gin}{width=0.5\textwidth} 
+\begin{figure}
+\begin{center}
+<<label=fig2,fig=TRUE,echo=FALSE>>=
+<<fig2>>  
+@
+\end{center}
+\caption{Estimated expression of variants}
+\label{fig2}
+\end{figure}
+<<code2>>=
+geneExp$exp
+@ 
+
+\bibliographystyle{plainnat}
+\bibliography{references} 
+
+\end{document}
