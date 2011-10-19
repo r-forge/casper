@@ -2,8 +2,8 @@
 #include "casper.h"
 #include <algorithm>
 #include <time.h>
-#include <R.h>
-#include <Rinternals.h>
+//#include <R.h>
+//#include <Rinternals.h>
 
 using namespace std;
 
@@ -47,6 +47,7 @@ void Casper::addVariant(Variant* v)
 			int be = v->indexOf(f->right[f->rightc - 1]);
 
 			p = prob(fs, fe, bs, be, v->positions, v->length);
+			p = p;
 		}
 
 		if (p > 0.0)

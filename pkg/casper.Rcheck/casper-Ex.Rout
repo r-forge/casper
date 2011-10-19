@@ -1,0 +1,191 @@
+
+R version 2.13.0 (2011-04-13)
+Copyright (C) 2011 The R Foundation for Statistical Computing
+ISBN 3-900051-07-0
+Platform: x86_64-redhat-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> pkgname <- "casper"
+> source(file.path(R.home("share"), "R", "examples-header.R"))
+> options(warn = 1)
+> library('casper')
+Loading required package: Biobase
+
+Welcome to Bioconductor
+
+  Vignettes contain introductory material. To view, type
+  'browseVignettes()'. To cite Bioconductor, see
+  'citation("Biobase")' and for packages 'citation("pkgname")'.
+
+Loading required package: IRanges
+Warning: package 'IRanges' was built under R version 2.14.0
+Warning in .recacheSubclasses(def@className, def, doSubclasses, env) :
+  undefined subclass "refMethodDefWithTrace" of class "expressionORfunction"; definition not updated
+Warning in .recacheSubclasses(def@className, def, doSubclasses, env) :
+  undefined subclass "refMethodDefWithTrace" of class "functionORNULL"; definition not updated
+
+Attaching package: 'IRanges'
+
+The following object(s) are masked from 'package:Biobase':
+
+    updateObject
+
+The following object(s) are masked from 'package:base':
+
+    Map, cbind, eval, intersect, mapply, order, paste, pmax, pmax.int,
+    pmin, pmin.int, rbind, rep.int, setdiff, table, union
+
+Loading required package: gtools
+Loading required package: GenomicFeatures
+Loading required package: GenomicRanges
+Warning: package 'GenomicRanges' was built under R version 2.14.0
+Warning: multiple methods tables found for ‘getSeq’
+> 
+> assign(".oldSearch", search(), pos = 'CheckExEnv')
+> cleanEx()
+> nameEx("calcExp")
+> ### * calcExp
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: calcExp
+> ### Title: Calculate expression of gene variants
+> ### Aliases: calcExp
+> ### Keywords: ~kwd1 ~kwd2
+> 
+> ### ** Examples
+> 
+> ##---- Should be DIRECTLY executable !! ----
+> ##-- ==>  Define data, use random,
+> ##--	or do  help(data=index)  for the standard data sets.
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("genPlot")
+> ### * genPlot
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: genPlot
+> ### Title: Plot exon structure and aligned reads for a given gene
+> ### Aliases: genPlot
+> ### Keywords: ~kwd1 ~kwd2
+> 
+> ### ** Examples
+> 
+> ##---- Should be DIRECTLY executable !! ----
+> ##-- ==>  Define data, use random,
+> ##--	or do  help(data=index)  for the standard data sets.
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("getDistrs")
+> ### * getDistrs
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: getDistrs
+> ### Title: Compute fragment start and fragment length distributions
+> ### Aliases: getDistrs
+> ### Keywords: ~kwd1 ~kwd2
+> 
+> ### ** Examples
+> 
+> ##---- Should be DIRECTLY executable !! ----
+> ##-- ==>  Define data, use random,
+> ##--	or do  help(data=index)  for the standard data sets.
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("pathCounts")
+> ### * pathCounts
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: pathCounts
+> ### Title: Compute exon path counts
+> ### Aliases: pathCounts
+> 
+> ### ** Examples
+> 
+> ##---- Should be DIRECTLY executable !! ----
+> ##-- ==>  Define data, use random,
+> ##--	or do  help(data=index)  for the standard data sets.
+> 
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("procBam")
+> ### * procBam
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: procBam
+> ### Title: Process SAM/BAM files
+> ### Aliases: procBam
+> ### Keywords: ~paired-end sequencing ~SAM/BAM
+> 
+> ### ** Examples
+> 
+> ##---- Should be DIRECTLY executable !! ----
+> ##-- ==>  Define data, use random,
+> ##--	or do  help(data=index)  for the standard data sets.
+> 
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("procGenome")
+> ### * procGenome
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: procGenome
+> ### Title: Download and format annotations for a given genome
+> ### Aliases: procGenome
+> ### Keywords: ~annotation
+> 
+> ### ** Examples
+> 
+> ##---- Should be DIRECTLY executable !! ----
+> ##-- ==>  Define data, use random,
+> ##--	or do  help(data=index)  for the standard data sets.
+> 
+> 
+> 
+> 
+> ### * <FOOTER>
+> ###
+> cat("Time elapsed: ", proc.time() - get("ptime", pos = 'CheckExEnv'),"\n")
+Time elapsed:  8.87 0.117 9.038 0 0 
+> grDevices::dev.off()
+null device 
+          1 
+> ###
+> ### Local variables: ***
+> ### mode: outline-minor ***
+> ### outline-regexp: "\\(> \\)?### [*]+" ***
+> ### End: ***
+> quit('no')

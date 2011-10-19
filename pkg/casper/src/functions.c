@@ -10,7 +10,7 @@
 int *procCigar(char *cigar){
 	char *pch, *tab="MN";
 	int *cigs;
-	cigs=malloc(50 * sizeof(char));
+	cigs=malloc(50 * sizeof(int));
 	pch=strtok(cigar, tab);
 	cigs[0]=0;
 	while(pch!=NULL){

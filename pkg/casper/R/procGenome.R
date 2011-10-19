@@ -86,9 +86,14 @@ procGenome<-function(genome, mc.cores=mc.cores){
 
   cat("Remapping transcript structure to new exons\n")
   
-  t<-lapply(txs@elementMetadata$exon_id, unlist)
-  s<-as.character(txs@strand)
-  exon_ids<-lapply(1:length(t), function(x) if(s[[x]]=="+") t[[x]] else rev(t[[x]]))
+  t<-Exons@unlistData@elementMetadata$exon_id
+  tt<-split(t, rep(1:length(Exons), width(Exons@partitioning)))
+
+  s<-as.character(Exons@unlistData@strand)
+  ss<-split(s, rep(1:length(Exons), width(Exons@partitioning)))
+  ss<-unlist(ss, unique)
+  exon_ids<-lapply(1:length(tt), function(x) if(ss[[x]]=="+") tt[[x]] else rev(tt[[x]]))
+  
   if(mc.cores>1) require(multicore)
   if(mc.cores>1) {
     if ('multicore' %in% loadedNamespaces()) {
@@ -98,11 +103,11 @@ procGenome<-function(genome, mc.cores=mc.cores){
     newTxs<-lapply(exon_ids, function(x) mapEx(x, exkey))
   }
 
-  names(newTxs)<-txs@elementMetadata$tx_id
+  names(newTxs)<-names(Exons)
 
   geneids<-txs@elementMetadata$gene_id
   geneids<-unlist(geneids)
-  names(geneids)<- names(newTxs)
+  names(geneids)<- unlist(txs@elementMetadata$tx_id)
   txsNewExonID<-list(gene=geneids, exonsNI=exonsNI, exons=Exons, txs=txs, newTxs=newTxs, exonmap=exkey)
   txsNewExonID
  } 

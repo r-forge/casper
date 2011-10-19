@@ -34,8 +34,8 @@ getDistrs<-function(txs, exons, frags, mc.cores){
   
   #Find fragment length distribution for fragments aligning to exons larger than 1000 bases
   cat("Calculating fragment length distribution\n")
-  exonsRD<-as.data.frame(exons)
-  exonsRD<-exonsRD[,2:7]
+  exonsRD<-as.data.frame(exons@unlistData)
+  exonsRD<-exonsRD[,1:6]
   colnames(exonsRD)[1]<-"space"
   exonsRD<-RangedData(exonsRD)
   fragsL<-frags[space(frags) %in% space(exonsRD),]
@@ -49,10 +49,11 @@ getDistrs<-function(txs, exons, frags, mc.cores){
   txs<-RangedData(txs)
   oneTx<- unlist(txs$gene_id) %in% names(which(table(unlist(txs$gene_id))==1))
   oneTx<-txs[oneTx,]
+  oneTx<-subsetByOverlaps(oneTx, frags)
   exonsRD<-subsetByOverlaps(exonsRD, oneTx)
   over<-findOverlaps(frags, exonsRD, type="within")
   ovfr<-split(queryHits(over), exonsRD$exon_id[subjectHits(over)])
-
+  
   if(mc.cores>1) require(multicore)
   if(mc.cores>1) {
     if ('multicore' %in% loadedNamespaces()) {

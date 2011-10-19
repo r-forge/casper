@@ -11,6 +11,7 @@
 
 void countPaths(int pos, path_t *frags, hash_t *pathsHashPtr);
 int sort(const void *x, const void *y); //int sort(const void *x, const void *y);
+int sort2(const void *x, const void *y);
 void addPath(int *unex, int *unrid, hash_t *hash, int totEx);
 
 SEXP pathCounts(SEXP reid, SEXP rid, SEXP exst, SEXP exid){
@@ -48,9 +49,9 @@ SEXP pathCounts(SEXP reid, SEXP rid, SEXP exst, SEXP exid){
     if(fragsHash.bucket[i]!=NULL)  {
       bucket=fragsHash.bucket[i];
       while(bucket) {
-	if(verbose) printf("Sorting %d %s\n", bucket->data, bucket->key);
-	countPaths(bucket->data, frags, pathsHashPtr);
-	bucket=bucket->next;
+	  if(verbose) printf("Sorting %d %s\n", bucket->data, bucket->key);
+	  countPaths(bucket->data, frags, pathsHashPtr);
+	  bucket=bucket->next;
       }
     }
   }
@@ -109,6 +110,7 @@ void countPaths(int pos, path_t *frags, hash_t *pathsHashPtr){
   }
     
   qsort(standex, frags[pos].nexon, sizeof(int **), sort);
+  //  qsort(standex, frags[pos].nexon, sizeof(int **), sort1);
     
   totEx=0;
   unex[totEx]=standex[0][1];
@@ -169,6 +171,20 @@ void addPath(int *unex, int *unrid, hash_t *hash, int totEx){
 }
 
 int sort(const void *x, const void *y) {
-  return( **(int**)x - **(int **) y);
+  int *a = *(int**)x, *b= *(int**)y;
+  int res;
+  if((a[2]-b[2])!=0) res = a[2]-b[2];
+  else res = a[0]-b[0];
+  //res = (a[0] - b[0]) * (a[2] - b[2]);
+  // printf("%d %d %d %d\n", a[0], b[0], a[2], b[2]);
+  return( res );
+}
+
+int sort2(const void *x, const void *y) {
+  int *a = *(int**)x, *b= *(int**)y;
+  int res;
+  res = (a[0] - b[0]) * (a[1] - b[1]);
+  // printf("%d %d\n", a[2], b[2]);
+  return( a[2] - b[2] );
 }
 

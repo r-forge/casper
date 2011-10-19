@@ -230,6 +230,10 @@ extern "C"
 
 		return res;
 	}
+	double cumu_fragstaLIN(double x)
+	{
+		return x;
+	}
 
 	SEXP calc(SEXP exons, SEXP transcripts, SEXP pathCounts, SEXP fragsta, SEXP fraglen) 
 	{
@@ -247,12 +251,12 @@ extern "C"
 		{
 			double val = ld[i];
 			lenfun->Set(i, val);
-			REprintf("TESTTTT %i  %f\n", i, lenfun->Get(i));
 		}
 
 		// Main
 		Casper* c = new Casper();
 		c->setDistributions(lenfun, cumu_fragsta);
+		//c->setDistributions(readlenDistr(), cumu_fragstaLIN);
 
 		// Exons
 		SEXP dims;
@@ -283,7 +287,7 @@ extern "C"
 			const char* pname = CHAR(STRING_ELT(pnames, i));
 			int count = pvalus[i];
 
-			char* left = new char[strlen(pname)];
+			char* left = new char[strlen(pname) + 1];
 			strcpy(left, pname);
 			char* mid = strchr(left, '-');
 			if (mid == NULL)
@@ -309,7 +313,6 @@ extern "C"
 					rightc++;
 				}
 			}
-
 
 			left = left+1;
 			right[strlen(right)-1] = '\0';
@@ -364,43 +367,58 @@ extern "C"
 
 			c->addVariant(v);
 		}
-
+/*
 		// Debug
-		/*map<int, Exon*>::const_iterator ei;
+		map<Variant*, map<Fragment*, double> >::const_iterator mi;
+		for (mi = c->memvprobs.begin(); mi != c->memvprobs.end(); mi++)
+		{
+			map<Fragment*, double>::const_iterator ni;
+			for (ni = mi->second.begin(); ni != mi->second.end(); ni++) 
+			{
+				if (ni->first->leftc == 1 && ni->first->rightc == 2)
+				{
+				//	REprintf("%i\t%i %i %i\t%f\n", mi->first->id, ni->first->left[0], ni->first->right[0], ni->first->right[1], ni->second);
+				}
+			}
+		}
+//		REprintf("\n");
+		
+		map<int, Exon*>::const_iterator ei;
 		for (ei = c->exons.begin(); ei != c->exons.end(); ei++)
 		{
 			Exon* e = ei->second;
-			REprintf("%i\t%i\n", e->id, e->length);
+//			REprintf("%i\t%i\n", e->id, e->length);
 		}
-		REprintf("\n");
+//		REprintf("\n");
 		
 		list<Fragment*>::const_iterator fi;
 		for (fi = c->fragments.begin(); fi != c->fragments.end(); fi++)
 		{
 			Fragment* f = *fi;
-			REprintf("%i\t%i\t%i\n", f->leftc, f->rightc, f->count);
+		//	REprintf("%i\t%i\t%i\n", f->leftc, f->rightc, f->count);
 			for (int l = 0; l < f->leftc; l++)
 			{
-				REprintf("%i\n", f->left[l]);
+		//		REprintf("%i\n", f->left[l]);
 			}
 			for (int r = 0; r < f->rightc; r++)
 			{
-				REprintf("%i\n", f->right[r]);
+		//		REprintf("%i\n", f->right[r]);
 			}
 		}
-		REprintf("\n");
+	//	REprintf("\n");
 
 		vector<Variant*>::const_iterator vi;
 		for (vi = c->variants.begin(); vi != c->variants.end(); vi++)
 		{
 			Variant* v = *vi;
-			REprintf("%i\t%i\n", v->id, v->exonCount);
+	//		REprintf("%i\t%i\n", v->id, v->exonCount);
 			for (int e = 0; e < v->exonCount; e++)
 			{
-				REprintf("%i\n", v->exons[e]);
+	//			REprintf("%i\n", v->exons[e]);
 			}
 		}
-		REprintf("\n");*/
+	//	REprintf("\n");
+*/
 
 		// Output
 		int vc = c->varcount();
@@ -414,14 +432,6 @@ extern "C"
 			res[i] = em[i];
 		}
 		UNPROTECT(1);
-		
-		/*for (int i = 0; i < vc; i++)
-		{
-			Variant* v = c->variants.at(i);
-			int vc = c->memvprobs.count(v);
-
-			REprintf("%i\t%i\t%i\tXXXXX\t%i\tXXXX\t%f\n", i, v->num, v->id, vc, em[i]);
-		}*/
 
 		return(Rc);
 	}

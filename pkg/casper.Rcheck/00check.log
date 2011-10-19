@@ -1,0 +1,174 @@
+* using log directory ‘/c/biostats/routines/R/casper_library/casper/pkg/casper.Rcheck’
+* using R version 2.13.0 (2011-04-13)
+* using platform: x86_64-redhat-linux-gnu (64-bit)
+* using session charset: UTF-8
+* checking for file ‘casper/DESCRIPTION’ ... OK
+* this is package ‘casper’ version ‘0.0.0’
+* checking package name space information ... OK
+* checking package dependencies ... OK
+* checking if this is a source package ... WARNING
+Subdirectory ‘casper/src’ contains object files.
+* checking for executable files ... WARNING
+Found the following executable file(s):
+  data/asd/Debug/.svn/text-base/casper.obj.svn-base
+  data/asd/Debug/.svn/text-base/cstat.obj.svn-base
+  data/asd/Debug/.svn/text-base/discretedf.obj.svn-base
+  data/asd/Debug/.svn/text-base/exon.obj.svn-base
+  data/asd/Debug/.svn/text-base/fragment.obj.svn-base
+  data/asd/Debug/.svn/text-base/main.obj.svn-base
+  data/asd/Debug/.svn/text-base/qasper2c.obj.svn-base
+  data/asd/Debug/.svn/text-base/stdafx.obj.svn-base
+  data/asd/Debug/.svn/text-base/variant.obj.svn-base
+  data/asd/Debug/casper.obj
+  data/asd/Debug/cstat.obj
+  data/asd/Debug/discretedf.obj
+  data/asd/Debug/exon.obj
+  data/asd/Debug/fragment.obj
+  data/asd/Debug/main.obj
+  data/asd/Debug/qasper2c.obj
+  data/asd/Debug/stdafx.obj
+  data/asd/Debug/variant.obj
+  src-i386/Debug/casper.obj
+  src-i386/Debug/discretedf.obj
+  src-i386/Debug/exon.obj
+  src-i386/Debug/fragment.obj
+  src-i386/Debug/main.obj
+  src-i386/Debug/qasper2c.exe
+  src-i386/Debug/stdafx.obj
+  src-i386/Debug/variant.obj
+  src-i386/Release/qasper2c.exe
+  src-x86_64/Debug/casper.obj
+  src-x86_64/Debug/discretedf.obj
+  src-x86_64/Debug/exon.obj
+  src-x86_64/Debug/fragment.obj
+  src-x86_64/Debug/main.obj
+  src-x86_64/Debug/qasper2c.exe
+  src-x86_64/Debug/stdafx.obj
+  src-x86_64/Debug/variant.obj
+  src-x86_64/Release/qasper2c.exe
+  src/Debug/casper.obj
+  src/Debug/discretedf.obj
+  src/Debug/exon.obj
+  src/Debug/fragment.obj
+  src/Debug/main.obj
+  src/Debug/qasper2c.exe
+  src/Debug/stdafx.obj
+  src/Debug/variant.obj
+  src/Release/qasper2c.exe
+Source packages should not contain undeclared executable files.
+See section 'Package structure' in manual 'Writing R Extensions'.
+* checking whether package ‘casper’ can be installed ... WARNING
+Found the following significant warnings:
+  Warning: package 'IRanges' was built under R version 2.14.0
+  Warning: package 'GenomicRanges' was built under R version 2.14.0
+  Warning: multiple methods tables found for ‘getSeq’
+See ‘/c/biostats/routines/R/casper_library/casper/pkg/casper.Rcheck/00install.out’ for details.
+* checking installed package size ... NOTE
+  installed size is 507.1Mb
+  sub-directories of 1Mb or more:
+    doc    83.8Mb
+    data  422.7Mb
+* checking package directory ... OK
+* checking for portable file names ... OK
+* checking for sufficient/correct file permissions ... OK
+* checking DESCRIPTION meta-information ... OK
+* checking top-level files ... OK
+* checking index information ... OK
+* checking package subdirectories ... OK
+* checking R files for non-ASCII characters ... OK
+* checking R files for syntax errors ... OK
+* checking whether the package can be loaded ... OK
+* checking whether the package can be loaded with stated dependencies ... OK
+* checking whether the package can be unloaded cleanly ... OK
+* checking whether the name space can be loaded with stated dependencies ... OK
+* checking whether the name space can be unloaded cleanly ... OK
+* checking for unstated dependencies in R code ... OK
+* checking S3 generic/method consistency ... OK
+* checking replacement functions ... OK
+* checking foreign function calls ... OK
+* checking R code for possible problems ... OK
+* checking Rd files ... NOTE
+prepare_Rd: calcExp.Rd:30-32: Dropping empty section \details
+prepare_Rd: calcExp.Rd:46-48: Dropping empty section \note
+prepare_Rd: calcExp.Rd:39-41: Dropping empty section \references
+prepare_Rd: calcExp.Rd:52-54: Dropping empty section \seealso
+prepare_Rd: genPlot.Rd:34-36: Dropping empty section \details
+prepare_Rd: genPlot.Rd:54-56: Dropping empty section \note
+prepare_Rd: genPlot.Rd:47-49: Dropping empty section \references
+prepare_Rd: genPlot.Rd:60-62: Dropping empty section \seealso
+prepare_Rd: getDistrs.Rd:37-39: Dropping empty section \details
+prepare_Rd: getDistrs.Rd:53-55: Dropping empty section \note
+prepare_Rd: getDistrs.Rd:46-48: Dropping empty section \references
+prepare_Rd: getDistrs.Rd:59-61: Dropping empty section \seealso
+prepare_Rd: pathCounts.Rd:26-28: Dropping empty section \details
+prepare_Rd: pathCounts.Rd:44-46: Dropping empty section \note
+prepare_Rd: pathCounts.Rd:37-39: Dropping empty section \references
+prepare_Rd: pathCounts.Rd:50-52: Dropping empty section \seealso
+prepare_Rd: procBam.Rd:43-45: Dropping empty section \details
+prepare_Rd: procBam.Rd:66-68: Dropping empty section \note
+prepare_Rd: procBam.Rd:59-61: Dropping empty section \references
+prepare_Rd: procBam.Rd:72-74: Dropping empty section \seealso
+prepare_Rd: procGenome.Rd:52-54: Dropping empty section \note
+prepare_Rd: procGenome.Rd:45-47: Dropping empty section \references
+prepare_Rd: procGenome.Rd:58-60: Dropping empty section \seealso
+* checking Rd metadata ... OK
+* checking Rd cross-references ... OK
+* checking for missing documentation entries ... WARNING
+Undocumented code objects:
+  buildGene rangesPlot
+Undocumented data sets:
+  allStSite exonsNI newTxs txs pathCountsV
+Undocumented S4 methods:
+  generic 'rangesPlot' and siglist 'IRanges,IRanges'
+  generic 'rangesPlot' and siglist 'IRanges,IRangesList'
+  generic 'rangesPlot' and siglist 'IRanges,character'
+  generic 'rangesPlot' and siglist 'IRangesList,character'
+  generic 'rangesPlot' and siglist 'RangedData,IRanges'
+  generic 'rangesPlot' and siglist 'RangedData,IRangesList'
+  generic 'rangesPlot' and siglist 'RangedData,character'
+All user-level objects in a package (including S4 classes and methods)
+should have documentation entries.
+See the chapter 'Writing R documentation files' in manual 'Writing R
+Extensions'.
+* checking for code/documentation mismatches ... OK
+* checking Rd \usage sections ... OK
+* checking Rd contents ... OK
+* checking for unstated dependencies in examples ... OK
+* checking contents of 'data' directory ... WARNING
+Files not of a type allowed in a 'data' directory:
+  asd cstat.cpp cstat.h main.cpp mainWORKING.cpp modencode.sam
+  simulated.sam
+Please use e.g. 'inst/extdata' for non-R data files
+* checking data for non-ASCII characters ... OK
+* checking data for ASCII and uncompressed saves ... OK
+* checking line endings in C/C++/Fortran sources/headers ... WARNING
+Found the following sources/headers with CR or CRLF line endings:
+  src/casper.cpp
+  src/casper.h
+  src/discretedf.cpp
+  src/discretedf.h
+  src/exon.cpp
+  src/exon.h
+  src/fragment.cpp
+  src/fragment.h
+  src/main.cpp
+  src/rcasper.cpp
+  src/stdafx.cpp
+  src/stdafx.h
+  src/targetver.h
+  src/variant.cpp
+  src/variant.h
+Some Unix compilers require LF line endings.
+* checking line endings in Makefiles ... OK
+* checking for portable use of $(BLAS_LIBS) and $(LAPACK_LIBS) ... OK
+* checking for left-overs from vignette generation ... NOTE
+  file ‘inst/doc/Rplots.pdf’ will not be installed: please remove it
+* checking examples ... OK
+* checking for unstated dependencies in vignettes ... OK
+* checking package vignettes in ‘inst/doc’ ... OK
+* checking running R code from vignettes ... OK
+* checking re-building of vignettes ... OK
+* checking PDF version of manual ... OK
+WARNING: There were 6 warnings, see
+  ‘/c/biostats/routines/R/casper_library/casper/pkg/casper.Rcheck/00check.log’
+for details
