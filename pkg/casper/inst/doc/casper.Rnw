@@ -69,7 +69,7 @@ library(casper)
 genomeName="dm3"
 mc.cores=8
 genomeDB<-procGenome(genomeName, mc.cores)
-load(chr2data)
+data(chr2data)
 distrs<-getDistrs(genomeDB$txs,  genomeDB$exons, data$frags, mc.cores=mc.cores)
 
 datadir<-system.file("extdata", package="casper")
