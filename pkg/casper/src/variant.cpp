@@ -1,34 +1,51 @@
-#include "stdafx.h"
-#include "fragment.h"
 #include "variant.h"
 
-Variant::Variant(int id, int exonCount)
+Variant::Variant(Gene* gene, bool positive, vector<Exon*>* exons)
 {
-	this->id = id;
-	this->exonCount = exonCount;
-	this->exons = new int[exonCount];
+	this->id = -1;
+	this->gene = gene;
+	this->strand = strand;
+
+	this->exonCount = exons->size();
+	this->exons = new Exon*[exonCount];
 	this->positions = new int[exonCount + 1];
 	this->positions[0] = 1;
-	this->curexon = 0;
-}
+		
+    this->codelen = (exonCount + 31) / 32;
+    this->codes = new int[codelen];
+	for (int i = 0; i < codelen; i++)
+	{
+		this->codes[i] = 0;
+	}
 
-void Variant::addExon(Exon* e)
-{
-	Variant::addExon(e->id, e->length);
-}
-void Variant::addExon(int id, int length)
-{
-	this->idmap[id] = curexon;
-	this->exons[curexon] = id;
-	this->positions[curexon + 1] = this->positions[curexon] + length;
+	int i = 0;
+	vector<Exon*>::const_iterator ei;
+	for (ei = exons->begin(); ei != exons->end(); ei++)
+	{
+		Exon* exon = *ei;
+		
+		this->idmap[exon->id] = i;
+		this->exons[i] = exon;
+		this->positions[i + 1] = this->positions[i] + exon->length;
+		
+        int j = gene->indexOf(exon);
+        this->codes[j / 32] |= 1 << (j % 32);
+		i++;
+	}
 
-	this->length = this->positions[curexon + 1] - 1;
-	this->curexon++;
+	this->length = this->positions[i] - 1;
+
+	this->hashcode = gethash();
 }
 
 int Variant::indexOf(int exonid)
 {
 	return this->idmap[exonid];
+}
+
+bool Variant::contains(Exon* e)
+{
+	return this->idmap.count(e->id) > 0;
 }
 
 bool Variant::contains(Fragment* frag)
@@ -48,4 +65,53 @@ bool Variant::contains(Fragment* frag)
 		}
 	}
 	return true;
+}
+
+int Variant::compare(const Variant* other)
+{
+	if (this->strand && !other->strand)
+	{
+		return -1;
+	}
+	if (!this->strand && other->strand)
+	{
+		return +1;
+	}
+
+	if (this->exonCount < other->exonCount)
+	{
+		return -1;
+	}
+	if (this->exonCount > other->exonCount)
+	{
+		return +1;
+	}
+
+	for (int c = 0; c < this->codelen; c++)
+	{
+		if (this->codes[c] < other->codes[c])
+		{
+			return -1;
+		}
+		if (this->codes[c] > other->codes[c])
+		{
+			return +1;
+		}
+	}
+
+	return 0;
+}
+int Variant::gethash()
+{
+	int h = 0;
+
+    h += (strand ? 1 : 0) << 30;
+
+	for (int c = 0; c < codelen; c++)
+	{
+		h ^= codes[c];
+	}
+	h += gene->id;
+
+	return h;
 }

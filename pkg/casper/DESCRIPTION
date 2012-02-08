@@ -1,6 +1,6 @@
 Package: casper
-Version: 0.0.0
-Date: 2010-07-29
+Version: 0.0.1
+Date: 2012-02-08
 Title: Characterization of Alternative Splicing based on Paired-End Reads
 Author: Manuel Kroiss, Camille Stephan-Otto, Almond Strocker, David Rossell
 Maintainer: David Rossell <david.rossell@irbbarcelona.org>

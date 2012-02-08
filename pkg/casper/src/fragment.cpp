@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "fragment.h"
 
 Fragment::Fragment(int leftc, int rightc, int count)

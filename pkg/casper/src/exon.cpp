@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "exon.h"
 
 Exon::Exon(int id, int length)
