@@ -6,8 +6,8 @@ public:
 	DiscreteDF(double* data, int size);
 
 	int size;
-	double DiscreteDF::probability(int i);
-	double DiscreteDF::cumulativeProbability(int i);
+	double probability(int i);
+	double cumulativeProbability(int i);
 
 private:
 	double* prob;
