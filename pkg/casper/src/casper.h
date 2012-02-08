@@ -28,8 +28,8 @@ public:
 	// random int between 0 incl and n excl
 	static int randi(int n);
 private:
-	hash_map<Fragment*, hash_map<Variant*, double>> mempprobs;
-	hash_map<Variant*, hash_map<Fragment*, double>> memvprobs;
+	unordered_map<Fragment*, unordered_map<Variant*, double> > mempprobs;
+	unordered_map<Variant*, unordered_map<Fragment*, double> > memvprobs;
 
     static const int is_runs;
 	static const int em_maxruns;
@@ -40,7 +40,7 @@ private:
 	double likelihoodLn(double* pi);
 	double priorLikelihoodLn(double* pi);
 
-	hash_map<Fragment*, double> fragdist(double* pi);
+	unordered_map<Fragment*, double> fragdist(double* pi);
 
 	double** normapprox(double** G, double*** H, double* mode, double* thmode, int n);
 	double* mlogit(double* pi, int n);

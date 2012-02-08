@@ -39,5 +39,5 @@ public:
 	
 private:
 	// mapping of exonid to position in variant
-	hash_map<int, int> idmap;
+	unordered_map<int, int> idmap;
 };

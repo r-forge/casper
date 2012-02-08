@@ -24,7 +24,7 @@ void DataFrame::addGene(Gene* g)
 	this->genes[g->id] = g;
 }
 
-hash_map<Fragment*, double> DataFrame::probabilities(Variant* v)
+unordered_map<Fragment*, double> DataFrame::probabilities(Variant* v)
 {
 	if (this->cache.count(v) > 0)
 	{

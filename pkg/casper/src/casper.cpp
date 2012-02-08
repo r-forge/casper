@@ -1,182 +1,382 @@
-#include "stdafx.h"
 #include "casper.h"
 #include <algorithm>
 #include <time.h>
-//#include <R.h>
-//#include <Rinternals.h>
 
 using namespace std;
 
-const int Casper::frag_readlen = 75;
-const double Casper::em_maxprec = 0.0000000000000001;
-const int Casper::em_maxruns = 1000;
+const int Casper::is_runs = 100;
+const int Casper::em_maxruns = 100;
+const double Casper::mh_gammah = 2;
+const double Casper::prior_q = 2;
 
-Casper::Casper()
+Casper::Casper(Model* model, DataFrame* frame)
 {
-	srand((int)time(NULL));
-}
-void Casper::addExon(Exon* e)
-{
-	this->exons[e->id] = e;
-}
-Exon* Casper::getExon(int exonid)
-{
-	return exons[exonid];
-}
-void Casper::addFragment(Fragment* f)
-{
-	this->fragments.push_back(f);
-}
-void Casper::addVariant(Variant* v)
-{
-	v->num = variants.size();
-	this->variants.push_back(v);
+	this->model = model;
+	this->frame = frame;
 
-	list<Fragment*>::const_iterator fi;
-	for (fi = fragments.begin(); fi != fragments.end(); fi++)
+	vector<Variant* >::const_iterator vi;
+	for (vi = model->items.begin(); vi != model->items.end(); vi++)
 	{
-		Fragment* f = *fi;
+		Variant* v = *vi;
+		unordered_map<Fragment*, double> table = this->frame->probabilities(v);
 
-		double p = 0.0;
-
-		if (v->contains(f))
+		memvprobs[v] = table;
+        
+		unordered_map<Fragment*, double>::const_iterator fi;
+		for (fi = table.begin(); fi != table.end(); fi++)
 		{
-			int fs = v->indexOf(f->left[0]);
-			int fe = v->indexOf(f->left[f->leftc - 1]);
-			int bs = v->indexOf(f->right[0]);
-			int be = v->indexOf(f->right[f->rightc - 1]);
-
-			p = prob(fs, fe, bs, be, v->positions, v->length);
-			p = p;
-		}
-
-		if (p > 0.0)
-		{
-			mempprobs[f][v] = p;
-			memvprobs[v][f] = p;
+			Fragment* f = fi->first;
+			mempprobs[f][v] = fi->second;
 		}
 	}
 }
-
-int Casper::varcount()
+double* Casper::calculateMode()
 {
-	return this->variants.size();
-}
+	int n = model->count();
 
-double Casper::psi(double x)
-{
-	//return fragsta_cumu(x);
-	// return fragsta_cumu.Interpolate(x);
-	return x;
-}
-double Casper::prob(int fs, int fe, int bs, int be, int* pos, double T)
-{
-	// lower bound for start of left transcript
-	double a1 = max(pos[fs], pos[fe] - frag_readlen + 1);
-	// upper bound for start of left transcript
-	double b1 = min(pos[fs + 1] - 1, pos[fe + 1] - frag_readlen);
-	// lower bound for start of right transcript
-	double a2 = max(pos[bs] + frag_readlen, pos[be] + 1);
-	// upper bound for start of right transcript
-	double b2 = min(pos[bs + 1] + frag_readlen - 1, pos[be + 1]);
-
-	double psum = 0;
-
-	for (double l = fraglen_prob->MinimumX; l <= fraglen_prob->MaximumX; l++)
+	double* pi = new double[n];
+	for (int i = 0; i < n; i++)
 	{
-		double mb = 1.0 - l / T;
-		double rb = min(min(b1, b2 - l) / T, mb);
-		double lb = min((max(a1, a2 - l) - 1.0) / T, mb);
-
-		if (lb >= rb)
-		{
-			continue;
-		}
-
-		double punc = (psi(rb) - psi(lb)) / psi(mb);
-
-		double factor = 0;
-		if (l <= T && punc > 0)
-		{
-			factor = fraglen_prob->Get((int)l);
-			if (T < fraglen_cumu->MaximumX)
-			{
-				factor /= fraglen_cumu->Get((int)T);
-			}
-		}
-
-		psum += punc * factor;
+		pi[i] = 1.0 / (double)n;
 	}
-	return psum;
-}
-double* Casper::randomPi()
-{
-	int l = variants.size();
 
-	double* pi = new double[l];
-	double pisum = 0;
-	for (int i = 0; i < l; i++)
+	double normali = (double)memvprobs.size() * (prior_q - 1.0);
+	unordered_map<Fragment*, unordered_map<Variant*, double> >::const_iterator ofi;
+	for (ofi = mempprobs.begin(); ofi != mempprobs.end(); ofi++)
 	{
-		pi[i] = (double)rand() / (double)(RAND_MAX + 1);
-		pisum += pi[i];
+		normali += ofi->first->count;
 	}
-	for (int i = 0; i < l; i++)
-	{
-		pi[i] /= pisum;
-	}
-	return pi;
-}
-double* Casper::calculateEM(double* pi)
-{
-	int l = variants.size();
 
 	for (int r = 0; r < em_maxruns; r++)
 	{
-		map<Fragment*, double> mem;
-		double readcount = 0;
+		unordered_map<Fragment*, double> mem = fragdist(pi);
 		
-		map<Fragment*, map<Variant*, double> >::const_iterator fi;
-		for (fi = mempprobs.begin(); fi != mempprobs.end(); fi++)
+		unordered_map<Variant*, unordered_map<Fragment*, double> >::const_iterator vi;
+		for (vi = memvprobs.begin(); vi != memvprobs.end(); vi++)
 		{
-			double sum = 0;
-
-			map<Variant*, double>::const_iterator vi;
-			for (vi = fi->second.begin(); vi != fi->second.end(); vi++)
-			{
-				int i = vi->first->num;
-				sum += pi[i] * vi->second;
-			}
-			mem[fi->first] = sum;
-			readcount += fi->first->count;
-		}
-
-		double* npi = new double[l];
-		for (int d = 0; d < l; d++)
-		{
-			Variant* dv = variants[d];
+			int i = model->indexOf(vi->first);
 
 			double nsum = 0;
-			if (memvprobs.count(dv) > 0)
+			unordered_map<Fragment*, double>::const_iterator fi;
+			for (fi = vi->second.begin(); fi != vi->second.end(); fi++)
 			{
-				map<Fragment*, double> fragtable = memvprobs[dv];
-				map<Fragment*, double>::const_iterator fi;
-				for (fi = fragtable.begin(); fi != fragtable.end(); fi++)
-				{
-					nsum += (double)fi->first->count * fi->second / mem[fi->first];
-				}
+				nsum += (double)fi->first->count * fi->second / mem[fi->first];
 			}
 
-			npi[d] = nsum / readcount * pi[d];
+            pi[i] = (prior_q - 1.0 + nsum * pi[i]) / normali;
 		}
-
-		pi = npi;
 	}
 
 	return pi;
 }
-void Casper::setDistributions(DiscreteDF* fraglendist, double (*fragstacumu)(double))
+double Casper::calculateIntegral()
 {
-	this->fraglen_prob = fraglendist;
-	this->fraglen_cumu = fraglendist->GetCumulative();
-	this->fragsta_cumu = fragstacumu;
+	int n = model->count();
+	double* mode = calculateMode();
+	if (n == 1)
+	{
+		return priorLikelihoodLn(mode);
+	}
+
+	double* thmode = mlogit(mode, n);
+    double*** H = vtHess(thmode, n);
+    double** G = vtGradG(thmode, n);
+    double** S = normapprox(G, H, mode, thmode, n);
+
+	double emlk = priorLikelihoodLn(mode);
+	double gdet = vtGradLogdet(G, n);
+	double sdet = log(det(S, n - 1));
+
+	double integral = emlk + gdet + (double)(n - 1) / 2.0 * log(2 * M_PI) - 0.5 * sdet;
+
+    return integral;
+}
+
+bool Casper::isValid()
+{
+	list<Fragment*>::const_iterator fi;
+	for (fi = frame->data.begin(); fi != frame->data.end(); fi++)
+	{
+		Fragment* f = *fi;
+		if (mempprobs.count(f) == 0 || mempprobs[f].size() == 0)
+        {
+	        return false;
+		}
+	}
+	return true;
+}
+
+double Casper::priorLn(double* pi)
+{
+	int n = model->count();
+
+	double* alpha = new double[n];
+	for (int i = 0; i < n; i++)
+    {
+		alpha[i] = prior_q;
+	}
+
+	int log = 1;
+	return ddirichlet(pi, alpha, &n, &log);
+}
+
+double Casper::likelihoodLn(double* pi)
+{
+	double outer = 0;
+
+	unordered_map<Fragment*, unordered_map<Variant*, double>>::const_iterator fi;
+	for (fi = mempprobs.begin(); fi != mempprobs.end(); fi++)
+	{
+		double inner = 0;
+
+		unordered_map<Variant*, double>::const_iterator vi;
+		for (vi = fi->second.begin(); vi != fi->second.end(); vi++)
+		{
+			int i = model->indexOf(vi->first);
+			inner += pi[i] * vi->second;
+		}
+		outer += fi->first->count * log(inner);
+	}
+	return outer;
+}
+double Casper::priorLikelihoodLn(double* pi)
+{
+	return priorLn(pi) + likelihoodLn(pi);
+}
+
+unordered_map<Fragment*, double> Casper::fragdist(double* pi)
+{
+	unordered_map<Fragment*, double> mem;
+
+	unordered_map<Fragment*, unordered_map<Variant*, double>>::const_iterator fi;
+	for (fi = mempprobs.begin(); fi != mempprobs.end(); fi++)
+	{
+		double sum = 0;
+
+		unordered_map<Variant*, double>::const_iterator vi;
+		for (vi = fi->second.begin(); vi != fi->second.end(); vi++)
+		{
+			int i = model->indexOf(vi->first);
+			sum += pi[i] * vi->second;
+		}
+		mem[fi->first] = sum;
+	}
+
+	return mem;
+}
+
+double** Casper::normapprox(double** G, double*** H, double* mode, double* thmode, int n)
+{
+	unordered_map<Fragment*, double> mem = fragdist(mode);
+	double** S = new double*[n - 1];
+	for (int i = 0; i < n - 1; i++)
+	{
+		S[i] = new double[n - 1];
+	}
+	for (int l = 0; l < n - 1; l++)
+	{
+		for (int m = l; m < n - 1; m++)
+		{
+			S[l][m] = 0;
+			unordered_map<Fragment*, unordered_map<Variant*, double>>::const_iterator fi;
+			for (fi = mempprobs.begin(); fi != mempprobs.end(); fi++)
+			{
+				double term1 = 0, term2 = 0, term3 = 0;
+				unordered_map<Variant*, double>::const_iterator vi;
+				for (vi = fi->second.begin(); vi != fi->second.end(); vi++)
+				{
+					int d = model->indexOf(vi->first);
+					double P = vi->second;
+					term1 += P * H[d][l][m];
+					term2 += P * G[d][l];
+					term3 += P * G[d][m];
+				}
+				S[l][m] -= fi->first->count * (term1 * mem[fi->first] - term2 * term3) / pow(mem[fi->first], 2);
+			}
+			for (int d = 0; d < n; d++)
+			{
+				S[l][m] -= (prior_q - 1.0) * (H[d][l][m] * mode[d] - G[d][l] * G[d][m]) / pow(mode[d], 2);
+			}
+			if (l != m)
+			{
+				S[m][l] = S[l][m];
+			}
+		}
+	}
+	return S;
+}
+double* Casper::mlogit(double* pi, int n)
+{
+	double* theta = new double[n - 1];
+	for (int i = 0; i < n - 1; i++)
+	{
+		theta[i] = log(pi[i + 1] / pi[0]);
+	}
+	return theta;
+}
+double* Casper::milogit(double* theta, int n)
+{
+	double sum = 1.0;
+	for (int i = 0; i < n - 1; i++)
+	{
+		sum += exp(theta[i]);
+	}
+	double* pi = new double[n];
+	pi[0] = 1.0 / sum;
+	for (int i = 0; i < n - 1; i++)
+	{
+		pi[i + 1] = exp(theta[i]) / sum;
+	}
+	return pi;
+}
+double** Casper::vtGradG(double* th, int n)
+{
+	double sum = 1.0;
+	for (int i = 0; i < n - 1; i++)
+	{
+		sum += exp(th[i]);
+	}
+
+	double** G = new double*[n];
+	for (int i = 0; i < n; i++)
+	{
+		G[i] = new double[n - 1];
+	}
+
+	for (int l = 0; l < n - 1; l++)
+	{
+		G[0][l] = -exp(th[l]) / pow(sum, 2);
+	}
+
+	for (int d = 1; d < n; d++)
+	{
+		for (int l = 0; l < n - 1; l++)
+		{
+			if (l != d - 1)
+			{
+				G[d][l] = -exp(th[d - 1] + th[l]) / pow(sum, 2);
+			}
+			else
+			{
+				G[d][l] = -exp(th[d - 1] + th[l]) / pow(sum, 2) + exp(th[l]) / sum;
+			}
+		}
+	}
+	return G;
+}
+double Casper::vtGradLogdet(double** G, int n)
+{
+	double** GS = &G[1];
+    double mydet = det(GS, n - 1);
+	double logdet = log(abs(mydet));
+    return logdet;
+}
+double*** Casper::vtHess(double* th, int n)
+{
+	double sum = 1.0;
+	for (int i = 0; i < n - 1; i++)
+	{
+		sum += exp(th[i]);
+	}
+
+	double*** H = new double**[n];
+	for (int i = 0; i < n; i++)
+	{
+		H[i] = new double*[n - 1];
+		for (int j = 0; j < n - 1; j++)
+		{
+			H[i][j] = new double[n - 1];
+		}
+	}
+
+	for (int d = 0; d < n; d++)
+	{
+		for (int l = 0; l < n - 1; l++)
+		{
+			for (int m = l; m < n - 1; m++)
+			{
+				if (d == 0)
+				{
+					if (m == l)
+					{
+						H[0][l][l] = -exp(th[l]) / pow(sum, 2) + 2.0 * exp(2.0 * th[l]) / pow(sum, 3);
+					}
+					else
+					{
+						H[0][l][m] = H[0][m][l] = 2.0 * exp(th[l] + th[m]) / pow(sum, 3);
+					}
+				}
+				else
+				{
+					if (m == l)
+					{
+						if (l != d - 1)
+						{
+							H[d][l][l] = -exp(th[d - 1] + th[l]) / pow(sum, 2) + 2 * exp(th[d - 1] + 2 * th[l]) / pow(sum, 3);
+						}
+						else
+						{
+							H[d][l][l] = -2 * exp(2 * th[d - 1]) / pow(sum, 2) + 2 * exp(3 * th[d - 1]) / pow(sum, 3) + exp(th[d - 1]) / sum - exp(2 * th[d - 1]) / pow(sum, 2);
+						}
+					}
+					else
+					{
+						if (m == d - 1)
+						{
+							H[d][l][m] = H[d][m][l] = -exp(th[d - 1] + th[l]) / pow(sum, 2) + 2 * exp(th[d - 1] + th[m] + th[l]) / pow(sum, 3);
+						}
+						else
+						{
+							if (l == d - 1)
+							{
+								H[d][l][m] = H[d][m][l] = 2 * exp(th[d - 1] + th[l] + th[m]) / pow(sum, 3) - exp(th[m] + th[l]) / pow(sum, 2);
+							}
+							else
+							{
+								H[d][l][m] = H[d][m][l] = 2 * exp(th[d - 1] + th[l] + th[m]) / pow(sum, 3);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return H;
+}
+
+double Casper::det(double** a, int n)
+{
+	double **aout = dmatrix(0, n - 1, 0, n - 1);
+
+	int i,j,k;
+	double sum;
+
+	for (i=0;i<n;i++) { for (j=i;j<n;j++) { aout[i][j]= a[i][j]; } }  //copy a into aout
+	for (i=0;i<n;i++) {
+		for (j=i;j<n;j++) {
+			for (sum=aout[i][j],k=i-1;k>=0;k--) sum -= aout[i][k]*aout[j][k];
+			if (i == j) {
+				if (sum <= 0.0) nrerror("choldc failed","","matrix is not positive definite");
+				aout[i][i]=sqrt(sum);
+			} else aout[j][i]=sum/aout[i][i];
+		}
+	}
+	for (i=0;i<n;i++) { for (j=i+1;j<n;j++) { aout[i][j]= 0; } }  //set upper-diagonal elem to 0
+
+
+	double det;
+	for (det=1,i=0; i<n; i++) { det *= aout[i][i]*aout[i][i]; }
+	
+	free_dmatrix(aout, 0, n - 1, 0, n - 1);
+	return(det);
+}
+
+double Casper::randd()
+{
+	return (double)rand() / (double)RAND_MAX;
+}
+int Casper::randi(int n)
+{
+	return (int)((double)n * randd());
 }

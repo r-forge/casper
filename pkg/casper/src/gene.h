@@ -1,11 +1,6 @@
 #include "exon.h"
 #include <vector>
-
-#ifdef __GNUC__
-#include <ext/hash_map>
-#else
-#include <hash_map>
-#endif
+#include <unordered_map>
 
 using namespace std;
 
@@ -17,7 +12,7 @@ public:
 	vector<Exon*> exons;
 	int length;
 
-	hash_map<Exon*, int> idmap;
+	unordered_map<Exon*, int> idmap;
 
 	Gene(int id);
 	void addExon(Exon* e);

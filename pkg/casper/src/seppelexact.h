@@ -5,7 +5,7 @@ class SeppelExact
 public:
 	SeppelExact(DataFrame* frame, Gene* gene);
 	// calculates the probabilities of all possible explicit models through their integrals
-	hash_map<Model*, double, ModelCmp> calculate();
+	unordered_map<Model*, double, ModelCmp> calculate();
 private:
 	DataFrame* frame;
 	Gene* gene;
