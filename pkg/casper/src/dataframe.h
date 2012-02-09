@@ -33,7 +33,7 @@ private:
     int fraglen_maxx;
 	DiscreteDF* fraglen_dist;
 	double (*fragsta_cumu)(double x);
-    unordered_map<Variant*, unordered_map<Fragment*, double>, VariantCmp > cache;
+    map<Variant*, unordered_map<Fragment*, double>, VariantCmp > cache;
 
 	double prob(int fs, int fe, int bs, int be, int* pos, double T);
 	void allVariantsRec(vector<Exon*>* stack, int level, Gene* gene, vector<Variant*>* vars);

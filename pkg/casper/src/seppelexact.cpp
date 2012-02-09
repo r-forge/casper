@@ -6,9 +6,9 @@ SeppelExact::SeppelExact(DataFrame* frame, Gene* gene)
 	this->gene = gene;
 }
 
-unordered_map<Model*, double, ModelCmp> SeppelExact::calculate()
+unordered_map<Model*, double, ModelCmp, ModelCmp> SeppelExact::calculate()
 {
-	unordered_map<Model*, double, ModelCmp> result;
+	unordered_map<Model*, double, ModelCmp, ModelCmp> result;
 
 	vector<Model*>* models = frame->allModels(gene);
 
@@ -28,14 +28,14 @@ unordered_map<Model*, double, ModelCmp> SeppelExact::calculate()
 	}
 
 	double asum = 0;
-	unordered_map<Model*, double, ModelCmp>::const_iterator mvi;
+	unordered_map<Model*, double, ModelCmp, ModelCmp>::const_iterator mvi;
 	for (mvi = result.begin(); mvi != result.end(); mvi++)
 	{
 		asum += exp(mvi->second - imax);
 	}
 	double lsum = imax + log(asum);
 
-	unordered_map<Model*, double, ModelCmp> normalized;
+	unordered_map<Model*, double, ModelCmp, ModelCmp> normalized;
 	for (mvi = result.begin(); mvi != result.end(); mvi++)
 	{
 		normalized[mvi->first] = exp(mvi->second - lsum);

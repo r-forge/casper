@@ -90,7 +90,7 @@ Variant* SmartModelDist::makevar()
 {
 	int rv = Casper::randi(center->items.size());
 	Variant* var = center->items[rv];
-	bool dir = var->strand;
+	//bool dir = var->strand;
 	Gene* gene = var->gene;
 
 	vector<Exon*>* nex = new vector<Exon*>();
@@ -105,7 +105,7 @@ Variant* SmartModelDist::makevar()
 		}
 	}
 
-	Variant* nva = new Variant(gene, dir, nex);
+	Variant* nva = new Variant(gene, nex);
 	return nva;
 }
 double SmartModelDist::prob(Variant* v)

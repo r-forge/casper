@@ -1,10 +1,10 @@
 #include "variant.h"
 
-Variant::Variant(Gene* gene, bool positive, vector<Exon*>* exons)
+Variant::Variant(Gene* gene, vector<Exon*>* exons)
 {
 	this->id = -1;
 	this->gene = gene;
-	this->strand = strand;
+	//this->strand = strand;
 
 	this->exonCount = exons->size();
 	this->exons = new Exon*[exonCount];
@@ -69,14 +69,14 @@ bool Variant::contains(Fragment* frag)
 
 int Variant::compare(const Variant* other)
 {
-	if (this->strand && !other->strand)
+	/*if (this->strand && !other->strand)
 	{
 		return -1;
 	}
 	if (!this->strand && other->strand)
 	{
 		return +1;
-	}
+	}*/
 
 	if (this->exonCount < other->exonCount)
 	{
@@ -104,8 +104,6 @@ int Variant::compare(const Variant* other)
 int Variant::gethash()
 {
 	int h = 0;
-
-    h += (strand ? 1 : 0) << 30;
 
 	for (int c = 0; c < codelen; c++)
 	{

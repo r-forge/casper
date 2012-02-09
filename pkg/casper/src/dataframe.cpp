@@ -106,7 +106,7 @@ void DataFrame::allVariantsRec(vector<Exon*>* stack, int level, Gene* gene, vect
 	{
 		if (stack->size() > 0)
 		{
-			Variant* v = new Variant(gene, true, stack);
+			Variant* v = new Variant(gene, stack);
 			if (probabilities(v).size() > 0)
 			{
 				varis->push_back(v);

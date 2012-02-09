@@ -16,14 +16,14 @@ public:
 	int length;
 	Gene* gene;
 	// forward or backward strand
-	bool strand;
+	//bool strand;
 
 	// used for hashing
 	int codelen;
 	int* codes;
 	int hashcode;
 
-	Variant(Gene* gene, bool positive, vector<Exon*>* exons);
+	Variant(Gene* gene, vector<Exon*>* exons);
 
 	// index of the exon in the exon list of this variant
 	int indexOf(int exonid);

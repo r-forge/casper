@@ -9,9 +9,9 @@ SeppelPrior::SeppelPrior(DataFrame* frame, Gene* gene)
 	this->runs = 10000;
 }
 
-unordered_map<Model*, double, ModelCmp> SeppelPrior::calculate()
+unordered_map<Model*, double, ModelCmp, ModelCmp> SeppelPrior::calculate()
 {
-	unordered_map<Model*, double, ModelCmp> result;
+	unordered_map<Model*, double, ModelCmp, ModelCmp> result;
 
 	vector<Model*>* allmodels = frame->allModels(gene);
 	vector<Model*>* models = new vector<Model*>();
@@ -56,9 +56,9 @@ unordered_map<Model*, double, ModelCmp> SeppelPrior::calculate()
 		rescounts++;
 	}
 
-	unordered_map<Model*, double, ModelCmp> normalized;
+	unordered_map<Model*, double, ModelCmp, ModelCmp> normalized;
 
-	unordered_map<Model*, double, ModelCmp>::const_iterator mvi;
+	unordered_map<Model*, double, ModelCmp, ModelCmp>::const_iterator mvi;
 	for (mvi = result.begin(); mvi != result.end(); mvi++)
 	{
 		if (mvi->second > 0)
