@@ -1,39 +1,11 @@
-startsReadsTx<-function(ovfr, frags, tx, exonsRD){
-  pos<-exonsRD$exon_id %in% unlist(tx$exon_id)
-  ss<-start(exonsRD)[pos]
-  ee<-end(exonsRD)[pos]
-  len<-sum(width(exonsRD)[pos])
-  str<-as.character(tx$strand)
-  if(str=="-") {
-    ss<-rev(ss)
-    ee<-rev(ee)
-  }
-  if(!is.unsorted(ss)){
-    pos<-unlist(ovfr[as.character(unlist(tx$exon_id))])
-    stff<-start(frags)[pos]
-    if(length(stff)>0){
-      or<-order(stff)
-      stff<-stff[stff>=min(ss)]
-      stff<-stff[stff<=max(ee)]
-      gaps<-ss[-1]-ee[-length(ss)]
-      gaps<-c(0,gaps)
-      qq<-findInterval(stff, ss)
-      res<-((stff-cumsum(gaps)[qq])-min(ss))/len
-      wi=width(frags)[pos][or]	
-      if(str=="-") {
-        res<-rev(res)
-        wi<-rev(wi)
-      }
-      res<-list(res=res, wi=wi)
-    } else res=NA
-  } else res=NA
-  res
-}
 
 firstBamReads <- function(bam, nreads) {
-  id <- unique(bam$qname[1:nreads])
-  sel <- bam$qname %in% id
-  lapply(bam,function(z) z[sel])
+  if (nreads < length(bam$qname)) {
+    id <- unique(bam$qname[1:nreads])
+    sel <- bam$qname %in% id
+    bam <- lapply(bam,function(z) z[sel])
+  }
+  return(bam)
 }
 
 getDistrs<-function(txs, exons, bam, nreads=4*10^6){
@@ -86,6 +58,5 @@ getDistrs<-function(txs, exons, bam, nreads=4*10^6){
   sel <- str=='+'; stDis[sel] <- (exstnogap[sel]+readst[sel]-exst[sel])/txlength[sel]
   sel <- str=='-'; stDis[sel] <- (exstnogap[sel]+exen[sel]-readen[sel])/txlength[sel]
   
-  res<-unlist(res)
   list(lenDis=ld, stDis=stDis)
 }
