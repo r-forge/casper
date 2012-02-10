@@ -45,8 +45,8 @@ SEXP procBam(SEXP bamFileName, SEXP samtools, SEXP chromo, SEXP bam, SEXP size){
 	    bamFile=popen(comm, "r");
 	  }
 	  else {
-	    if(strlen(CHAR(STRING_ELT(chromo,0)))>0) sprintf(comm, "grep %s %s ", CHAR(STRING_ELT(chromo,0)), CHAR(STRING_ELT(bamFileName,0)));
-	    else sprintf(comm, "cat %s ", CHAR(STRING_ELT(bamFileName,0)));
+	    if(strlen(CHAR(STRING_ELT(chromo,0)))>0) sprintf(comm, "awk '{if($3==\"%s\") print $0}' %s ", CHAR(STRING_ELT(chromo,0)), CHAR(STRING_ELT(bamFileName,0)));
+	    else sprintf(comm, "grep -v @ %s ", CHAR(STRING_ELT(bamFileName,0)));
 	    printf("Reading file with: %s\n", comm);
 	    bamFile=popen(comm, "r");
 	    if (bamFile == NULL) perror("Error opening bamFile file");  

@@ -1,15 +1,15 @@
 buildGene<-function(genomeDB, gene){
-    rd<-genomeDB$exons[genomeDB$txs[unlist(genomeDB$txs@elementMetadata$gene_id) == gene]@elementMetadata$tx_id]
+    rd<-genomeDB$exons[genomeDB$txs[unlist(genomeDB$txs@elementMetadata$gene_id) == gene]@elementMetadata$tx_name]
     rdl<-lapply(rd, ranges)
     rdl<-IRangesList(rdl)
     rdl
 }
 
 genPlot<-function(goi, genomeDB, reads, exp){
-  txexp<-exprs(exp)[as.character(genomeDB$txs[unlist(genomeDB$txs@elementMetadata$gene_id) == goi]@elementMetadata$tx_id),]
+  txexp<-exprs(exp)[as.character(genomeDB$txs[unlist(genomeDB$txs@elementMetadata$gene_id) == goi]@elementMetadata$tx_name),]
   if(sum(txexp)>0) txexp<-(txexp/sum(txexp))*100
   gene<-buildGene(gene=goi, genomeDB)
-  rangesPlot(x=reads[space(reads) == unique(as.character(seqnames(genomeDB$txs[unlist(genomeDB$txs@elementMetadata$gene_id) == goi]))),], gene)
+  rangesPlot(x=reads[unique(as.character(seqnames(genomeDB$txs[unlist(genomeDB$txs@elementMetadata$gene_id) == goi])))], gene)
   gene<-RangedData(unlist(gene), space=as.character(unique(seqnames(genomeDB$txs[unlist(genomeDB$txs@elementMetadata$gene_id) == goi]))))
   list(gene=gene, exp=txexp)
     

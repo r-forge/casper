@@ -67,8 +67,12 @@ procGenome<-function(genome, mc.cores=mc.cores){
   genDB<-makeTranscriptDbFromUCSC(genome=genome, tablename="refGene")
 
   cat("Processing Exons and Transcrips\n")
-  Exons<-exonsBy(genDB, by="tx")
   txs<-transcripts(genDB,columns=c("tx_id","tx_name","gene_id","exon_id","cds_id"))
+  txs<-txs[match(unique(unlist(txs@elementMetadata$tx_name)), unlist(txs@elementMetadata$tx_name)),]
+  Exons<-exonsBy(genDB, by="tx")
+  Exons<-Exons[names(Exons) %in% txs@elementMetadata$tx_id,]
+  txnames<-match(names(Exons), txs@elementMetadata$tx_id)
+  names(Exons)<-txs@elementMetadata$tx_name[txnames]
   txsRD<-RangedData(txs)
 
   ExonsDF<-as.data.frame(Exons)

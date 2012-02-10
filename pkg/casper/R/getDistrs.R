@@ -30,7 +30,7 @@ startsReadsTx<-function(ovfr, frags, tx, exonsRD){
   res
 }
 
-getDistrs<-function(txs, exons, frags, mc.cores){
+getDistrs<-function(txs, exons, frags, mc.cores=1){
   
   #Find fragment length distribution for fragments aligning to exons larger than 1000 bases
   cat("Calculating fragment length distribution\n")
@@ -60,7 +60,7 @@ getDistrs<-function(txs, exons, frags, mc.cores){
       stPerTx<-mclapply(1:nrow(oneTx), function(x) startsReadsTx(ovfr, frags, oneTx[x,], exonsRD) , mc.cores=mc.cores)
     } else stop('multicore library has not been loaded!')
   } else  {
-    newTxs<-lapply(1:nrow(oneTx), function(x) startsReadsTx(ovfr, frags, oneTx[x,], exonsRD))
+    stPerTx<-lapply(1:nrow(oneTx), function(x) startsReadsTx(ovfr, frags, oneTx[x,], exonsRD))
   }
 
   stPerTx<-stPerTx[!is.na(stPerTx)]
