@@ -39,6 +39,37 @@ Currently, we assume that splicing variants are known.
 We plan to implement the case of {\it de novo} variant discovery 
 in the near future.
 
+\section{Aligning reads and importing data}
+\label{sec:import}
+
+The input for \texttt{casper} are BAM files containing aligned reads.
+There are several software options to produce BAM files.
+TopHat \citep{trapnell:2009} is a convenient option, as it is specifically designed to map
+reads spanning exon junctions accurately.
+As an illustration, suppose paired end reads
+produced with the Illumina platform
+are stored
+in the FASTQ files \texttt{sampleR1.fastq} and \texttt{sampleR2.fastq}.
+The TopHap command to align these reads into a BAM file is:
+
+\begin{verbatim}
+> tophat --solexa1.3-quals -p 4 -r 200 /Volumes/biostats/databases/bowtie-0.12.5_indexes/hg19 sampleR1.fastq sampleR2.fastq
+\end{verbatim}
+
+The option \texttt{--solexa1.3-quals} indicates the version of quality scores
+produced by the Illumina pipeline and \texttt{-p 4} to use 4 processors.
+The option \texttt{-r} is required by TopHat for paired-end reads and indicates the average fragment size.
+The fragment size is around 200-300 for many experiments,
+so any value of \texttt{-r} in this range should be reasonable.
+After importing the data into R,
+one can use the \texttt{casper} function \texttt{getDistrs}
+to estimate the fragment size distribution (see below).
+This can be used as a check that the specified \texttt{-r} was reasonable.
+In our experience, results are usually robust to moderate miss-specifications of \texttt{-r}.
+
+BAM files can be read into R using the \texttt{Rsamtools} package \citep{rpkg:Rsamtools}.
+
+
 \section{Estimating expression for a set of known variants}
 \label{sec:knownvar}
 

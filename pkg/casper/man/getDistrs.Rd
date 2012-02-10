@@ -12,26 +12,26 @@
   distribution for fragments aligned to long exons (>1000nt)
 }
 \usage{
-getDistrs(txs, exons, frags, mc.cores)
+getDistrs(txs, exons, frags, nreads=2000000, mc.cores=1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{txs}{
-    %%     ~~Describe \code{txs} here~~
     GRanges object with known transcripts
 }
   \item{exons}{
-    %%     ~~Describe \code{exons} here~~
     GRangesList with annotated exons per transcript
 }
   \item{frags}{
-    %%     ~~Describe \code{frags} here~~
     RangedData object defined by start and end of whole fragments
-}
+  }
+  \item{nreads}{
+    To speed up computations, only the first \code{nreads} are used to
+    obtain the estimates. The default value of 2 milions usually gives
+    highly precise estimates.
+  }
   \item{mc.cores}{
-    %%     ~~Describe \code{mc.cores} here~~
-    Number of cores to use in parallel processing (multicore package
-    required)
+    Number of cores to use in parallel processing (multicore package required)
 }
 }
 \details{
