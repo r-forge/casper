@@ -35,8 +35,6 @@ procBam<-function(bam){
     cat("done.\nProcessing cigars and building read's object...\n")
     data<-.Call("procBam", bam$qname, bam$flag,  bam$rname, bam$pos, bam$cigar, length(bam$pos), nreads)
     cat("done.\n")
-	data[[1]]<-buildRD(reads=data[[1]], frags=NA)
-    data[[2]]<-buildRD(reads=NA, frags=data[[2]])
-    names(data)<-c("reads", "frags")
-    data
+    ans<-buildRD(reads=data[[1]], frags=NA)
+    ans
 }
