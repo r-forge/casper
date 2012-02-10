@@ -12,7 +12,7 @@
   distribution for fragments aligned to long exons (>1000nt)
 }
 \usage{
-getDistrs(txs, exons, frags, nreads=2000000, mc.cores=1)
+getDistrs(txs, exons, frags, nreads=4*10^6)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -23,16 +23,14 @@ getDistrs(txs, exons, frags, nreads=2000000, mc.cores=1)
     GRangesList with annotated exons per transcript
 }
   \item{frags}{
-    RangedData object defined by start and end of whole fragments
+    List with reads from imported BAM file, as returned by
+    \code{scanBam} or \code{rmShortInserts}.
   }
   \item{nreads}{
     To speed up computations, only the first \code{nreads} are used to
-    obtain the estimates. The default value of 2 milions usually gives
+    obtain the estimates. The default value of 4 milions usually gives
     highly precise estimates.
   }
-  \item{mc.cores}{
-    Number of cores to use in parallel processing (multicore package required)
-}
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~
@@ -40,32 +38,35 @@ getDistrs(txs, exons, frags, nreads=2000000, mc.cores=1)
 \value{
   %%  ~Describe the value returned
   %%  If it is a LIST, use
-  \item{stDis}{Numeric vector with relative fragment start positions}
   \item{lenDis}{Table with fragment counts for each existing length}
-}
-\references{
-%% ~put references to the literature/web site here ~
+  \item{stDis}{Numeric vector with relative fragment start positions}
 }
 \author{
-%%  ~~who you are~~
-Camille Stephan-Otto Attolini
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
-\seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
+Camille Stephan-Otto Attolini, David Rossell
 }
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
+##Process genome
+##hg19DB <- procGenome('hg19',mc.cores=6)
 
+##Read BAM file
+##what <- c('qname','flag','rname','strand','pos','qwidth','mapq','cigar','mrnm','mpos','isize')
+##param <- ScanBamParam(scanBamFlag(isPaired=TRUE,hasUnmappedMate=FALSE),what=what)
+##bam0 <- scanBam(file='~/Desktop/ranidata/test_rani/mapped_reads/accepted_hits.bam',param=param)[[1]]
+
+##Remove short inserts
+##bam0 <- rmShortInserts(bam0, isizeMin=150)
+
+##Estimate fragment size distribution
+##distrs <- getDistrs(txs=hg19DB$txs,exons=hg19DB$exons,bam=bam0,nreads=length(bam0$qname))
+
+##Plot fragment size distribution
+##n <- as.numeric(names(distrs$lenDis))
+##plot(n,distrs$lenDis,type='l',xlab='Fragment length',ylab='Counts')
+
+##Plot read start distribution
+##hist(distrs$stDis,xlab='Read start',main='')
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line
+\keyword{ stats }
+%\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line
