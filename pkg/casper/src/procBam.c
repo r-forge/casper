@@ -9,81 +9,61 @@
 #include "functions.h"
 #include "fragFunc.h"
 
-SEXP procBam(SEXP bamFileName, SEXP samtools, SEXP chromo, SEXP bam, SEXP size){
-    //void procBam(){
-	FILE *bamFile;
-	char *pch, *holder, tab[]="\t", comm[1000];
+SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP totFrags, SEXP totReads){
 	read_t *frags;
-	int totF, j, l, hashSize, i, *p_bam, *p_size;
+	int totF, j, l, hashSize, i, *frags_size, *reads_size;
 	hash_t *fragsHashPtr, fragsHash;
 	hash_node_t *bucket;
 	verbose=0;
     
-	fragsHashPtr = &fragsHash;		
-	hashSize=pow(2,25);
-	hash_init(fragsHashPtr, hashSize);
-	holder=malloc(2000*sizeof(char));
-    
 	
 	// Alloc memory for fragments
-	PROTECT(size = coerceVector(size, INTSXP));
-	p_size = INTEGER(size);
-	frags = malloc((p_size[0] + 1) * sizeof(read_t));
+	PROTECT(totFrags = coerceVector(totFrags, INTSXP));
+	frags_size = INTEGER(totFrags);
+	frags = malloc((frags_size[0] + 1) * sizeof(read_t));
 	
-	char tmpqname[50];
     
-	// Open bamFile
-	PROTECT(bamFileName = coerceVector(bamFileName, STRSXP));	
-	PROTECT(samtools = coerceVector(samtools, STRSXP));	
-	PROTECT(chromo = coerceVector(chromo, STRSXP));	
-	PROTECT(bam = coerceVector(bam, INTSXP));
-	p_bam=INTEGER(bam);
-	  if(p_bam[0]>0){
-	    if(strlen(CHAR(STRING_ELT(chromo,0)))>0) sprintf(comm, "%s/samtools view -f 2 %s %s ", CHAR(STRING_ELT(samtools,0)), CHAR(STRING_ELT(bamFileName,0)), CHAR(STRING_ELT(chromo,0)));
-	    else sprintf(comm, "%s/samtools view -f 2 %s ", CHAR(STRING_ELT(samtools,0)), CHAR(STRING_ELT(bamFileName,0)));
-	    printf("Reading file with: %s\n", comm);
-	    bamFile=popen(comm, "r");
-	  }
-	  else {
-	    if(strlen(CHAR(STRING_ELT(chromo,0)))>0) sprintf(comm, "awk '{if($3==\"%s\") print $0}' %s ", CHAR(STRING_ELT(chromo,0)), CHAR(STRING_ELT(bamFileName,0)));
-	    else sprintf(comm, "grep -v @ %s ", CHAR(STRING_ELT(bamFileName,0)));
-	    printf("Reading file with: %s\n", comm);
-	    bamFile=popen(comm, "r");
-	    if (bamFile == NULL) perror("Error opening bamFile file");  
-	  }
-	// Read BAM file and find paired reads  
-	totF=0;
-	while(fgets (holder, 1000, bamFile)!=0){
-	  if(verbose) printf("Read %d\n", totF);
-	  j=(int)strlen(holder);
-	  holder[j]='\0';
-	  holder[j-1]='\0';
-	  pch=strtok(m_strdup(holder), tab);
-	  strcpy(tmpqname, pch);
-	  l=hash_lookup(fragsHashPtr, tmpqname);
+	fragsHashPtr = &fragsHash;		
+	hashSize=frags_size[0];
+	hash_init(fragsHashPtr, hashSize);
+    
+	PROTECT(qname = coerceVector(qname, STRSXP));
+	PROTECT(flags = coerceVector(flags, INTSXP));
+    int *p_flags=INTEGER(flags);
+	PROTECT(chr = coerceVector(chr, STRSXP));
+    PROTECT(start = coerceVector(start, INTSXP));
+    int *p_start=INTEGER(start);
+	PROTECT(cigar = coerceVector(cigar, STRSXP));
+	PROTECT(totReads = coerceVector(totReads, INTSXP));
+	reads_size = INTEGER(totReads);
+	
+    totF=0;
+    	// Find paired reads and fill fragment's object 
+	for (i=0; i<frags_size[0]; i++) {
+   	  l=hash_lookup(fragsHashPtr, CHAR(STRING_ELT(qname, i)));
 	  if(l!=HASH_FAIL) {
-            addRead2Frag(holder, l, frags, 2);
-            if(verbose) printf("hold: %s st: %d fl: %d cig: %s l: %d\n", holder, frags[l].st_2, frags[l].flag_2, frags[l].cigar_2, l);
-        }
+            addRead2Frag(CHAR(STRING_ELT(qname, i)), p_flags[i], CHAR(STRING_ELT(chr, i)), p_start[i], CHAR(STRING_ELT(cigar, i)), l, frags, 2);
+// if(verbose) printf("qname: %s orig_cig %s st: %d fl: %d cig: %s l: %d\n", qname[i], cigar[i], frags[l].st_2, frags[l].flag_2, frags[l].cigar_2, l);
+		}
         else {
-            hash_insert(fragsHashPtr, tmpqname, totF);
-            addRead2Frag(holder, totF, frags, 1);
-            if(verbose) printf("hold: %s st: %d fl: %d cig: %s\n", holder, frags[totF].st_1, frags[totF].flag_1, frags[totF].cigar_1);
+            hash_insert(fragsHashPtr, CHAR(STRING_ELT(qname, i)), totF);
+            addRead2Frag(CHAR(STRING_ELT(qname, i)), p_flags[i], CHAR(STRING_ELT(chr, i)), p_start[i], CHAR(STRING_ELT(cigar, i)), totF, frags, 1);
+//   if(verbose) printf("qname: %s orig_cig: %s st: %d fl: %d cig: %s\n", qname[i], cigar[i], frags[totF].st_1, frags[totF].flag_1, frags[totF].cigar_1);
+            totF++;
         }
-        totF++;
     }
-
+printf("Finished importing data\n");
 	if(verbose) printf("%d %s %d %d %d\n", totF, frags[0].cigar_1, frags[0].st_1, frags[0].flag_1, frags[0].nreads);
     
 	SEXP len, strs, flag, key, chrom, rid;	
 	int tmp, *cigs, counter=0, *p_len, *p_strs, *p_flag, *p_rid;
 	
-	PROTECT(len = allocVector(INTSXP, totF*3));
-	PROTECT(strs = allocVector(INTSXP, totF*3));
-	PROTECT(flag = allocVector(INTSXP, totF*3));
-	PROTECT(rid = allocVector(INTSXP, totF*3));
-	PROTECT(key = allocVector(STRSXP, totF*3));
-	PROTECT(chrom = allocVector(STRSXP, totF*3));
+	PROTECT(len = allocVector(INTSXP, reads_size[0]));
+	PROTECT(strs = allocVector(INTSXP, reads_size[0]));
+	PROTECT(flag = allocVector(INTSXP, reads_size[0]));
+	PROTECT(rid = allocVector(INTSXP, reads_size[0]));
+	PROTECT(key = allocVector(STRSXP, reads_size[0]));
+	PROTECT(chrom = allocVector(STRSXP, reads_size[0]));
     
 	p_len=INTEGER(len);
 	p_strs=INTEGER(strs);
@@ -94,14 +74,14 @@ SEXP procBam(SEXP bamFileName, SEXP samtools, SEXP chromo, SEXP bam, SEXP size){
 	int *p_len1, *p_len2, *p_st1, *p_st2, *p_flag1, *p_flag2;
 	int count2=0;
     
-	PROTECT(len1 = allocVector(INTSXP, totF+1));
-	PROTECT(len2 = allocVector(INTSXP, totF+1));
-	PROTECT(st1 = allocVector(INTSXP, totF+1));
-	PROTECT(st2 = allocVector(INTSXP, totF+1));
-	PROTECT(flag1 = allocVector(INTSXP, totF+1));
-	PROTECT(flag2 = allocVector(INTSXP, totF+1));
-	PROTECT(chrom1 = allocVector(STRSXP, totF+1));
-	PROTECT(chrom2 = allocVector(STRSXP, totF+1));
+	PROTECT(len1 = allocVector(INTSXP, frags_size[0]+1));
+	PROTECT(len2 = allocVector(INTSXP, frags_size[0]+1));
+	PROTECT(st1 = allocVector(INTSXP, frags_size[0]+1));
+	PROTECT(st2 = allocVector(INTSXP, frags_size[0]+1));
+	PROTECT(flag1 = allocVector(INTSXP, frags_size[0]+1));
+	PROTECT(flag2 = allocVector(INTSXP, frags_size[0]+1));
+	PROTECT(chrom1 = allocVector(STRSXP, frags_size[0]+1));
+	PROTECT(chrom2 = allocVector(STRSXP, frags_size[0]+1));
     
 	p_len1=INTEGER(len1);
 	p_len2=INTEGER(len2);
@@ -110,8 +90,9 @@ SEXP procBam(SEXP bamFileName, SEXP samtools, SEXP chromo, SEXP bam, SEXP size){
 	p_flag1=INTEGER(flag1);
 	p_flag2=INTEGER(flag2);
     
-    
-	for(i=0; i<fragsHash.size; i++) {
+    printf("Number of reads %d/n", reads_size[0]);
+	
+    for(i=0; i<fragsHash.size; i++) {
 	  if(verbose) printf("%d %d\n", i, fragsHash.size);
 	  if(fragsHash.bucket[i]!=NULL)  {
             bucket=fragsHash.bucket[i];
@@ -143,8 +124,12 @@ SEXP procBam(SEXP bamFileName, SEXP samtools, SEXP chromo, SEXP bam, SEXP size){
 		  p_rid[counter] = 2;
 		  frags[tmp].len_2+=cigs[j];
 		  if((cigs[0]>1)&&(j<cigs[0]-1)) frags[tmp].len_2+=cigs[j+1];
-		  if(verbose) printf("2 %d %d %d %d\n", p_strs[counter], p_flag[counter], p_len[counter], counter);
-		  counter++;
+	if(verbose) printf("2 %d %d %d %d\n", p_strs[counter], p_flag[counter], p_len[counter], counter);
+            counter++;
+            //if(counter>reads_size[0]) {
+            //    printf("Too many reads\n");
+            //   break;
+            //}
 		}
 		if(verbose) printf("%s %d %d %s count %d \n", bucket->key, frags[tmp].st_1, frags[tmp].flag_1, frags[tmp].cigar_1, counter);
 		if(verbose) printf("%s %d %d %s %d %d count %d \n", bucket->key, frags[tmp].st_2, frags[tmp].flag_2, frags[tmp].cigar_2, cigs[0], cigs[1], counter);
@@ -159,6 +144,10 @@ SEXP procBam(SEXP bamFileName, SEXP samtools, SEXP chromo, SEXP bam, SEXP size){
 		p_flag2[count2] = frags[tmp].flag_2;
 		free(frags[tmp].qname);
 		count2++;
+              //if(count2>frags_size[0]){
+                //  printf("Too many fragments\n");
+                 // break;
+             // }
 	      }
 	      if(verbose) printf("%s %d %d %s %d\n", bucket->key, frags[tmp].st_1, frags[tmp].flag_1, frags[tmp].cigar_1, count2);
 	      bucket=bucket->next;
@@ -201,7 +190,6 @@ SEXP procBam(SEXP bamFileName, SEXP samtools, SEXP chromo, SEXP bam, SEXP size){
 	SET_VECTOR_ELT(lengths, 8, totRe);
     
 	free(frags);
-	free(holder);
-	UNPROTECT(24);
+	UNPROTECT(26);
 	return(ans);
 }

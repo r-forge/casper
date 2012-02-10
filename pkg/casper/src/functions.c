@@ -8,7 +8,7 @@
 //********** Functions ***********
 
 int *procCigar(char *cigar){
-	char *pch, *tab="MN";
+	char *pch, *tab="DIMN";
 	int *cigs;
 	cigs=malloc(50 * sizeof(int));
 	pch=strtok(cigar, tab);
@@ -22,33 +22,20 @@ int *procCigar(char *cigar){
 }
 
 
-void addRead2Frag(char *holder, int totF, read_t *frags, int read){
-	char *pch, tab[]="\t";
+void addRead2Frag(const char *qname, int flag, const char *chr, int start, const char *cigar, int totF, read_t *frags, int read){
 	if(read==1){
-		pch=strtok(holder, tab);
-        	frags[totF].qname = malloc(100 * sizeof(char));
-		strcpy(frags[totF].qname, pch);
-		pch=strtok(NULL, tab);
-		sscanf(pch, "%d", &frags[totF].flag_1);
-		pch=strtok(NULL, tab);
-		strcpy(frags[totF].chr_1, pch);
-		pch=strtok(NULL, tab);
-		sscanf(pch, "%d", &frags[totF].st_1);
-		pch=strtok(NULL, tab);
-		pch=strtok(NULL, tab);
-		strcpy(frags[totF].cigar_1, pch);
-		frags[totF].nreads=1;
+        frags[totF].qname = malloc(strlen(qname) * sizeof(char));
+		strcpy(frags[totF].qname, qname);
+        frags[totF].flag_1=flag;
+        strcpy(frags[totF].chr_1, chr);
+     	frags[totF].st_1=start;
+     	strcpy(frags[totF].cigar_1, cigar);
+  		frags[totF].nreads=1;
 	} else {    
-		pch=strtok(holder, tab);
-		pch=strtok(NULL, tab);
-		sscanf(pch, "%d", &frags[totF].flag_2);
-		pch=strtok(NULL, tab);
-		strcpy(frags[totF].chr_2, pch);
-		pch=strtok(NULL, tab);
-		sscanf(pch, "%d", &frags[totF].st_2);
-		pch=strtok(NULL, tab);
-		pch=strtok(NULL, tab);
-		strcpy(frags[totF].cigar_2, pch);
+        frags[totF].flag_2=flag;
+        strcpy(frags[totF].chr_2, chr);
+		frags[totF].st_2=start;
+     	strcpy(frags[totF].cigar_2, cigar);
 		frags[totF].nreads=2;
 	}   
 }

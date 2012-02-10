@@ -20,86 +20,23 @@ buildRD<-function(reads, frags){
     res
 }
     
+nbReads <- function(bam0) {
+    tab <- table(bam0$cigar)
+    count <- sapply(gregexpr("M",names(tab)),length)
+    sum(tab*count)
+}
 
-procBam<-function(bamFileName, samtools, chrom, bam, parallel){
-  require(IRanges)
-  if(!parallel){
-    if(bam>0){
-      size<-system(paste(samtools, "/samtools idxstats ", bamFileName, sep=""), intern=T)
-      size<-do.call(rbind, lapply(strsplit(size, "\t"), function(x) c(x[1], x[3])))
-      if(chrom!=""){
-        size<-as.numeric(size[size[,1]==chrom,][2])
-      } else {
-        size<-sum(as.numeric(size[,2]))
-      }
-    } else {
-      if(chrom!=""){      
-        size<-system(paste("grep ", chrom, " ", bamFileName, "| wc ", sep=""), intern=T)
-      } else size<-system(paste("wc ", bamFileName, sep=""), intern=T)
-      size<-strsplit(size, " ")
-      size<-as.numeric(size[[1]][size[[1]]!=""][1])
-    }
-    cat(paste("Reading file with ", size," reads\n"))
-    data<-.Call("procBam", bamFileName, samtools,  chrom, bam, size)
+procBam<-function(bam){
+    require(IRanges)
+ 
+    cat("Calculating total number of reads...\n")
+    nreads<-nbReads(bam)
     
+    cat("done.\nProcessing cigars and building read's object...\n")
+    data<-.Call("procBam", bam$qname, bam$flag,  bam$rname, bam$pos, bam$cigar, length(bam$pos), nreads)
+    cat("done.\n")
 	data[[1]]<-buildRD(reads=data[[1]], frags=NA)
     data[[2]]<-buildRD(reads=NA, frags=data[[2]])
     names(data)<-c("reads", "frags")
-      
-  } else {
-    if(bam>0){
-      size<-system(paste(samtools, "/samtools idxstats ", bamFileName, sep=""), intern=T)
-      size<-do.call(rbind, lapply(strsplit(size, "\t"), function(x) c(x[1], x[3])))
-      chroms<-size[size[,2]>0,1]
-      size<-as.numeric(size[size[,2]>0,2])
-      names(size)<-chroms
-      data<-lapply(names(size), function(x){
-        cat(paste("Reading chromosome ", x," with ", size[x]," reads\n"))
-        res<-.Call("procBam", bamFileName, samtools,  x, bam, size[x])
-        if(length(res[[1]][[1]])>0){
-                   
-        res[[1]]<-buildRD(reads=res[[1]], frags=NA)
-        res[[2]]<-buildRD(reads=NA, frags=res[[2]])
-                   
-        names(res)<-c("reads", "frags")
-        } else res<-NA
-        gc()
-        res
-      }
-      )
-      reads<-lapply(data[!is.na(data)], function(x) x$reads)
-      frags<-lapply(data[!is.na(data)], function(x) x$frags)
-      data<-list()
-      data$reads<-do.call(rbind, reads)
-      data$frags<-do.call(rbind, frags)
-      data
-    } else {
-      chroms<-system(paste("head -n 100 ", bamFileName, " | grep SQ ", sep=""), intern=T)
-      chroms<-lapply(chroms, function(x) strsplit(x, "\t")[[1]][2])
-      chroms<-lapply(chroms, function(x) strsplit(x, ":")[[1]][2])
-      data<-lapply(chroms, function(x){
-			size<-system(paste("awk '{print $3}' ", bamFileName, " | grep ", x, " | wc | awk '{print $1}' ", sep=""), intern=T)
-            size<-as.numeric(size)
-            cat(paste("Reading chromosome ", x," with ", size," reads\n"))
- 	if(size>0){
-       res<-.Call("procBam", bamFileName, samtools,  x, bam, size)
-	 } else res<-NULL
-        if(length(res[[1]][[1]])>0){
-            res[[1]]<-buildRD(reads=res[[1]], frags=NA)
-                   res[[2]]<-buildRD(reads=NA, frags=res[[2]])
-                   names(res)<-c("reads", "frags")
-
-        } else res<-NA
-                   gc()
-                   res
-                   })
-        reads<-lapply(data[!is.na(data)], function(x) x$reads)
-        frags<-lapply(data[!is.na(data)], function(x) x$frags)
-        data<-list()
-        data$reads<-do.call(rbind, reads)
-        data$frags<-do.call(rbind, frags)
-        data
-    }
-  }
-data
+    data
 }
