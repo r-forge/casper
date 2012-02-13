@@ -35,7 +35,7 @@ One alignment is chosen at random from those multihits with same start position 
 %%  \item{comp1 }{Description of 'comp1'}
 %%  \item{comp2 }{Description of 'comp2'}
 %% ...
-\item{reads}{A RangedData object with reads from fragments with both
+A RangedData object with reads from fragments with both
   ends correctly aligned after splitting them
   by the corresponding CIGAR. Unique identifiers by fragment are
   stored.}
