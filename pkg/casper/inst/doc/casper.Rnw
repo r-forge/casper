@@ -50,11 +50,14 @@ As an illustration, suppose paired end reads
 produced with the Illumina platform
 are stored
 in the FASTQ files \texttt{sampleR1.fastq} and \texttt{sampleR2.fastq}.
-The TopHap command to align these reads into a BAM file is:
+The TopHat command to align these reads into a BAM file is:
 
+\footnotesize
 \begin{verbatim}
-> tophat --solexa1.3-quals -p 4 -r 200 /Volumes/biostats/databases/bowtie-0.12.5_indexes/hg19 sampleR1.fastq sampleR2.fastq
+> tophat --solexa1.3-quals -p 4 -r 200 /pathToBowtieIndexes/hg19 
+sampleR1.fastq sampleR2.fastq
 \end{verbatim}
+\normalsize
 
 The option \texttt{--solexa1.3-quals} indicates the version of quality scores
 produced by the Illumina pipeline and \texttt{-p 4} to use 4 processors.
@@ -68,80 +71,180 @@ This can be used as a check that the specified \texttt{-r} was reasonable.
 In our experience, results are usually robust to moderate miss-specifications of \texttt{-r}.
 
 BAM files can be read into R using the \texttt{Rsamtools} package \citep{rpkg:Rsamtools}.
+For the sake of computational speed,
+in this vignette we will use data that has already been imported in a previous session.
+We indicate the code required to import the file below.
 
+\footnotesize
+\begin{verbatim}
+> library(Rsamtools)
+> what <- scanBamWhat(); what <- what[!(what %in% c('seq','qual'))]
+> flag <- scanBamFlag(isPaired=TRUE,hasUnmappedMate=FALSE)
+> param <- ScanBamParam(flag=flag,what=what)
+> bam0 <- scanBam(file='accepted_hits.bam',param=param)[[1]]
+\end{verbatim}
+\normalsize
+
+\section{Pre-processing the data for analysis}
+\label{sec:preprocess}
+
+We start by obtaining and processing genome annotation data.
+We included the processed human genome hg19 in the dataset \texttt{hg19DB}.
+The command used to produce \texttt{hg19DB} is
+
+\begin{verbatim}
+> hg19DB <- procGenome('hg19',mc.cores=6)
+\end{verbatim}
+
+We load the imported BAM file and processed human genome annotation.
+\texttt{bam0} is a list containing read-level information such as read identifier,
+chromosome and alignment position, position of the matched paired end etc.
+\texttt{hg19DB} is also a list, containing several kinds of information
+related to annotated genes, transcripts and exons.
+
+\footnotesize
+<<process1>>=
+library(casper)
+data(bam0)
+class(bam0)
+names(bam0)
+data(hg19DB)
+class(hg19DB)
+names(hg19DB)
+@ 
+\normalsize
+
+RNA-seq experiments typically contain some very short RNA sequences,
+which can be due to RNA degradation.
+The function \texttt{rmShortInserts} removes all sequences with insert size
+({\it i.e.} distance between start of left-end and start of right-end)
+below a user-specified level. We remove reads with insert sizes below 150bp.
+We then use \texttt{getDistrs} to estimate the fragment length distribution
+and the read start distribution.
+
+\footnotesize
+<<process2>>=
+bam0 <- rmShortInserts(bam0, isizeMin=150)
+distrs <- getDistrs(txs=hg19DB$txs,exons=hg19DB$exons,bam=bam0)
+@ 
+\normalsize
+
+We visualize the fragment length distribution.
+The resulting plot is shown in Figure \ref{fig:plotprocess1}, left panel.
+Notice how fragment lengths below 150bp have been removed.
+
+\footnotesize
+<<plotprocess1>>=
+n <- as.numeric(names(distrs$lenDis))
+plot(n,distrs$lenDis,type='l',xlab='Fragment length',ylab='Counts')
+@ 
+\normalsize
+
+We produce a histogram to inspect the read start distribution.
+The histogram reveals that reads are non-uniformly distributed
+along transcripts (Figure \ref{fig:plotprocess1}, right panel).
+Rather, there is a bias towards the 3' end.
+
+\footnotesize
+<<plotprocess2>>=
+hist(distrs$stDis,xlab='Read start',main='')
+@ 
+\normalsize
+
+\setkeys{Gin}{width=0.45\textwidth} 
+\begin{figure}
+\begin{center}
+\begin{tabular}{cc}
+<<label=plotprocess1,fig=TRUE,echo=FALSE>>=
+<<plotprocess1>>
+@ &
+<<label=plotprocess2,fig=TRUE,echo=FALSE>>=
+<<plotprocess2>>
+@ 
+\end{tabular}
+\end{center}
+\caption{Left: fragment length distribution; Right: read start distribution}
+\label{fig:plotprocess1}
+\end{figure}
+
+As a final pre-processing step, we use the function \texttt{procBam}
+to divide each read pair into a series of disjoint intervals.
+The intervals indicate genomic regions that the read
+aligned to 
+consecutively, {\it i.e.} with no gaps.
+
+\footnotesize
+<<procBam>>=
+pbam0 <- procBam(bam0)
+head(pbam0)
+@ 
+\normalsize
+
+The resulting object \texttt{pbam0} is of type \texttt{RangedData}.
+The first four rows share a common \texttt{id}, {\it i.e.} they correspond to the same read pair.
+Rows 1 and 2 correspond to the left end of the read (\texttt{rid}=1),
+and rows 3 and 4 to the right end (\texttt{rid}=2).
 
 \section{Estimating expression for a set of known variants}
 \label{sec:knownvar}
 
-Below we show the code needed to load and analyze some sample data 
-included with \texttt{casper}.
-Sample data was generated using real drosophila gene coordinates
-(ENTREZ id 43792) and preasigning the fraction of reads per variant to 
-\\
+In order to obtain expression estimates,
+we first determine the exons visited by each read,
+which we denominate the {\it exon path},
+and count the number of reads following 
+the same exon path.
 
-\begin{tabular}{ l | c | r }
-tx & frac \\
-\hline
-99 & 0.0254 \\
-100 & 0.0708 \\ 
-101 & 0.1083 \\
-102 & 0.1453 \\
-103 & 0.1784 \\
-104 & 0.2202 \\
-105 & 0.2513 \\
-\end{tabular}
-
-and assuming a linear fragment length distribution.
-
-<<code1>>=
-.libPaths('/software/R_libs')
-library(casper)
-
-genomeName="dm3"
-mc.cores=8
-genomeDB<-procGenome(genomeName, mc.cores)
-data(chr2data)
-distrs<-getDistrs(genomeDB$txs,  genomeDB$exons, data$frags, mc.cores=mc.cores)
-
-datadir<-system.file("extdata", package="casper")
-
-bamFileName<-paste(datadir, "/simulated500K.sam", sep="")
-data<-procBam(bamFileName, samtools="", chrom="", bam=0, parallel=FALSE)
-pathCounts<-pathCounts(data$reads, genomeDB$exonsNI)
-exp<-calcExp(distrs, genomeDB, pathCounts)
+\footnotesize
+<<pathCounts>>=
+pc <- pathCounts(pbam0, exons=hg19DB$exonsNI)
+head(pc)
 @ 
+\normalsize
 
-<<label=fig1,include=FALSE>>=
-geneExp<-genPlot(43792, genomeDB, data$reads, exp)
+The output of \texttt{pathCounts} is a 
+named integer vector counting exon paths. 
+The names follow the format ".exon1.exon2-exon3.exon4.", with
+dashes making the split between exons visited by left and
+right-end reads correspondingly.
+For instance, an element in \texttt{pc} named
+\texttt{.12633.12635-12637.12639.}
+indicates the number of reads for which the left end
+visited exons 12633 and 12635 
+and the right end visited exons 12637 and 12639.
+The precise genomic coordinates of each exon are stored in
+the annotated genome.
+
+The function \texttt{calcExp} uses the exon path counts,
+read start and  fragment length distributions and genome annotation
+to obtain RPKM expression estimates.
+Expression estimates are returned in an \texttt{ExpressionSet} object,
+with RefSeq transcript identifiers as \texttt{featureNames}
+and Entrez identifiers stored as feature data.
+
+\footnotesize
+<<calcExp>>=
+eset <- calcExp(distrs=distrs, genomeDB=hg19DB, pc=pc)
+eset
+head(exprs(eset))
+head(featureNames(eset))
+head(fData(eset))
 @ 
-\setkeys{Gin}{width=0.5\textwidth} 
-\begin{figure}
-\begin{center}
-<<label=fig1,fig=TRUE,echo=FALSE>>=
-<<fig1>>  
+\normalsize
+
+\texttt{calExp} returns absolute expression estimates for each isoform.
+However, in many alternative splicing studies the focus is on {\it relative} expression levels,
+{\it i.e.} the proportion of transcripts originating from each variant.
+These are easily obtained by dividing the expression estimate of each transcript
+by the sum for all transcripts of a given gene.
+The function \texttt{relIsoformExp} performs this simple calculation.
+
+\footnotesize
+<<relIsoformExpr>>=
+esetRel <- relIsoformExp(eset)
+head(exprs(esetRel))
 @ 
-\end{center}
-\caption{Aligned reads to variants from gene of interest}
-\label{fig1}
-\end{figure}
-@
-<<label=fig2,include=FALSE>>=
-cols<-rep(rainbow(min(length(geneExp$exp), 10)), ceiling(length(geneExp$exp)/10))
-barplot(geneExp$exp, col=cols)
-@ 
-\setkeys{Gin}{width=0.5\textwidth} 
-\begin{figure}
-\begin{center}
-<<label=fig2,fig=TRUE,echo=FALSE>>=
-<<fig2>>  
-@
-\end{center}
-\caption{Estimated expression of variants}
-\label{fig2}
-\end{figure}
-<<code2>>=
-geneExp$exp
-@ 
+\normalsize
+
 
 \bibliographystyle{plainnat}
 \bibliography{references} 
