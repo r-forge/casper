@@ -52,7 +52,6 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP totF
             totF++;
         }
     }
-printf("Finished importing data\n");
 	if(verbose) printf("%d %s %d %d %d\n", totF, frags[0].cigar_1, frags[0].st_1, frags[0].flag_1, frags[0].nreads);
     
 	SEXP len, strs, flag, key, chrom, rid;	
@@ -90,7 +89,6 @@ printf("Finished importing data\n");
 	p_flag1=INTEGER(flag1);
 	p_flag2=INTEGER(flag2);
     
-    printf("Number of reads %d/n", reads_size[0]);
 	
     for(i=0; i<fragsHash.size; i++) {
 	  if(verbose) printf("%d %d\n", i, fragsHash.size);
@@ -126,10 +124,6 @@ printf("Finished importing data\n");
 		  if((cigs[0]>1)&&(j<cigs[0]-1)) frags[tmp].len_2+=cigs[j+1];
 	if(verbose) printf("2 %d %d %d %d\n", p_strs[counter], p_flag[counter], p_len[counter], counter);
             counter++;
-            //if(counter>reads_size[0]) {
-            //    printf("Too many reads\n");
-            //   break;
-            //}
 		}
 		if(verbose) printf("%s %d %d %s count %d \n", bucket->key, frags[tmp].st_1, frags[tmp].flag_1, frags[tmp].cigar_1, counter);
 		if(verbose) printf("%s %d %d %s %d %d count %d \n", bucket->key, frags[tmp].st_2, frags[tmp].flag_2, frags[tmp].cigar_2, cigs[0], cigs[1], counter);
