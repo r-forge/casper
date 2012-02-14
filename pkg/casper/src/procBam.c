@@ -9,7 +9,8 @@
 #include "functions.h"
 #include "fragFunc.h"
 
-SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP totFrags, SEXP totReads){
+
+SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP totFrags, SEXP totReads, SEXP len, SEXP strs, SEXP flag, SEXP key, SEXP chrom, SEXP rid){
 	read_t *frags;
 	int totF, j, l, hashSize, i, *frags_size, *reads_size;
 	hash_t *fragsHashPtr, fragsHash;
@@ -54,136 +55,86 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP totF
     }
 	if(verbose) printf("%d %s %d %d %d\n", totF, frags[0].cigar_1, frags[0].st_1, frags[0].flag_1, frags[0].nreads);
     
-	SEXP len, strs, flag, key, chrom, rid;	
-	int tmp, *cigs, counter=0, *p_len, *p_strs, *p_flag, *p_rid;
+	//SEXP len, strs, flag, key, chrom, rid;	
+	int tmp, *cigs, counter=0;
 	
-	PROTECT(len = allocVector(INTSXP, reads_size[0]));
-	PROTECT(strs = allocVector(INTSXP, reads_size[0]));
-	PROTECT(flag = allocVector(INTSXP, reads_size[0]));
-	PROTECT(rid = allocVector(INTSXP, reads_size[0]));
-	PROTECT(key = allocVector(STRSXP, reads_size[0]));
-	PROTECT(chrom = allocVector(STRSXP, reads_size[0]));
+//  PROTECT(len = allocVector(INTSXP, reads_size[0]));
+//	PROTECT(strs = allocVector(INTSXP, reads_size[0]));
+//	PROTECT(flag = allocVector(INTSXP, reads_size[0]));
+//	PROTECT(rid = allocVector(INTSXP, reads_size[0]));
+//	PROTECT(key = allocVector(STRSXP, reads_size[0]));
+//	PROTECT(chrom = allocVector(STRSXP, reads_size[0]));
+ 
+    PROTECT(len = coerceVector(len, INTSXP));
+    int *p_len=INTEGER(len);
+	PROTECT(flag = coerceVector(flag, INTSXP));
+    int *p_flag=INTEGER(flag);
+	PROTECT(chrom = coerceVector(chrom, STRSXP));
+    PROTECT(strs = coerceVector(strs, INTSXP));
+    int *p_strs=INTEGER(strs);
+	PROTECT(key = coerceVector(key, STRSXP));
+    PROTECT(rid = coerceVector(rid, INTSXP));
+    int *p_rid=INTEGER(rid);
     
-	p_len=INTEGER(len);
-	p_strs=INTEGER(strs);
-	p_flag=INTEGER(flag);
-	p_rid=INTEGER(rid);
     
-	SEXP len1, len2, st1, st2, flag1, flag2, chrom1, chrom2;
-	int *p_len1, *p_len2, *p_st1, *p_st2, *p_flag1, *p_flag2;
-	int count2=0;
-    
-	PROTECT(len1 = allocVector(INTSXP, frags_size[0]+1));
-	PROTECT(len2 = allocVector(INTSXP, frags_size[0]+1));
-	PROTECT(st1 = allocVector(INTSXP, frags_size[0]+1));
-	PROTECT(st2 = allocVector(INTSXP, frags_size[0]+1));
-	PROTECT(flag1 = allocVector(INTSXP, frags_size[0]+1));
-	PROTECT(flag2 = allocVector(INTSXP, frags_size[0]+1));
-	PROTECT(chrom1 = allocVector(STRSXP, frags_size[0]+1));
-	PROTECT(chrom2 = allocVector(STRSXP, frags_size[0]+1));
-    
-	p_len1=INTEGER(len1);
-	p_len2=INTEGER(len2);
-	p_st1=INTEGER(st1);
-	p_st2=INTEGER(st2);
-	p_flag1=INTEGER(flag1);
-	p_flag2=INTEGER(flag2);
-    
-	
     for(i=0; i<fragsHash.size; i++) {
-	  if(verbose) printf("%d %d\n", i, fragsHash.size);
-	  if(fragsHash.bucket[i]!=NULL)  {
+        if(verbose) printf("%d %d\n", i, fragsHash.size);
+        if(fragsHash.bucket[i]!=NULL)  {
             bucket=fragsHash.bucket[i];
             while(bucket) {
-	      tmp=bucket->data;
-	      if(frags[tmp].nreads==2) {
-		cigs=procCigar(m_strdup(frags[tmp].cigar_1));
-		frags[tmp].len_1=frags[tmp].st_1;
-		for(j=1; j<cigs[0]+1;j=j+2) {
-		  SET_STRING_ELT(key, counter, mkChar(bucket->key));
-		  SET_STRING_ELT(chrom, counter, mkChar(frags[tmp].chr_1));
-		  p_strs[counter] = frags[tmp].len_1;
-		  p_len[counter] = frags[tmp].len_1+(cigs[j]-1);
-		  p_flag[counter] = frags[tmp].flag_1;
-		  p_rid[counter] = 1;
-		  frags[tmp].len_1+=cigs[j];
-		  if((cigs[0]>1)&&(j<cigs[0]-1)) frags[tmp].len_1+=cigs[j+1];
-		  if(verbose) printf("1 %d %d %d %d\n", p_strs[counter], p_flag[counter], p_len[counter], counter);
-		  counter++;
-		}
-		cigs=procCigar(m_strdup(frags[tmp].cigar_2));
-		frags[tmp].len_2=frags[tmp].st_2;
-		for(j=1; j<cigs[0]+1;j=j+2) {        
-		  SET_STRING_ELT(key, counter, mkChar(bucket->key));
-		  SET_STRING_ELT(chrom, counter, mkChar(frags[tmp].chr_2));
-		  p_strs[counter] = frags[tmp].len_2;
-		  p_len[counter] = frags[tmp].len_2+(cigs[j]-1);
-		  p_flag[counter] = frags[tmp].flag_2;
-		  p_rid[counter] = 2;
-		  frags[tmp].len_2+=cigs[j];
-		  if((cigs[0]>1)&&(j<cigs[0]-1)) frags[tmp].len_2+=cigs[j+1];
-	if(verbose) printf("2 %d %d %d %d\n", p_strs[counter], p_flag[counter], p_len[counter], counter);
-            counter++;
-		}
-		if(verbose) printf("%s %d %d %s count %d \n", bucket->key, frags[tmp].st_1, frags[tmp].flag_1, frags[tmp].cigar_1, counter);
-		if(verbose) printf("%s %d %d %s %d %d count %d \n", bucket->key, frags[tmp].st_2, frags[tmp].flag_2, frags[tmp].cigar_2, cigs[0], cigs[1], counter);
-		if(verbose) if((frags[tmp].len_1<0)||(frags[tmp].len_2<0)) printf("caca %s %d %d %d %d %d count %d \n", bucket->key, frags[tmp].st_1, frags[tmp].len_1, frags[tmp].st_2, frags[tmp].len_2, j, counter);
-		SET_STRING_ELT(chrom1, count2, mkChar(frags[tmp].chr_1));
-		SET_STRING_ELT(chrom2, count2, mkChar(frags[tmp].chr_2));
-		p_st1[count2] = frags[tmp].st_1;
-		p_st2[count2] = frags[tmp].st_2;
-		p_len1[count2] = frags[tmp].len_1;
-		p_len2[count2] = frags[tmp].len_2;
-		p_flag1[count2] = frags[tmp].flag_1;
-		p_flag2[count2] = frags[tmp].flag_2;
-		free(frags[tmp].qname);
-		count2++;
-              //if(count2>frags_size[0]){
-                //  printf("Too many fragments\n");
-                 // break;
-             // }
-	      }
-	      if(verbose) printf("%s %d %d %s %d\n", bucket->key, frags[tmp].st_1, frags[tmp].flag_1, frags[tmp].cigar_1, count2);
-	      bucket=bucket->next;
+                tmp=bucket->data;
+                cigs=malloc(50 * sizeof(int));
+                if(frags[tmp].nreads==2) {
+                    cigs=procCigar(m_strdup(frags[tmp].cigar_1), cigs);
+                    frags[tmp].len_1=frags[tmp].st_1;
+                    for(j=1; j<cigs[0]+1;j=j+2) {
+                        SET_STRING_ELT(key, counter, mkChar(bucket->key));
+                        SET_STRING_ELT(chrom, counter, mkChar(frags[tmp].chr_1));
+                        p_strs[counter] = frags[tmp].len_1;
+                        p_len[counter] = frags[tmp].len_1+(cigs[j]-1);
+                        p_flag[counter] = frags[tmp].flag_1;
+                        p_rid[counter] = 1;
+                        frags[tmp].len_1+=cigs[j];
+                        if((cigs[0]>1)&&(j<cigs[0]-1)) frags[tmp].len_1+=cigs[j+1];
+                        if(verbose) printf("1 %d %d %d %d\n", p_strs[counter], p_flag[counter], p_len[counter], counter);
+                        counter++;
+                    }
+                    cigs=procCigar(m_strdup(frags[tmp].cigar_2), cigs);
+                    frags[tmp].len_2=frags[tmp].st_2;
+                    for(j=1; j<cigs[0]+1;j=j+2) {        
+                        SET_STRING_ELT(key, counter, mkChar(bucket->key));
+                        SET_STRING_ELT(chrom, counter, mkChar(frags[tmp].chr_2));
+                        p_strs[counter] = frags[tmp].len_2;
+                        p_len[counter] = frags[tmp].len_2+(cigs[j]-1);
+                        p_flag[counter] = frags[tmp].flag_2;
+                        p_rid[counter] = 2;
+                        frags[tmp].len_2+=cigs[j];
+                        if((cigs[0]>1)&&(j<cigs[0]-1)) frags[tmp].len_2+=cigs[j+1];
+                        if(verbose) printf("2 %d %d %d %d\n", p_strs[counter], p_flag[counter], p_len[counter], counter);
+                        counter++;
+                        
+                    }
+                }
+                free(frags[tmp].qname);
+                free(cigs);
+                if(verbose) printf("%s %d %d %s\n", bucket->key, frags[tmp].st_1, frags[tmp].flag_1, frags[tmp].cigar_1);
+                bucket=bucket->next;
             }
-	  }
+        }
 	}
     
-	SEXP ans, totFr, totRe, lengths, reads;	
-	int *p_totFr, *p_totRe;
-    
-	PROTECT(ans = allocVector(VECSXP, 2));
-	PROTECT(lengths = allocVector(VECSXP, 9));
+	SEXP reads;
 	PROTECT(reads = allocVector(VECSXP, 7));
-	PROTECT(totFr = allocVector(INTSXP, 1));
-	PROTECT(totRe = allocVector(INTSXP, 1));
-	p_totFr = INTEGER(totFr);
-	p_totFr[0] = counter;
-	p_totRe = INTEGER(totRe);
-	p_totRe[0] = count2;
-    
-	SET_VECTOR_ELT(ans, 0, reads);
-	SET_VECTOR_ELT(ans, 1, lengths);
-	
 	SET_VECTOR_ELT(reads, 0, len);
 	SET_VECTOR_ELT(reads, 1, strs);
 	SET_VECTOR_ELT(reads, 2, flag);
 	SET_VECTOR_ELT(reads, 3, key);
 	SET_VECTOR_ELT(reads, 4, chrom);
 	SET_VECTOR_ELT(reads, 5, rid);
-	SET_VECTOR_ELT(reads, 6, totFr);
     
-	SET_VECTOR_ELT(lengths, 0, st1);
-	SET_VECTOR_ELT(lengths, 1, len1);
-	SET_VECTOR_ELT(lengths, 2, st2);
-	SET_VECTOR_ELT(lengths, 3, len2);
-	SET_VECTOR_ELT(lengths, 4, flag1);
-	SET_VECTOR_ELT(lengths, 5, flag2);
-	SET_VECTOR_ELT(lengths, 6, chrom1);
-	SET_VECTOR_ELT(lengths, 7, chrom2);
-	SET_VECTOR_ELT(lengths, 8, totRe);
-    
-	free(frags);
-	UNPROTECT(26);
-	return(ans);
+    printf("Ciao 1\n");
+  	free(frags);
+    hash_destroy(fragsHashPtr);
+	UNPROTECT(14);
+	return(reads);
 }

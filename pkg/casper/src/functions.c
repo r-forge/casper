@@ -7,10 +7,8 @@
 
 //********** Functions ***********
 
-int *procCigar(char *cigar){
+int *procCigar(char *cigar, int *cigs){
 	char *pch, *tab="DIMN";
-	int *cigs;
-	cigs=malloc(50 * sizeof(int));
 	pch=strtok(cigar, tab);
 	cigs[0]=0;
 	while(pch!=NULL){
@@ -24,7 +22,7 @@ int *procCigar(char *cigar){
 
 void addRead2Frag(const char *qname, int flag, const char *chr, int start, const char *cigar, int totF, read_t *frags, int read){
 	if(read==1){
-        frags[totF].qname = malloc(strlen(qname) * sizeof(char));
+        frags[totF].qname = malloc((strlen(qname)+1) * sizeof(char));
 		strcpy(frags[totF].qname, qname);
         frags[totF].flag_1=flag;
         strcpy(frags[totF].chr_1, chr);
