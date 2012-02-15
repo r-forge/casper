@@ -115,9 +115,13 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP totF
                         
                     }
                 }
-                free(frags[tmp].qname);
-                free(cigs);
                 if(verbose) printf("%s %d %d %s\n", bucket->key, frags[tmp].st_1, frags[tmp].flag_1, frags[tmp].cigar_1);
+                free(frags[tmp].qname);
+                free(frags[tmp].chr_1);
+                free(frags[tmp].chr_2);
+                free(frags[tmp].cigar_1);
+                free(frags[tmp].cigar_2);
+                free(cigs);
                 bucket=bucket->next;
             }
         }
@@ -132,7 +136,6 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP totF
 	SET_VECTOR_ELT(reads, 4, chrom);
 	SET_VECTOR_ELT(reads, 5, rid);
     
-    printf("Ciao 1\n");
   	free(frags);
     hash_destroy(fragsHashPtr);
 	UNPROTECT(14);

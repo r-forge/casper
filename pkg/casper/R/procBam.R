@@ -59,5 +59,6 @@ procBam<-function(bam, seed=1){
     data<-lapply(data, "[", sel)  
     cat("done.\n")
 	ans<-buildRD(data)
+    ans<-ans[start(ans)!=0,]
     ans
 }
