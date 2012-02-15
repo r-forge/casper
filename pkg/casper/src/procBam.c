@@ -7,7 +7,6 @@
 #include "header.h"
 #include "hash.h"
 #include "functions.h"
-#include "fragFunc.h"
 
 
 SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP totFrags, SEXP totReads, SEXP len, SEXP strs, SEXP flag, SEXP key, SEXP chrom, SEXP rid){
