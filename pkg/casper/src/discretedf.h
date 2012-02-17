@@ -1,17 +1,15 @@
+
+// discrete density function for values 0 to size
 class DiscreteDF
 {
 public:
-	int MinimumX;
-	int MaximumX;
+	DiscreteDF(double* data, int size);
 
-	DiscreteDF(int size);
-
-	double Get(int i);
-	void Set(int i, double value);
-
-	DiscreteDF* GetCumulative();
+	int size;
+	double probability(int i);
+	double cumulativeProbability(int i);
 
 private:
-	double* data;
-	int size;
+	double* prob;
+	double* cumu;
 };
