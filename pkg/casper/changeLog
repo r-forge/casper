@@ -1,5 +1,7 @@
 Changes in version 0.0.3
 - Fixed memory issues in procBam
+- Fixed memory issues in pathCounts
+- Fixed bug in procBam
 
 Changes in version 0.0.2
 - Fixed bug in read start distribution estimation
