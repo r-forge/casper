@@ -29,7 +29,6 @@ typedef struct path_t {
 	int count;
 	int incomp;
 	int island;
-	char name[50];
 } path_t;
 
 int verbose;

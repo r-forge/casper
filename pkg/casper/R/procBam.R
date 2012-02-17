@@ -9,6 +9,7 @@ buildRD<-function(reads){
 }
 
 uniquifyQname<-function(bam, seed=1){   	
+    bam$rname<-as.character(bam$rname)
     sel<-bam$pos>bam$mpos
     bam$qname[sel]<-paste(bam$qname[sel], ".", bam$pos[sel], ".",bam$mpos[sel], sep="")
     sel<-bam$pos<=bam$mpos
@@ -44,6 +45,7 @@ nbReads <- function(bam0) {
 
 procBam<-function(bam, seed=1){
     require(IRanges)
+    bam$rname<-as.character(bam$rname)
     bam<-uniquifyQname(bam, seed)
     cat("Calculating total number of reads...\n")
     nreads<-nbReads(bam)    
@@ -55,10 +57,9 @@ procBam<-function(bam, seed=1){
     key=vector(mode="character", length=nreads)
     chrom=vector(mode="character", length=nreads)
     data<-.Call("procBam", bam$qname, bam$flag,  bam$rname, bam$pos, bam$cigar, length(bam$pos), nreads, len, strs, flag, key, chrom, rid)
-	sel<-!is.na(data[[2]])
+    sel<-data[[1]]!=0 & !is.na(data[[3]])
     data<-lapply(data, "[", sel)  
     cat("done.\n")
 	ans<-buildRD(data)
-    ans<-ans[start(ans)!=0,]
     ans
 }

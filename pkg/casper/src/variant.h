@@ -1,43 +1,28 @@
-#include "gene.h"
-#include "fragment.h"
+#include <map>
+#include "exon.h"
 
 using namespace std;
 
 class Variant
 {
+	friend class Casper;
+
 public:
 	int id;
-	// ordered array of exons of this variant
-	Exon** exons;
 	int exonCount;
-	// positions of the exons
+	int* exons;
 	int* positions;
-	// bp length of this variant
 	int length;
-	Gene* gene;
-	// forward or backward strand
-	//bool strand;
 
-	// used for hashing
-	int codelen;
-	int* codes;
-	int hashcode;
+	Variant(int id, int exonCount);
 
-	Variant(Gene* gene, vector<Exon*>* exons);
-
-	// index of the exon in the exon list of this variant
+	void addExon(Exon* e);
+	void addExon(int exonid, int exonlength);
 	int indexOf(int exonid);
-	// checks whether this variant could explain the fragment
 	bool contains(Fragment* frag);
-	// checks whether the exon is used in this variant
-	bool contains(Exon* v);
 	
-	// compares two variants, 0 if equal. -1 and +1 used for sorting in maps
-	int compare(const Variant* other);
-	// hash for this variant
-	int gethash();
-	
+	int num;
 private:
-	// mapping of exonid to position in variant
-	unordered_map<int, int> idmap;
+	map<int, int> idmap;
+	int curexon;
 };
