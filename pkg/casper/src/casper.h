@@ -1,51 +1,52 @@
-#include <map>
+#include "dataframe.h"
+#include "cstat.h"
 #include <list>
 #include <vector>
-#include "discretedf.h"
-#include "fragment.h"
-#include "variant.h"
 
 using namespace std;
 
 class Casper
 {
-public:
-	Casper();
+ public:
+  Casper(Model* model, DataFrame* frame);
 
-	void addVariant(Variant* v);
-	void addExon(Exon* e);
-	Exon* addExon(int id, int start, int end);
-	Exon* getExon(int id);
-	void addFragment(Fragment* f);
-	void removeVariant(Variant* v);
-	void setDistributions(DiscreteDF* fraglendist, double(*fragstadist)(double));
+  // current model (set of variants) that tries to explain the data
+  Model* model;
+  // data
+  DataFrame* frame;
 
-	int varcount();
-	
-	double* randomPi();
-	double* calculateEM(double* pi);
-	double* calcualteGibs(double* pi);
-	double* calculateMH(double* pi);
-	double* calcualteLogLikelihood(double* pi);
-	
-	map<int, Exon*> exons;
-	list<Fragment*> fragments;
-	vector<Variant*> variants;
+  // gives the mode given the current model and data
+  double* calculateMode();
+  // gives the integral given the current model and data
+  double calculateIntegral();
 
-	map<Variant*, map<Fragment*, double> > memvprobs;
-private:
+  // returns whether the current model is valid
+  bool isValid();
 
-	map<Fragment*, map<Variant*, double> > mempprobs;
-	
-	DiscreteDF* fraglen_prob;
-	DiscreteDF* fraglen_cumu;
-	double (*fragsta_cumu)(double x);
+  // random double between 0 and 1
+  static double randd();
+  // random int between 0 incl and n excl
+  static int randi(int n);
+ private:
+  unordered_map<Fragment*, unordered_map<Variant*, double> > mempprobs;
+  unordered_map<Variant*, unordered_map<Fragment*, double> > memvprobs;
 
-	static const int frag_readlen;
-	static const int em_maxruns;
-	static const double em_maxprec;
+  static const int is_runs;
+  static const int em_maxruns;
+  static const double mh_gammah;
+  static const double prior_q;
+  
+  double priorLn(double* pi);
+  double likelihoodLn(double* pi);
+  double priorLikelihoodLn(double* pi);
 
-	double psi(double x);
-	double prob(int fs, int fe, int bs, int be, int* pos, double T);
-	double randd();
+  unordered_map<Fragment*, double> fragdist(double* pi);
+
+  double** normapprox(double** G, double*** H, double* mode, double* thmode, int n);
+  double* mlogit(double* pi, int n);
+  double* milogit(double* theta, int n);
+  double** vtGradG(double* th, int n);
+  double vtGradLogdet(double** G, int n);
+  double*** vtHess(double* th, int n);
+  double det(double** a, int n);
 };
