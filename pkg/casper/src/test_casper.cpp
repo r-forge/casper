@@ -1,4 +1,5 @@
 #include "seppelsmart.h"
+#include <cstdlib>
 #include <stdio.h>
 #include <tchar.h>
 #include <time.h>

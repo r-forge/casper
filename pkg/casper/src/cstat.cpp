@@ -24,8 +24,7 @@ static int set=0;
 FILE	*ifile, *ofile;
 int nv = 0;
 
-long Xm1,Xm2,Xa1,Xa2,Xcg1[32],Xcg2[32],Xa1w,Xa2w,Xig1[32],Xig2[32],Xlg1[32],
-    Xlg2[32],Xa1vw,Xa2vw;
+long Xm1,Xm2,Xa1,Xa2,Xcg1[32],Xcg2[32],Xa1w,Xa2w,Xig1[32],Xig2[32],Xlg1[32],Xlg2[32],Xa1vw,Xa2vw;
 long Xqanti[32];
 
 
@@ -4443,7 +4442,7 @@ void setall(long iseed1,long iseed2)
 extern void gsrgs(long getset,long *qvalue);
 extern void gssst(long getset,long *qset);
 extern void gscgn(long getset,long *g);
-extern long Xm1,Xm2,Xa1vw,Xa2vw,Xig1[],Xig2[];
+extern long Xm1,Xm2,Xa1vw,Xa2vw,Xig1[32],Xig2[32];
 static long T1;
 static long g,ocgn;
 static long qrgnin;
@@ -4496,7 +4495,7 @@ void initgn(long isdtyp)
 #define numg 32L
 extern void gsrgs(long getset,long *qvalue);
 extern void gscgn(long getset,long *g);
-extern long Xm1,Xm2,Xa1w,Xa2w,Xig1[],Xig2[],Xlg1[],Xlg2[],Xcg1[],Xcg2[];
+extern long Xm1,Xm2,Xa1w,Xa2w,Xig1[32],Xig2[32],Xlg1[32],Xlg2[32],Xcg1[32],Xcg2[32];
 static long g;
 static long qrgnin;
 /*
@@ -4554,8 +4553,8 @@ long ignlgi(void)
 extern void gsrgs(long getset,long *qvalue);
 extern void gssst(long getset,long *qset);
 extern void gscgn(long getset,long *g);
-extern long Xm1,Xm2,Xa1,Xa2,Xcg1[],Xcg2[];
-extern long Xqanti[];
+extern long Xm1,Xm2,Xa1,Xa2,Xcg1[32],Xcg2[32];
+extern long Xqanti[32];
 static long ignlgi,curntg,k,s1,s2,z;
 static long qqssd,qrgnin;
 /*
@@ -4604,7 +4603,7 @@ void inrgcm(void)
 #define numg 32L
 extern void gsrgs(long getset,long *qvalue);
 extern long Xm1,Xm2,Xa1,Xa2,Xa1w,Xa2w,Xa1vw,Xa2vw;
-extern long Xqanti[];
+extern long Xqanti[32];
 static long T1;
 static long i;
 /*

@@ -1,4 +1,5 @@
 #include "seppelexact.h"
+#define DBL_MAX 1.79769e+308;
 
 SeppelExact::SeppelExact(DataFrame* frame, Gene* gene)
 {
