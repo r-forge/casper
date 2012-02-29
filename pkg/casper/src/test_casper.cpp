@@ -1,7 +1,7 @@
 #include "seppelsmart.h"
 #include <cstdlib>
 #include <stdio.h>
-#include <tchar.h>
+//#include <tchar.h>
 #include <time.h>
 
 using namespace std;
@@ -122,8 +122,8 @@ Casper* example()
 	return casp;
 }
 
-int _tmain(int argc, _TCHAR* argv[])
-{
+int _tmain() {
+//int _tmain(int argc, _TCHAR* argv[])
 	srand((unsigned)time( NULL ));
 
 	Casper* c = example();
