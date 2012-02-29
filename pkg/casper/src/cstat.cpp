@@ -356,8 +356,9 @@ void lm (double *b, double **XtX, double **invXtX, double *Xty, double *s, doubl
       - ypred: predicted values i.e. X'b
  */
   int i;
+  char proc[]="lm", act[]="linear model with more variables than observations";
 
-  if (*n<*p) errorC("lm", "linear model with more variables than observations", 0);
+  if (*n<*p) errorC(proc, act, 0);
 
   if (*useXtX==0) {
     AtB(X,1,*n,1,*p,X,1,*n,1,*p,XtX);
@@ -502,9 +503,10 @@ void lmbayes_knownvar (double *bpost, double *b, double **Vb, double **XtX, doub
 /* open file for input */
 FILE *openIn(char *name)
 {
+  char proc[]="openIn", act[]="open file for read";
   assert(name != NULL);
   if ((ifile = fopen(name, "r")) == NULL) {
-    fserror("openIn", "open file for read", name);
+    fserror(proc, act, name);
   }
   return(ifile);
 }
@@ -513,9 +515,10 @@ FILE *openIn(char *name)
 
 FILE *openOut(char *name)
 {
+  char proc[]="openOut", act[]="open file for read";
   assert(name != NULL);
   if ((ofile = fopen(name, "w")) == NULL) {
-    fserror("openOut", "open file for write", name);
+    fserror(proc, act, name);
   }
   return ofile;
 }
@@ -686,35 +689,37 @@ FILE *openOut(char *name)
 void writeInt(int i)
 {
   int s;
+  char proc[]="writeInt", act[]="write integer to file", what[]="";
   s=fprintf(ofile,"%d\n",i);
   if(s<0)
-    fserror("writeInt", "write int", "");
+    fserror(proc, act, what);
 }
 
 void writeLong(long i)
 {
   int s;
+  char proc[]="writeLong", act[]="write long to file", what[]="";
   s=fprintf(ofile,"%ld\n",i);
   if (s<0)
-    fserror("writeLong", "write long", "");
-    
+    fserror(proc, act, what);   
 }
 
 void writeFloat(float x)
 {
   int s;
+  char proc[]="writeFloat", act[]="write float to file", what[]="";
   s=fprintf(ofile,"%f\n",x);
   if (s<0)
-    fserror("writeFloat", "write float", "");
-  
+    fserror(proc, act, what);   
 }
 
 void writeDouble(double x)
 {
   int s;
+  char proc[]="writeDouble", act[]="write double to file", what[]="";
   s=fprintf(ofile,"%5.3e\n",x);
   if (s<0)
-    fserror("writeDouble", "write double", "");
+    fserror(proc, act, what);   
 }
 
 
@@ -723,6 +728,7 @@ void writeDouble(double x)
 void fwriteDoubleArray(FILE *f, double *x, int rows, int cols)
 {
   int	i,j,s1,s2;
+  char proc[]="fwriteDoubleArray", act[]="write double array", what[]="";
   
   s1 = 0;
   for(i=0;i<rows;i++){
@@ -733,14 +739,14 @@ void fwriteDoubleArray(FILE *f, double *x, int rows, int cols)
       if (s1<0) break;
     }
     s2=fprintf(f,"\n");
-    if ((s2<0)|(s1<0))
-      fserror("fwriteDoubleArray", "write double array", "");
+    if ((s2<0)|(s1<0)) fserror(proc, act, what);   
   }
 }
 
 void fwriteIntArray(FILE *f, int *x, int rows, int cols)
 {
   int	i,j,s1,s2;
+  char proc[]="fwriteIntArray", act[]="write int array", what[]="";
   
   s1 = 0;
   for(i=0;i<rows;i++){
@@ -751,8 +757,7 @@ void fwriteIntArray(FILE *f, int *x, int rows, int cols)
       if (s1<0) break;
     }
     s2=fprintf(f,"\n");
-    if ((s2<0)|(s1<0))
-      fserror("fwriteIntArray", "write int array", "");
+    if ((s2<0)|(s1<0)) fserror(proc, act, what);   
   }
 }
 
@@ -765,14 +770,14 @@ void writeIntArray(int *x, int rows, int cols)
 void fwriteIntMatrix(FILE *f, int **x, int rows, int cols)
 {
   int	i,j,s1;
+  char proc[]="fwriteIntMatrix", act[]="write int matrix", what[]="";
   
   for(i=0;i<rows;i++){
     for(j=0;j<cols;j++){
       if(j%10 == 9)
 	fprintf(f,"\n\t");
       s1=fprintf(f,"%d\t",x[i][j]);
-      if (s1<0) 
-	fserror("fwriteIntMatrix", "write int matrix", "");
+      if (s1<0) fserror(proc, act, what);
     }
     fprintf(f,"\n");
   }
@@ -791,6 +796,7 @@ void writeDoubleArray(double *x,int rows,int cols)
 void fwriteDoubleMatrix2(FILE *f, double **x, int rows, int cols)
 {
   int	i, j, s;
+  char proc[]="fwriteDoubleMatrix2", act[]="write double matrix", what[]="";
   
   for(i=0;i<rows;i++){
     for(j=0;j<cols;j++){
@@ -798,8 +804,7 @@ void fwriteDoubleMatrix2(FILE *f, double **x, int rows, int cols)
 	fprintf(f,"\n\t");
       }
       s=fprintf(f,"%5.3e ",x[i][j]);
-      if (s<0)
-	fserror("fwriteDoubleMatrix2", "write double matrix", "");
+      if (s<0) fserror(proc, act, what);
     }
     fprintf(f,"\n");
   }
@@ -813,6 +818,7 @@ void writeDoubleMatrix2(double **x, int rows, int cols)
 void writeDoubleMatrix(double **x, int rows, int cols)
 {
   int	i,j, c,s;
+  char proc[]="fwriteDoubleMatrix", act[]="write double matrix", what[]="";
   
   for(i=0;i<rows;i++){
     for(j=0, c=0;j<cols;j++){
@@ -821,8 +827,7 @@ void writeDoubleMatrix(double **x, int rows, int cols)
 	c = 0;
       }
       s=fprintf(ofile,"%5.3e ",x[i][j]);
-      if (s<0)
-	fserror("writeDoubleMatrix", "write double matrix", "");
+      if (s<0) fserror(proc, act, what);
     }
     fprintf(ofile,"\n");
   }
@@ -835,9 +840,9 @@ void writeFloatArray(float *x,int rows,int cols)
 
 void writeArray(float *x,int rows,int cols)
 {
-  int	
-    i,j, c,s;
-  
+  int i,j, c,s;
+  char proc[]="writeArray", act[]="write float matrix", what[]="";
+
   for(i=0;i<rows;i++){
     for(j=0,c=0;j<cols;j++){
       if (c++>9){
@@ -845,8 +850,7 @@ void writeArray(float *x,int rows,int cols)
 	c = 0;
       }
       s=fprintf(ofile,"%5.3e ",x[i*cols+j]);
-      if (s<0)
-	fserror("writeArray", "write float matrix", "");
+      if (s<0) fserror(proc, act, what);  
     }
     fprintf(ofile,"\n");
   }
@@ -895,7 +899,10 @@ float *vector2(int nl,int nh)
         float *v; 
  
         v=(float *)calloc((unsigned) (nh-nl+1),sizeof(float)); 
-        if (!v) nrerror("vector","allocate a float vector",""); 
+        if (!v) {
+          char proc[]="vector", act[]="allocate a float vector", what[]="";
+          nrerror(proc,act,what); 
+        }
         return v-nl; 
 } 
 
@@ -905,8 +912,10 @@ double  *dvector(int nl,int nh)
  
 	nv += (nh-nl+1); 
         v=(double  *)calloc((unsigned) (nh-nl+1),sizeof(double)); 
-        if (!v)  
-	  nrerror("dvector","allocate a double vector",""); 
+        if (!v) {
+          char proc[]="dvector", act[]="allocate a double vector", what[]="";
+          nrerror(proc,act,what); 
+        }
         return v-nl; 
 } 
 
@@ -918,15 +927,19 @@ double  **dmatrix(int nrl,int nrh,int ncl,int nch)
 	nv += (nrh-nrl+1)*(nch-ncl+1); 
         m=(double  **)calloc((unsigned) (nrh-nrl+1), 
 				   sizeof(double  *)); 
-        if (!m)  
-	  nrerror("dmatrix","allocate a double matrix (1st dim)",""); 
+        if (!m) {
+          char proc[]="dmatrix", act[]="allocate a double matrix (1st dim)", what[]="";
+	  nrerror(proc,act,what); 
+        }
         m -= nrl; 
  
         for(i=nrl;i<=nrh;i++) { 
                 m[i]=(double  *)calloc((unsigned) (nch-ncl+1), 
 					     sizeof(double)); 
-                if (!m[i])  
-	  	  nrerror("dmatrix","allocate a double matrix (2nd dim)",""); 
+                if (!m[i]) {
+                  char proc[]="dmatrix", act[]="allocate a double matrix (2nd dim)", what[]="";
+	  	  nrerror(proc,act,what); 
+                }
                 m[i] -= ncl; 
         } 
         return m; 
@@ -966,14 +979,23 @@ double ***darray3(int n1,int n2,int n3)
   int  i, j;
 
   a = (double ***) malloc(n1 * sizeof(double **));
-  if(a == NULL) nrerror("darray3","allocate a 3dim double array (1st dim)","");
+  if(a == NULL) {
+    char proc[]="darray3", act[]="allocate a 3dim double array (1st dim)", what[]="";
+    nrerror(proc,act,what);
+  }
 
   a[0] = (double **) malloc(n1 * n2 * sizeof(double *));
-  if(a[0] == NULL) nrerror("darray3","allocate a 3dim double array (2nd dim)","");
+  if(a[0] == NULL) {
+    char proc[]="darray3", act[]="allocate a 3dim double array (2nd dim)", what[]="";
+    nrerror(proc,act,what);
+  }
   for(i=1;i<n1;i++) a[i] = a[i-1] + n2;
 
   a[0][0] = (double *) malloc(n1 * n2 * n3 * sizeof(double));
-  if(a[0][0] == NULL) nrerror("darray3","allocate a 3dim double array (3rd dim)","");
+  if(a[0][0] == NULL) {
+    char proc[]="darray3", act[]="allocate a 3dim double array (3rd dim)", what[]="";
+    nrerror(proc,act,what);
+  }
   for(i=0;i<n1;i++) 
     for(j=0;j<n2;j++) 
       a[i][j] = a[0][0] + n2*n3*i + j*n3;
@@ -987,7 +1009,10 @@ int  *ivector(int nl,int nh)
  
 	nv += (nh-nl+1); 
         v=(int  *)calloc((unsigned) (nh-nl+1),sizeof(int)); 
-        if (!v) nrerror("ivector","allocate an int vector",""); 
+        if (!v) {
+          char proc[]="ivector", act[]="allocate an int vector", what[]="";
+          nrerror(proc,act,what);
+	}
         return v-nl; 
 } 
 
@@ -997,14 +1022,18 @@ int  **imatrix(int nrl,int nrh,int ncl,int nch)
  
 	nv += (nrh-nrl+1)*(nch-ncl+1); 
         m=(int  **)calloc((unsigned) (nrh-nrl+1),sizeof(int  *)); 
-        if (!m)  
-	  nrerror("imatrix","allocate a int matrix (1st dim).",""); 
+        if (!m) {
+          char proc[]="imatrix", act[]="allocate an int matrix (1st dim)", what[]="";
+          nrerror(proc,act,what);
+        }
         m -= nrl; 
  
         for(i=nrl;i<=nrh;i++) { 
                 m[i]=(int  *)calloc((unsigned) (nch-ncl+1),sizeof(int)); 
-                if (!m[i])  
-	  	  nrerror("imatrix","allocate a int matrix (2nd dim).",""); 
+                if (!m[i]) {
+                  char proc[]="imatrix", act[]="allocate an int matrix (2nd dim)", what[]="";
+                  nrerror(proc,act,what);
+                }
                 m[i] -= ncl; 
         } 
         return m; 
@@ -1043,14 +1072,23 @@ int ***iarray3(int n1,int n2,int n3)
   int ***a, i, j;
 
   a = (int ***) malloc(n1 * sizeof(int **));
-  if(a == NULL)  nrerror("iarray3","allocate a 3dim int array (1st dim)","");
+  if(a == NULL) {
+    char proc[]="iarray3", act[]="allocate a 3dim int array (1st dim)", what[]="";
+    nrerror(proc,act,what);
+  }
 
   a[0] = (int **) malloc(n1 * n2 * sizeof(int *));
-  if(a[0] == NULL)  nrerror("iarray3","allocate a 3dim int array (2nd dim)","");
+  if(a[0] == NULL) {
+    char proc[]="iarray3", act[]="allocate a 3dim int array (2nd dim)", what[]="";
+    nrerror(proc,act,what);
+  }
   for(i=1;i<n1;i++) a[i] = a[i-1] + n2;
 
   a[0][0] = (int *) malloc(n1 * n2 * n3 * sizeof(int));
-  if(a[0][0] == NULL)  nrerror("iarray3","allocate a 3dim int array (3rd dim)","");
+  if(a[0][0] == NULL) {
+    char proc[]="iarray3", act[]="allocate a 3dim int array (3rd dim)", what[]="";
+    nrerror(proc,act,what);
+  }
   for(i=0;i<n1;i++) 
     for(j=0;j<n2;j++) 
       a[i][j] = a[0][0] + n2*n3*i + j*n3;
@@ -1245,7 +1283,10 @@ double digamma(double x) {
   double lower= 1.0e-8, upper= 19.5, euler_one= .422784335098467139393488, ans, x_inv, x_pow;
 
 
-  if (x<=0) errorC("digamma", "argument must be positive", 1);
+  if (x<=0) {
+    char proc[]="digamma", act[]="argument must be positive";
+    errorC(proc, act, 1);
+  }
 
   if (x<lower) {
     ans = -1.0 / x - 1.0/(1.0+x) + euler_one;
@@ -1365,7 +1406,10 @@ double betacf(double a, double b, double x) {
     h *= del;
     if (fabs(del-1.0) < EPS) break; //Are we done?
   }
-  if (m > MAXIT) nrerror("a or b too big, or MAXIT too small in betacf","","");
+  if (m > MAXIT) {
+    char proc[]="betacf", act[]="a or b too big, or MAXIT too small", what[]="";
+    nrerror(proc,act,what);
+  }
   return(h);
 }
 
@@ -1573,7 +1617,10 @@ void Atx(double **A,double *x,double *z, int rowini, int rowfi, int colini, int 
 
 void AtB(double **A, int rowiniA, int rowfiA, int coliniA, int colfiA, double **B, int rowiniB, int rowfiB, int coliniB, int colfiB, double **C) { 
   int _i, _j, _k;
-  if ((rowfiA-rowiniA) != (rowfiB-rowiniB)) errorC("AtB", "dimensions don't match", 1); 
+  if ((rowfiA-rowiniA) != (rowfiB-rowiniB)) {
+    char proc[]="AtB", act[]="dimensions don't match";
+    errorC(proc, act, 1); 
+  }
   for(_i=coliniA;_i<=colfiA;_i++)			 
     for(_j=coliniB;_j<=colfiB;_j++)			 
       for(C[_i][_j]=0,_k=rowiniA;_k<=rowfiA;_k++)	 
@@ -1671,7 +1718,10 @@ decomposition, A = L * L' . On input, only the upper triangle of a need be given
     for (j=i;j<=n;j++) {
       for (sum=aout[i][j],k=i-1;k>=1;k--) sum -= aout[i][k]*aout[j][k];
       if (i == j) {
-	if (sum <= 0.0) nrerror("choldc failed","","matrix is not positive definite");
+	if (sum <= 0.0) {
+          char proc[]="choldc", act[]="", what[]="matrix is not positive definite";
+          nrerror(proc,act,what);
+	}
 	aout[i][i]=sqrt(sum);
       } else aout[j][i]=sum/aout[i][i];
     }
@@ -1811,7 +1861,10 @@ or invert a matrix. */
   for (i=1;i<=n;i++) { //Loop over rows to get the implicit scaling information
     big= 0.0;
     for (j=1;j<=n;j++) if ((temp=fabs(a[i][j])) > big) big=temp;
-    if (big == 0.0) nrerror("Singular matrix in routine ludcmp","",""); //No nonzero largest element.
+    if (big == 0.0) {
+      char proc[]="ludcmp", act[]="Singular matrix", what[]="";
+      nrerror(proc,act,what); //No nonzero largest element.
+    }
     vv[i]=1.0/big; //Save the scaling.
   }
   for (j=1;j<=n;j++) { //This is the loop over columns of Crout's method.
@@ -2104,7 +2157,10 @@ double rbetaC(double alpha, double beta)
 /* CDF of a Beta distribution */
 double pbetaC(double x, double a, double b) {
   double bt, c;
-  if (x < 0.0 || x > 1.0) nrerror("Bad x in routine betai","","");
+  if (x < 0.0 || x > 1.0) {
+    char proc[]="pbetaC", act[]="x not in [0,1]", what[]="";
+    nrerror(proc,act,what); 
+  }
   if (x == 0.0 || x == 1.0) bt=0.0;
   else { //Factors in front of the continued fraction.
     c= a+b;
@@ -2249,7 +2305,8 @@ double	qnormC (double cdf, double m, double s)
     status,which; 
  
   if( (cdf < 0.0) | (cdf > 1.0) ){ 
-    errorC("qnormC", "tried inverse cdf with p<0 or p>1", 1); 
+    char proc[]="qnormc", act[]="tried inverse cdf with p<0 or p>1";
+    errorC(proc, act, 1); 
   }  
   /* par check */ 
   if (cdf <= 2.86e-07) 
@@ -2368,7 +2425,10 @@ double rnorm_trunc_prob(double lprob, double rprob, double m, double s) {
   // lprob, rprob: prob to the left of the truncation points; m: mean; s: SD
   //e.g. lprob=.05, rprob=.99 means we're truncating the lower 5% and the upper 1%
   double u;
-  if (lprob>=rprob) nrerror("rnorm_trunc_prob","left truncation probability is larger than right truncation probability","");
+  if (lprob>=rprob) {
+    char proc[]="rnorm_trunc_prob", act[]="left truncation probability is larger than right truncation probability", what[]="";
+    nrerror(proc,act,what); 
+  }
   u= lprob + runif()*(rprob-lprob);  //generate uniform between lprob, rprob
   u= qnormC(u,m,s);
   return(u);
@@ -2488,8 +2548,8 @@ double rt_trunc_prob(int nu, double lprob, double rprob) {
   //e.g. lprob=.05, rprob=.99 means we're truncating the lower 5% and the upper 1%
   double u;
   if (lprob>=rprob) {
-    nrerror("rt_trunc_prob",
-            "left truncation probability is larger than right truncation probability", "");
+    char proc[]="rt_trunc_prob", act[]="left truncation probability is larger than right truncation probability", what[]="";
+    nrerror(proc,act,what); 
     /*NOTREACHED*/
   }
   u= lprob + runif()*(rprob-lprob);  //generate uniform between lprob, rprob
@@ -4742,7 +4802,8 @@ double qromo(double (*func)(double), double a, double b, double (*choose)(double
     }
     h[j+1]= h[j]/9.0;  //this is where the assumption of step tripling and even error series is used
   }
-  nrerror("qromo","integrate a function","");
+  char proc[]="qromo", act[]="integrate a function", what[]="";
+  nrerror(proc,act,what); 
   /*NOTREACHED*/
   return(0.0);    /* make compiler happy */
 }
@@ -4778,7 +4839,10 @@ void polint (double xa[], double ya[], int n, double x, double *y, double *dy)
       ho= xa[i]-x;
       hp=xa[i+m]-x;
       w= c[i+1] - d[i];
-      if ( (den=ho-hp) == 0.0) nrerror("polint","increment in x axis in 0 units (two input x values are identical)","");
+      if ( (den=ho-hp) == 0.0) {
+        char proc[]="polint", act[]="increment in x axis in 0 units (two input x values are identical)", what[]="";
+        nrerror(proc,act,what); 
+      }
       den= w/den;
       d[i]= hp*den;
       c[i]= ho*den;

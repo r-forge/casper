@@ -11,7 +11,7 @@ extern "C"
 	{
 		SEXP sval;
 		PROTECT(sval = allocVector(REALSXP, 1));
-		double* val = REAL(sval);
+		//double* val = REAL(sval);
 
 		SEXP R_fcall;
 		PROTECT(R_fcall = lang2(fun_fragsta, R_NilValue));
