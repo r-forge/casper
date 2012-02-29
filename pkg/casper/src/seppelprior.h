@@ -4,7 +4,7 @@ class SeppelPrior
 {
 public:
 	SeppelPrior(DataFrame* frame, Gene* gene);
-	unordered_map<Model*, double, ModelCmp, ModelCmp> calculate();
+	map<Model*, double, ModelCmp> calculate();
 
 	int runs;
 

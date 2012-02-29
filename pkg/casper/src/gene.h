@@ -1,6 +1,6 @@
 #include "exon.h"
 #include <vector>
-#include <unordered_map>
+#include <map>
 
 using namespace std;
 
@@ -12,7 +12,7 @@ public:
 	vector<Exon*> exons;
 	int length;
 
-	unordered_map<Exon*, int> idmap;
+	map<Exon*, int> idmap;
 
 	Gene(int id);
 	void addExon(Exon* e);

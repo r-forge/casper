@@ -10,14 +10,14 @@ SeppelSmart::SeppelSmart(DataFrame* frame, Gene* gene)
 	this->thinning = 1;
 }
 
-unordered_map<Model*, double, ModelCmp, ModelCmp> SeppelSmart::calculate(Model* center)
+map<Model*, double, ModelCmp> SeppelSmart::calculate(Model* center)
 {
 	Model* omodl = center;
 	Casper* ocasp = new Casper(omodl, frame);
 	double olike = ocasp->calculateIntegral();
 	SmartModelDist* odist = new SmartModelDist(omodl, gene, 0.8);
 	
-	unordered_map<Model*, double, ModelCmp, ModelCmp> result;
+	map<Model*, double, ModelCmp> result;
 	double rescounts = 0;
 	int accepted = 0;
 
@@ -65,9 +65,9 @@ unordered_map<Model*, double, ModelCmp, ModelCmp> SeppelSmart::calculate(Model* 
 		}
 	}
 	
-	unordered_map<Model*, double, ModelCmp, ModelCmp> normalized;
+	map<Model*, double, ModelCmp> normalized;
 	
-	unordered_map<Model*, double, ModelCmp, ModelCmp>::const_iterator mvi;
+	map<Model*, double, ModelCmp>::const_iterator mvi;
 	for (mvi = result.begin(); mvi != result.end(); mvi++)
 	{
 		if (mvi->second > 0)

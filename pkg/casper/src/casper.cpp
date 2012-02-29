@@ -18,11 +18,11 @@ Casper::Casper(Model* model, DataFrame* frame)
 	for (vi = model->items.begin(); vi != model->items.end(); vi++)
 	{
 		Variant* v = *vi;
-		unordered_map<Fragment*, double> table = this->frame->probabilities(v);
+		map<Fragment*, double> table = this->frame->probabilities(v);
 
 		memvprobs[v] = table;
         
-		unordered_map<Fragment*, double>::const_iterator fi;
+		map<Fragment*, double>::const_iterator fi;
 		for (fi = table.begin(); fi != table.end(); fi++)
 		{
 			Fragment* f = fi->first;
@@ -41,7 +41,7 @@ double* Casper::calculateMode()
 	}
 
 	double normali = (double)memvprobs.size() * (prior_q - 1.0);
-	unordered_map<Fragment*, unordered_map<Variant*, double> >::const_iterator ofi;
+	map<Fragment*, map<Variant*, double> >::const_iterator ofi;
 	for (ofi = mempprobs.begin(); ofi != mempprobs.end(); ofi++)
 	{
 		normali += ofi->first->count;
@@ -49,15 +49,15 @@ double* Casper::calculateMode()
 
 	for (int r = 0; r < em_maxruns; r++)
 	{
-		unordered_map<Fragment*, double> mem = fragdist(pi);
+		map<Fragment*, double> mem = fragdist(pi);
 		
-		unordered_map<Variant*, unordered_map<Fragment*, double> >::const_iterator vi;
+		map<Variant*, map<Fragment*, double> >::const_iterator vi;
 		for (vi = memvprobs.begin(); vi != memvprobs.end(); vi++)
 		{
 			int i = model->indexOf(vi->first);
 
 			double nsum = 0;
-			unordered_map<Fragment*, double>::const_iterator fi;
+			map<Fragment*, double>::const_iterator fi;
 			for (fi = vi->second.begin(); fi != vi->second.end(); fi++)
 			{
 				nsum += (double)fi->first->count * fi->second / mem[fi->first];
@@ -124,12 +124,12 @@ double Casper::likelihoodLn(double* pi)
 {
 	double outer = 0;
 
-	unordered_map<Fragment*, unordered_map<Variant*, double>>::const_iterator fi;
+	map<Fragment*, map<Variant*, double> >::const_iterator fi;
 	for (fi = mempprobs.begin(); fi != mempprobs.end(); fi++)
 	{
 		double inner = 0;
 
-		unordered_map<Variant*, double>::const_iterator vi;
+		map<Variant*, double>::const_iterator vi;
 		for (vi = fi->second.begin(); vi != fi->second.end(); vi++)
 		{
 			int i = model->indexOf(vi->first);
@@ -144,16 +144,16 @@ double Casper::priorLikelihoodLn(double* pi)
 	return priorLn(pi) + likelihoodLn(pi);
 }
 
-unordered_map<Fragment*, double> Casper::fragdist(double* pi)
+map<Fragment*, double> Casper::fragdist(double* pi)
 {
-	unordered_map<Fragment*, double> mem;
+	map<Fragment*, double> mem;
 
-	unordered_map<Fragment*, unordered_map<Variant*, double>>::const_iterator fi;
+	map<Fragment*, map<Variant*, double> >::const_iterator fi;
 	for (fi = mempprobs.begin(); fi != mempprobs.end(); fi++)
 	{
 		double sum = 0;
 
-		unordered_map<Variant*, double>::const_iterator vi;
+		map<Variant*, double>::const_iterator vi;
 		for (vi = fi->second.begin(); vi != fi->second.end(); vi++)
 		{
 			int i = model->indexOf(vi->first);
@@ -167,7 +167,7 @@ unordered_map<Fragment*, double> Casper::fragdist(double* pi)
 
 double** Casper::normapprox(double** G, double*** H, double* mode, double* thmode, int n)
 {
-	unordered_map<Fragment*, double> mem = fragdist(mode);
+	map<Fragment*, double> mem = fragdist(mode);
 	double** S = new double*[n - 1];
 	for (int i = 0; i < n - 1; i++)
 	{
@@ -178,11 +178,11 @@ double** Casper::normapprox(double** G, double*** H, double* mode, double* thmod
 		for (int m = l; m < n - 1; m++)
 		{
 			S[l][m] = 0;
-			unordered_map<Fragment*, unordered_map<Variant*, double>>::const_iterator fi;
+			map<Fragment*, map<Variant*, double> >::const_iterator fi;
 			for (fi = mempprobs.begin(); fi != mempprobs.end(); fi++)
 			{
 				double term1 = 0, term2 = 0, term3 = 0;
-				unordered_map<Variant*, double>::const_iterator vi;
+				map<Variant*, double>::const_iterator vi;
 				for (vi = fi->second.begin(); vi != fi->second.end(); vi++)
 				{
 					int d = model->indexOf(vi->first);
@@ -268,7 +268,11 @@ double Casper::vtGradLogdet(double** G, int n)
 {
 	double** GS = &G[1];
     double mydet = det(GS, n - 1);
-	double logdet = log(abs(mydet));
+	if (mydet < 0)
+	{
+		mydet = -mydet;
+	}
+	double logdet = log(mydet);
     return logdet;
 }
 double*** Casper::vtHess(double* th, int n)

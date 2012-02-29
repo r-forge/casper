@@ -144,21 +144,21 @@ int _tmain(int argc, _TCHAR* argv[])
 	Model* n2 = m2->at(0);
 
 	SeppelPrior* sep2 = new SeppelPrior(c->frame, c->frame->genes[1]);
-	unordered_map<Model*, double, ModelCmp, ModelCmp> res2 = sep2->calculate();
+	map<Model*, double, ModelCmp> res2 = sep2->calculate();
 
 	printf("PRIOR\n");
 
 	SeppelSmart* sep3 = new SeppelSmart(c->frame, c->frame->genes[1]);
-	unordered_map<Model*, double, ModelCmp, ModelCmp> res3 = sep3->calculate(c->model);
+	map<Model*, double, ModelCmp> res3 = sep3->calculate(c->model);
 
 	printf("SMART\n");
 
 	SeppelExact* sep1 = new SeppelExact(c->frame, c->frame->genes[1]);
-	unordered_map<Model*, double, ModelCmp, ModelCmp> res1 = sep1->calculate();
+	map<Model*, double, ModelCmp> res1 = sep1->calculate();
 
 	printf("EXACT\n");
 	
-	unordered_map<Model*, double, ModelCmp, ModelCmp>::const_iterator mi;
+	map<Model*, double, ModelCmp>::const_iterator mi;
 	for (mi = res1.begin(); mi != res1.end(); mi++)
 	{
 		Model* m = mi->first;

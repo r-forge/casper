@@ -8,9 +8,9 @@ class DataFrame
 {
 public:
 	// all exons mapped by their id
-	unordered_map<int, Exon*> exons;
+	map<int, Exon*> exons;
 	// all genes mapped by their id
-	unordered_map<int, Gene*> genes;
+	map<int, Gene*> genes;
 	// all fragments
 	list<Fragment*> data;
 
@@ -21,7 +21,7 @@ public:
 	void addGene(Gene* g);
 
 	// probabilities of all the fragments given a variant
-	unordered_map<Fragment*, double> probabilities(Variant* v);
+	map<Fragment*, double> probabilities(Variant* v);
 	double probability(Variant* v, Fragment* f);
 
 	// returns a list of all possible models that could explain this gene (explicit calculation)
@@ -33,7 +33,7 @@ private:
     int fraglen_maxx;
 	DiscreteDF* fraglen_dist;
 	double (*fragsta_cumu)(double x);
-    map<Variant*, unordered_map<Fragment*, double>, VariantCmp > cache;
+    map<Variant*, map<Fragment*, double>, VariantCmp > cache;
 
 	double prob(int fs, int fe, int bs, int be, int* pos, double T);
 	void allVariantsRec(vector<Exon*>* stack, int level, Gene* gene, vector<Variant*>* vars);

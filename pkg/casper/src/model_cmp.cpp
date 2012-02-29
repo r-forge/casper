@@ -10,5 +10,5 @@ bool ModelCmp::operator()(const Model* a, const Model* b) const
 	Model* va = (Model*)a;
 	Model* vb = (Model*)b;
 
-	return va->compare(vb) == 0;
+	return va->compare(vb) < 0;
 }
