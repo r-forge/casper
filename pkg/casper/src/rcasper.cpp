@@ -124,7 +124,7 @@ extern "C"
 				item = strtok(NULL, ".");
 			}
 
-			df->addFragment(f);
+			df->addData(f);
 		}
 
 		// Genes
@@ -155,7 +155,7 @@ extern "C"
 			{
 				int eid = tvals[s];
 
-				Exon* ex = c->getExon(eid);
+				Exon* ex = df->exons[eid];
 				el->push_back(ex);
 			}
 
@@ -166,7 +166,8 @@ extern "C"
 			int gid = -1;
 			Gene* gene = df->genes[gid];
 
-			Variant* v = new Variant(gene, strand, el);
+			//Variant* v = new Variant(gene, strand, el);
+			Variant* v = new Variant(gene, el);
 			v->id = tid;
 
 			vm->push_back(v);
