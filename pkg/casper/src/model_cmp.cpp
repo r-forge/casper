@@ -1,14 +1,14 @@
-﻿#include "model_cmp.h"
+#include "model_cmp.h"
 
 size_t ModelCmp::operator()(const Model* a) const
 {
-	Model* va = (Model*)a;
-	return va->hashcode;
+	Model* ma = (Model*)a;
+	return ma->hashcode;
 }
 bool ModelCmp::operator()(const Model* a, const Model* b) const
 {
-	Model* va = (Model*)a;
-	Model* vb = (Model*)b;
+	Model* ma = (Model*)a;
+	Model* mb = (Model*)b;
 
-	return va->compare(vb) < 0;
+	return ma->compare(mb) < 0;
 }
