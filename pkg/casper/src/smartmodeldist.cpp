@@ -45,7 +45,7 @@ void SmartModelDist::updatepks()
 	int maxexused = 0;
 	int sumexused = 0;
 	exon_used = new int[gene->exons.size()];
-	for (int u = 0; u < gene->exons.size(); u++)
+	for (unsigned int u = 0; u < gene->exons.size(); u++)
 	{
 		exon_used[u] = 0;
 	}
@@ -79,7 +79,7 @@ void SmartModelDist::updatepks()
 	double fact = max(esti + 0.001, exon_weight);
 
 	exon_prob = new double[gene->exons.size()];
-	for (int i = 0; i < gene->exons.size(); i++)
+	for (unsigned int i = 0; i < gene->exons.size(); i++)
 	{
 		double k = exon_used[i];
 		exon_prob[i] = explen * ((double)k + fact) / (sumexused + fact * gex);
@@ -94,7 +94,7 @@ Variant* SmartModelDist::makevar()
 	Gene* gene = var->gene;
 
 	vector<Exon*>* nex = new vector<Exon*>();
-	for (int i = 0; i < gene->exons.size(); i++)
+	for (unsigned int i = 0; i < gene->exons.size(); i++)
 	{
 		double pk = exon_prob[i];
 
@@ -111,7 +111,7 @@ Variant* SmartModelDist::makevar()
 double SmartModelDist::prob(Variant* v)
 {
 	double p = 1;
-	for (int i = 0; i < gene->exons.size(); i++)
+	for (unsigned int i = 0; i < gene->exons.size(); i++)
 	{
 		double pk = exon_prob[i];
 		if (v != NULL && v->contains(gene->exons[i]))

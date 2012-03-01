@@ -128,7 +128,7 @@ int _tmain() {
 
 	Casper* c = example();
 	double* pi = c->calculateMode();
-	double inte = c->calculateIntegral();
+	//double inte = c->calculateIntegral();
 
 	int n = c->model->count();
 
@@ -140,8 +140,8 @@ int _tmain() {
 
 	vector<Model*>* m1 = c->frame->allModels(c->frame->genes[1]);
 	vector<Model*>* m2 = c->frame->allModels(c->frame->genes[1]);
-	Model* n1 = m1->at(0);
-	Model* n2 = m2->at(0);
+	//Model* n1 = m1->at(0);
+	//Model* n2 = m2->at(0);
 
 	SeppelPrior* sep2 = new SeppelPrior(c->frame, c->frame->genes[1]);
 	map<Model*, double, ModelCmp> res2 = sep2->calculate();

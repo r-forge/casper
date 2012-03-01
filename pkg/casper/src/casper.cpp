@@ -361,7 +361,10 @@ double Casper::det(double** a, int n)
 		for (j=i;j<n;j++) {
 			for (sum=aout[i][j],k=i-1;k>=0;k--) sum -= aout[i][k]*aout[j][k];
 			if (i == j) {
-				if (sum <= 0.0) nrerror("choldc failed","","matrix is not positive definite");
+			  if (sum <= 0.0) {
+                            char proc[]="choldc failed", act[]="", what[]="matrix is not positive definite";
+                            nrerror(proc,act,what); 
+			  }
 				aout[i][i]=sqrt(sum);
 			} else aout[j][i]=sum/aout[i][i];
 		}
