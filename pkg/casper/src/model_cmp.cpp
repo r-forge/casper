@@ -2,13 +2,13 @@
 
 size_t ModelCmp::operator()(const Model* a) const
 {
-	Model* ma = (Model*)a;
-	return ma->hashcode;
+	Model* va = (Model*)a;
+	return va->hashcode;
 }
 bool ModelCmp::operator()(const Model* a, const Model* b) const
 {
-	Model* ma = (Model*)a;
-	Model* mb = (Model*)b;
+	Model* va = (Model*)a;
+	Model* vb = (Model*)b;
 
-	return ma->compare(mb) < 0;
+	return va->compare(vb) < 0;
 }
