@@ -56,7 +56,7 @@ int hash_lookup (const hash_t *tptr, const char *);
 int hash_insert (hash_t *tptr, const char *, int);
 
 int hash_update(hash_t *tptr, const char *key, int data);
-  char* m_strdup(char *o);
+char* m_strdup(const char *o);
 int hash_delete (hash_t *tptr, const char *);
 
 void hash_destroy(hash_t *tptr);

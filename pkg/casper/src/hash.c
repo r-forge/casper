@@ -192,7 +192,7 @@ VMDEXTERNSTATIC int hash_insert(hash_t *tptr, const char *key, int data) {
   return HASH_FAIL;
 }
 
-char* m_strdup(char *o){
+char* m_strdup(const char *o){
   int l=strlen(o)+1;
   char *ns=(char*)malloc(l*sizeof(char));
   strcpy(ns,o);
