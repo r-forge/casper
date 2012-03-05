@@ -1156,7 +1156,7 @@ double ldoublefact(double x) {
   //log-double factorial
   //Returns x*(x-2)*...*k, where k is the first term <2. Corresponds to double factorial for integer x
   int _i; double ans=0;
-  for (_i=x; _i>=2; _i-=2) { ans+= log((double)_i); }
+  for (_i=(int)x; _i>=2; _i-=2) { ans+= log((double)_i); }
   return(ans);
 }
 
@@ -2079,7 +2079,7 @@ void samplei_wr(int *x, int popsize, int n) {
 //Result is returned in the first n elements of x
   int i, r, temp;
   for (i=0; i<n; i++) {
-    r= i + (popsize - i - 1)*runif();
+    r= i + (int) ((popsize - i - 1)*runif());
     temp= x[i]; x[i]= x[r]; x[r]= temp;
   }
 }
@@ -2090,7 +2090,7 @@ void sampled_wr(double *x, int popsize, int n) { //same for vector of doubles
   int i, r;
   double temp;
   for (i=0; i<n; i++) {
-    r= i + (popsize - i - 1)*runif();
+    r= i + (int) ((popsize - i - 1)*runif());
     temp= x[i]; x[i]= x[r]; x[r]= temp;
   }
 }
@@ -2130,7 +2130,7 @@ double dunifC(double x, double a, double b) {
 
 int runifdisc(int min, int max) {
 //Returns integer value between min and max (both included)
-  return(min + runif()*(max+1-min));
+  return((int) (min + runif()*(max+1-min)));
 }
 
 int rdisc(double *probs, int nvals) {
@@ -2458,7 +2458,7 @@ void rmvnormC(double *y, int n, double *mu, double **chols) {
 //Raw moment of N(m,sd) of order "order"
 //Function adapted from that in R package "actuar"
 double mnorm(double order, double m, double sd) {
-  int i, n = order;
+  int i, n = (int) order;
   double res, temp1, temp2, ans;
   if (order == 0.0) {   /* Trivial case */
     ans=1.0;
@@ -2578,7 +2578,7 @@ double qtC(double p, int nu) {
     P = 2.0 * p;
   }
 
-  if(abs(ndf - 2.0) < eps) {   /* df ~= 2 */
+  if(fabs(ndf - 2.0) < eps) {   /* df ~= 2 */
     q=sqrt(2.0 / (P * (2.0 - P)) - 2.0);
   }
   else if (ndf < 1 + eps) {   /* df ~= 1 */
