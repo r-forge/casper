@@ -1,11 +1,12 @@
-calcExp<-function(distrs, genomeDB, pc){
+calcExp<-function(distrs, genomeDB, pc, readLength){
+  if (missing(readLength)) stop("readLength must be specified")
   dexo<-as.data.frame(genomeDB$exonsNI)
   mexo<-as.matrix(dexo[,c(5,4)])
   stafun = ecdf(distrs$stDis)
-  fill<-c(rep(0,(min(as.numeric(names(distrs$lenDis))))), distrs$lenDis)
-  names(fill)[1:min(as.numeric(names(distrs$lenDis)))]<-0:(min(as.numeric(names(distrs$lenDis)))-1)
-  lendis<-as.table(fill/sum(fill))
-  exp<-.Call("calc", mexo, genomeDB$newTx, pc, stafun, lendis)
+  #fill<-c(rep(0,(min(as.numeric(names(distrs$lenDis))))), distrs$lenDis)
+  #names(fill)[1:min(as.numeric(names(distrs$lenDis)))]<-0:(min(as.numeric(names(distrs$lenDis)))-1)
+  lendis<- as.double(distrs$lenDis/sum(distrs$lenDis))
+  exp<-.Call("calc", mexo, genomeDB$newTx, pc, stafun, lendis, as.integer(names(lendis)), as.integer(readLength))
   names(exp)<-names(genomeDB$newTx)
   exp<-as.matrix(exp)
   featureData<-as.numeric(unlist(genomeDB$txs@elementMetadata$gene_id))

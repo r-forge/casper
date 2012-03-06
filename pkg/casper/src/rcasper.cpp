@@ -4,10 +4,6 @@
 #include "casper.h"
 #include "rcasper.h"
 
-SEXP fun_fragsta;  //define global variable needed by cumu_fragsta
-
-extern "C"
-{
 
 double cumu_fragsta(double x)
 {
@@ -28,10 +24,13 @@ double cumu_fragsta(double x)
 
 //double cumu_fragstaLIN(double x) { return x; }
 
-//Compute expression for known variants.
-	SEXP calc(SEXP exons, SEXP transcripts, SEXP pathCounts, SEXP fragsta, SEXP fraglen) 
+extern "C"
+{
+
+  //Compute expression for known variants.
+  SEXP calc(SEXP exons, SEXP transcripts, SEXP pathCounts, SEXP fragsta, SEXP fraglen, SEXP lenvals, SEXP readLength) 
 	{
-		fun_fragsta = fragsta;
+	        ::fun_fragsta = fragsta;
 		
 		// DiscreteDF
 		SEXP lims;
@@ -39,11 +38,13 @@ double cumu_fragsta(double x)
 		int ln = INTEGER(lims)[0];
 		double* ld = REAL(fraglen);
 		UNPROTECT(1);
+		int* lv= INTEGER(lenvals);
 
-		DiscreteDF* lenfun = new DiscreteDF(ld, ln);
+		DiscreteDF* lenfun = new DiscreteDF(ld, lv, ln);
 
 		// Main
 		DataFrame* df = new DataFrame(lenfun, cumu_fragsta);
+                df->frag_readlen= INTEGER(readLength)[0];
 		
 		// Exons
 		SEXP dims;
@@ -247,9 +248,7 @@ double cumu_fragsta(double x)
 	}
 
 
-
-
-  SEXP calcDenovo(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP priorprobR) {
+  SEXP calcDenovo(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorprobR) {
   //Perform de novo isoform discovery and estimate expression for a single gene
   //Input
   // - exons: vector with exon ids
@@ -258,29 +257,31 @@ double cumu_fragsta(double x)
   // - transcripts: list of transcripts. Names indicate transcript id. Each element contain list of exon ids. Used to initialize model
   // - pathCounts: vector with path counts. Names indicate series of visited exons e.g. e1.e2-e5
   // - fragsta: function that returns start distrib cdf
-  // - fraglen: vector with fragment length distrib, i.e. P(length=0),P(length=1),... up to max length
+  // - fraglen: vector with fragment length distrib, i.e. P(length=lenvals[0]),P(length=lenvals[1]),... up to max length
+  // - lenvals: vector with possibles values for length
+  // - readLength: read length
   // - priorprob: unfinished. This should somehow allow to compute prior prob on model space
 
-    int *exons= INTEGER(exonsR), *exonwidth= INTEGER(exonwidthR), geneid= INTEGER(geneidR)[0];
+    int *exons= INTEGER(exonsR), *exonwidth= INTEGER(exonwidthR), geneid= INTEGER(geneidR)[0], *lenvals= INTEGER(lenvalsR);
     double *fraglen= REAL(fraglenR); 
     SEXP nexonsR = getAttrib(exonsR,R_DimSymbol), nfraglenR= getAttrib(fraglenR,R_DimSymbol);
-    int nexons= INTEGER(nexonsR)[0], nfraglen= INTEGER(nfraglenR)[0];
+    int nexons= INTEGER(nexonsR)[0], nfraglen= INTEGER(nfraglenR)[0], readLength= INTEGER(readLengthR)[0];
 
-    Casper* casp = initCasper(exons, exonwidth, transcriptsR, geneid, nexons, pathCountsR, fraglen, nfraglen, fragstaR);
+    Casper* casp = initCasper(exons, exonwidth, transcriptsR, geneid, nexons, pathCountsR, fraglen, lenvals, nfraglen, readLength, fragstaR);
 
   }
-
 
 }
 
 
-Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, int nexons, SEXP pathCountsR, double *fraglen, int nfraglen, SEXP fragstaR) {
+Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, int nexons, SEXP pathCountsR, double *fraglen, int *lenvals, int nfraglen, int readLength, SEXP fragstaR) {
 
   //Define fragment length/start distributions and create DataFrame
-  DiscreteDF* fraglen_dist = new DiscreteDF(fraglen, nfraglen);
+  DiscreteDF* fraglen_dist = new DiscreteDF(fraglen, lenvals, nfraglen);
 
-  fun_fragsta = fragstaR;  //Manuel: cumu_fragsta does not seem to use its argument x. Is this correct?
+  ::fun_fragsta = fragstaR;  //Manuel: cumu_fragsta does not seem to use its argument x. Is this correct?
   DataFrame* df = new DataFrame(fraglen_dist, cumu_fragsta);
+  df->frag_readlen= readLength;
 
   //Add exons & gene to DataFrame
   Gene* g= new Gene(geneid);
@@ -415,3 +416,4 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
 
   return casp;
 }
+

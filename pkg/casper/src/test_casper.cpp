@@ -13,13 +13,11 @@ double fragsta_cumu(double x)
 
 Casper* example()
 {	
-	double* fraglens = new double[201];
-	for (int i = 0; i < 200; i++)
-	{
-		fraglens[i] = 0;
-	}
-	fraglens[200] = 1;
-	DiscreteDF* fraglen_dist = new DiscreteDF(fraglens, 201);
+	double* fraglens = new double[1];
+        int* lenvals= new int[1];
+        fraglens[0]= 1;
+        lenvals[0]= 200;
+	DiscreteDF* fraglen_dist = new DiscreteDF(fraglens, lenvals, 1);
 
 	DataFrame* f = new DataFrame(fraglen_dist, fragsta_cumu);
 

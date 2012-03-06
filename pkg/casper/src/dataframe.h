@@ -26,14 +26,14 @@ public:
 
 	// returns a list of all possible models that could explain this gene (explicit calculation)
 	vector<Model*>* allModels(Gene* gene);
+	int frag_readlen;
 private:
-	static const int frag_readlen;
 
 	int fraglen_minx;
-    int fraglen_maxx;
+        int fraglen_maxx;
 	DiscreteDF* fraglen_dist;
 	double (*fragsta_cumu)(double x);
-    map<Variant*, map<Fragment*, double>, VariantCmp > cache;
+        map<Variant*, map<Fragment*, double>, VariantCmp > cache;
 
 	double prob(int fs, int fe, int bs, int be, int* pos, double T);
 	void allVariantsRec(vector<Exon*>* stack, unsigned int level, Gene* gene, vector<Variant*>* vars);

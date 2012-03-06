@@ -1,14 +1,14 @@
 #include "dataframe.h"
 
-const int DataFrame::frag_readlen = 75;
-
 DataFrame::DataFrame(DiscreteDF* fraglen_dist, double (*fragsta_cumu)(double))
 {
 	this->fraglen_dist = fraglen_dist;
 	this->fragsta_cumu = fragsta_cumu;
 
-	for (fraglen_minx = 0; fraglen_dist->probability(fraglen_minx) == 0; fraglen_minx++) ;
-	for (fraglen_maxx = fraglen_dist->size - 1; fraglen_dist->probability(fraglen_maxx) == 0; fraglen_maxx--) ;
+        fraglen_minx= fraglen_dist->value(0);
+        fraglen_maxx= fraglen_dist->value((fraglen_dist->size)-1);
+	//	for (fraglen_minx = 0; fraglen_dist->probability(fraglen_minx) == 0; fraglen_minx++) ;
+	//	for (fraglen_maxx = fraglen_dist->size - 1; fraglen_dist->probability(fraglen_maxx) == 0; fraglen_maxx--) ;
 }
 
 void DataFrame::addData(Fragment* f)
@@ -72,8 +72,10 @@ double DataFrame::prob(int fs, int fe, int bs, int be, int* pos, double T)
 
 	double psum = 0;
 
-	for (double l = this->fraglen_minx; l <= this->fraglen_maxx; l++)
+        for (int i=0; i< fraglen_dist->size; i++)  //stop before T
+	//	for (double l = this->fraglen_minx; l <= this->fraglen_maxx; l++)
 	{
+	        double l= fraglen_dist->value(i);
 		double mb = 1.0 - l / T;
 		double rb = min(min(b1, b2 - l) / T, mb);
 		double lb = min((max(a1, a2 - l) - 1.0) / T, mb);
@@ -88,10 +90,12 @@ double DataFrame::prob(int fs, int fe, int bs, int be, int* pos, double T)
 		double factor = 0;
 		if (l <= T && punc > 0)
 		{
-			factor = fraglen_dist->probability((int)l);
+			factor = fraglen_dist->probability(i);
+		  //			factor = fraglen_dist->probability((int)l);
 			if (T < fraglen_maxx)
 			{
-				factor /= fraglen_dist->cumulativeProbability((int)T);
+			  factor /= fraglen_dist->cumulativeProbability((int)(T-fraglen_minx));
+			  //				factor /= fraglen_dist->cumulativeProbability((int)T);
 			}
 		}
 

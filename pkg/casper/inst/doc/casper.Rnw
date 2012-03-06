@@ -223,7 +223,7 @@ and Entrez identifiers stored as feature data.
 
 \footnotesize
 <<calcExp>>=
-eset <- calcExp(distrs=distrs, genomeDB=hg19DB, pc=pc)
+eset <- calcExp(distrs=distrs, genomeDB=hg19DB, pc=pc, readLength=75)
 eset
 head(exprs(eset))
 head(featureNames(eset))
