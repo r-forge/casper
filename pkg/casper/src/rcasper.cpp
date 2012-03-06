@@ -254,7 +254,7 @@ extern "C"
   // - exons: vector with exon ids
   // - exonwidth: vector exon widths
   // - geneid: integer with gene id
-  // - transcripts: list of transcripts. Names indicate transcript id. Each element contain list of exon ids. Used to initialize model
+  // - transcripts: list of transcripts. Names indicate transcript id. Each element contains list of exon ids. Used to initialize model
   // - pathCounts: vector with path counts. Names indicate series of visited exons e.g. e1.e2-e5
   // - fragsta: function that returns start distrib cdf
   // - fraglen: vector with fragment length distrib, i.e. P(length=lenvals[0]),P(length=lenvals[1]),... up to max length
@@ -269,6 +269,11 @@ extern "C"
 
     Casper* casp = initCasper(exons, exonwidth, transcriptsR, geneid, nexons, pathCountsR, fraglen, lenvals, nfraglen, readLength, fragstaR);
 
+    SEXP ans;
+    PROTECT(ans = allocVector(REALSXP, 1));
+    REAL(ans)[0]= 1.0;
+    UNPROTECT(1);
+    return(ans);
   }
 
 }

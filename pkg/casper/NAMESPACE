@@ -3,7 +3,7 @@ useDynLib(casper)
 import(IRanges, graphics)
 
 #export regular functions
-export(procBam, procGenome, pathCounts, getDistrs, calcExp, buildGene, rangesPlot, genPlot, rmShortInserts, relIsoformExp)
+export(procBam, procGenome, pathCounts, getDistrs, calcExp, calcDenovo, buildGene, rangesPlot, genPlot, rmShortInserts, relIsoformExp)
 
 #export general methods
 #exportMethods("calc")

@@ -136,8 +136,8 @@ int _tmain() {
 	}
 	printf("\n");
 
-	vector<Model*>* m1 = c->frame->allModels(c->frame->genes[1]);
-	vector<Model*>* m2 = c->frame->allModels(c->frame->genes[1]);
+	//vector<Model*>* m1 = c->frame->allModels(c->frame->genes[1]);
+	//vector<Model*>* m2 = c->frame->allModels(c->frame->genes[1]);
 	//Model* n1 = m1->at(0);
 	//Model* n2 = m2->at(0);
 
