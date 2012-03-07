@@ -7,13 +7,12 @@
 
 double cumu_fragsta(double x)
 {
-  SEXP sval;
+  SEXP sval, R_fcall;
   PROTECT(sval = allocVector(REALSXP, 1));
-  //double* val = REAL(sval);
+  REAL(sval)[0]= x; //store x in sval
 
-  SEXP R_fcall;
-  PROTECT(R_fcall = lang2(fun_fragsta, R_NilValue));
-  SETCADR(R_fcall, sval);
+  PROTECT(R_fcall = lang2(fun_fragsta, R_NilValue)); //create executable pairlist
+  SETCADR(R_fcall, sval);  //prepare call for value in sval
 
   SEXP funval = eval(R_fcall, R_NilValue);
   double res = REAL(funval)[0];
@@ -262,14 +261,15 @@ extern "C"
   // - readLength: read length
   // - priorprob: unfinished. This should somehow allow to compute prior prob on model space
 
-    int *exons= INTEGER(exonsR), *exonwidth= INTEGER(exonwidthR), geneid= INTEGER(geneidR)[0], *lenvals= INTEGER(lenvalsR);
+    int *exons= INTEGER(exonsR), *exonwidth= INTEGER(exonwidthR), geneid= INTEGER(geneidR)[0], *lenvals= INTEGER(lenvalsR), nexons, nfraglen, readLength= INTEGER(readLengthR)[0];
     double *fraglen= REAL(fraglenR); 
-    SEXP nexonsR = getAttrib(exonsR,R_DimSymbol), nfraglenR= getAttrib(fraglenR,R_DimSymbol);
-    int nexons= INTEGER(nexonsR)[0], nfraglen= INTEGER(nfraglenR)[0], readLength= INTEGER(readLengthR)[0];
+    SEXP ans;
+
+    nexons= length(exonsR);
+    nfraglen= length(fraglenR);
 
     Casper* casp = initCasper(exons, exonwidth, transcriptsR, geneid, nexons, pathCountsR, fraglen, lenvals, nfraglen, readLength, fragstaR);
 
-    SEXP ans;
     PROTECT(ans = allocVector(REALSXP, 1));
     REAL(ans)[0]= 1.0;
     UNPROTECT(1);

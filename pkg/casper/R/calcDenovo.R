@@ -4,7 +4,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid){
   #if (class(genomeDB)!='') stop("class of genomeDB must be...")
   stafun <- ecdf(distrs$stDis)
   lendis <- as.double(distrs$lenDis/sum(distrs$lenDis))
-  lenvals <- as.integer(names(lendis))
+  lenvals <- as.integer(names(distrs$lenDis))
   readLength <- as.integer(readLength)
   priorprob <- function(nexonsGene, nexonsVariant) { return(1) }
   if (!missing(geneid)) {
@@ -17,7 +17,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid){
 
 
 calcDenovoSingle <- function(exons, exonwidth, transcripts, geneid, pc, stafun, lendis, lenvals, readLength, priorprob){
-  ans <- .Call("calcDenovo", exons, exonwidth, transcripts, geneid, pc, stafun, lendis, lenvals, readLength, priorprob)
+  ans <- .Call("calcDenovo", as.integer(exons), as.integer(exonwidth), transcripts, geneid, pc, stafun, lendis, lenvals, readLength, priorprob)
   return(ans)
 }
 
@@ -36,6 +36,11 @@ getDenovoArgs <- function(genomeDB, pc, geneid) {
   n <- lapply(n,'[',-1)
   exonchar <- as.character(exons)
   sel <- sapply(n,function(z) any(z %in% exonchar))
-  list(exons=exons,exonwidth=exonwidth,transcripts=transcripts,pc=pc[sel])
+  #Type coercion
+  exons <- as.integer(exons)
+  exonwidth <- as.integer(exonwidth)
+  transcripts <- lapply(transcripts,as.integer)
+  pc <- as.integer(pc[sel])
+  list(exons=exons,exonwidth=exonwidth,transcripts=transcripts,pc=pc)
 }
 
