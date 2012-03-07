@@ -292,7 +292,7 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
   Gene* g= new Gene(geneid);
   for (int i=0; i<nexons; i++) {
     df->addExon(new Exon(exons[i], exonwidth[i]));
-    g->addExon(new Exon(exons[i], exonwidth[i]));  //Manuel: do we really need to store exon info in the gene? It seems that df has this info twice
+    g->addExon(new Exon(exons[i], exonwidth[i]));
   }
   df->addGene(g);
 
@@ -324,15 +324,15 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
     right[strlen(right)-1] = '\0';
     char* item;
     item = strtok(left, ".");  //split string
-    for (int i = 0; item != NULL; i++) {
+    for (int j = 0; item != NULL; j++) {
       int eid = atoi(item);
-      f->left[i] = eid;
+      f->left[j] = eid;
       item = strtok(NULL, ".");
     }
     item = strtok(right, ".");
-    for (int i = 0; item != NULL; i++) {
+    for (int j = 0; item != NULL; j++) {
       int eid = atoi(item);
-      f->right[i] = eid;
+      f->right[j] = eid;
       item = strtok(NULL, ".");
     }
 
@@ -342,11 +342,10 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
   //Set initial variants
   int nt = LENGTH(transcriptsR);
   vector<Variant*>* initvars = new vector<Variant*>();
-  SEXP tnames = getAttrib(transcriptsR, R_NamesSymbol);
+  //SEXP tnames = getAttrib(transcriptsR, R_NamesSymbol);
   Gene* gene;
 
   for (int i = 0; i < nt; i++) {
-    int tid = atoi(CHAR(STRING_ELT(tnames, i)));
     SEXP trow = VECTOR_ELT(transcriptsR, i);
     int ntsub = LENGTH(trow);
     int* tvals = INTEGER(trow);
@@ -360,27 +359,30 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
 
     gene = df->genes[geneid];
     Variant* v = new Variant(gene, el);
-    v->id = tid;
+    v->id= i;
+    //tid = atoi(CHAR(STRING_ELT(tnames, i)));
+    //v->id = tid;
 
     initvars->push_back(v);
   }
 
   //Add variants to initial set so that all observed exon paths have positive probability
-  int deletedPath= 0;
+  int deletedPath= 0, newct=0;
   list<Fragment*>::iterator it;
   vector<Variant*>::iterator it2;
   for (it=df->data.begin(); it != df->data.end(); it++) {
-    int posprob=0, newct=0;
+    int posprob=0;
     if (deletedPath==1) { it--; deletedPath=0; }
     for (it2= initvars->begin(); (it2 != initvars->end()) && posprob==0; it2++) {
       if (df->probability(*it2, *it) > 0) posprob=1;  //probability(Variant *v, Fragment *it)
     }
     //Add new variant containing observed exon path (plus all exons before & after the path)
     if (posprob==0) {  
-      int eid; Exon* ex;
+      int eid; Exon *ex;
       vector<Exon*>* el = new vector<Exon*>();
-      for (int i=0; i< (*it)->left[0]; i++) {
-        ex= df->exons[i];
+      map<int, Exon*>::iterator itexon;
+      for (itexon= df->exons.begin(); (*itexon).first != (*it)->left[0]; itexon++) {
+        ex= (*itexon).second;
         el->push_back(ex);
       }
       for (int i=0; i< (*it)->leftc; i++) {
@@ -398,10 +400,12 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
         ex = df->exons[eid];
         el->push_back(ex);
       }
-      int nexon= gene->exons.size();
-      for (int i=eid; i<nexon; i++) {
-        ex= df->exons[i];
+      while ((*itexon).first != eid) { itexon++; }
+      itexon++;
+      while (itexon != df->exons.end()) {
+        ex= (*itexon).second;
         el->push_back(ex);
+        itexon++;
       }
       Variant* v = new Variant(gene, el);
       v->id = nt+newct;
@@ -411,7 +415,7 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
       if (df->probability(v, *it)==0) { 
         it= df->data.erase(it);
         deletedPath= 1;
-        Rprintf("Observed path count could not be explained, so it was removed\n"); 
+        Rprintf("Observed exon path cannot be explained by defining any new variant. Removed the path\n"); 
       }  
     }
   }

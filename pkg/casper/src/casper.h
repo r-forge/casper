@@ -28,7 +28,7 @@ class Casper
   // random int between 0 incl and n excl
   static int randi(int n);
  private:
-  map<Fragment*, map<Variant*, double> > mempprobs;
+  Map<Fragment*, map<Variant*, double> > mempprobs;
   map<Variant*, map<Fragment*, double> > memvprobs;
 
   static const int is_runs;
