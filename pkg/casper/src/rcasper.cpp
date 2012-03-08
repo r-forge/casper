@@ -366,63 +366,122 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
     initvars->push_back(v);
   }
 
+  Model* model = new Model(initvars);
+  Casper* casp = new Casper(model, df);
+
   //Add variants to initial set so that all observed exon paths have positive probability
-  int deletedPath= 0, newct=0;
-  list<Fragment*>::iterator it;
-  vector<Variant*>::iterator it2;
-  for (it=df->data.begin(); it != df->data.end(); it++) {
-    int posprob=0;
-    if (deletedPath==1) { it--; deletedPath=0; }
-    for (it2= initvars->begin(); (it2 != initvars->end()) && posprob==0; it2++) {
-      if (df->probability(*it2, *it) > 0) posprob=1;  //probability(Variant *v, Fragment *it)
-    }
-    //Add new variant containing observed exon path (plus all exons before & after the path)
-    if (posprob==0) {  
-      int eid; Exon *ex;
-      vector<Exon*>* el = new vector<Exon*>();
-      map<int, Exon*>::iterator itexon;
-      for (itexon= df->exons.begin(); (*itexon).first != (*it)->left[0]; itexon++) {
-        ex= (*itexon).second;
-        el->push_back(ex);
-      }
-      for (int i=0; i< (*it)->leftc; i++) {
-        eid = (*it)->left[i];
-        ex = df->exons[eid];
-        el->push_back(ex);
-      }
-      if (eid != (*it)->right[0]) {
-        eid = (*it)->right[0];
-        ex = df->exons[eid];
-        el->push_back(ex);
-      }
-      for (int i=1; i< (*it)->rightc; i++) {
-        eid = (*it)->right[i];
-        ex = df->exons[eid];
-        el->push_back(ex);
-      }
-      while ((*itexon).first != eid) { itexon++; }
-      itexon++;
-      while (itexon != df->exons.end()) {
-        ex= (*itexon).second;
-        el->push_back(ex);
-        itexon++;
-      }
-      Variant* v = new Variant(gene, el);
-      v->id = nt+newct;
+  int deletedPath=0, newct=nt;
+  list<Fragment*>::iterator fi;
+  for (fi = casp->frame->data.begin(); fi != casp->frame->data.end(); fi++) {
+    if (deletedPath==1) { fi--; deletedPath=0; }
+    Fragment* f = *fi;
+    if (!(casp->isFragValid(f))) {
+      Variant* v = path2Variant(casp->frame, f, gene);
+      v->id= newct;
       newct++;
       initvars->push_back(v);
-      //If path count still has 0 prob, remove path count
-      if (df->probability(v, *it)==0) { 
-        it= df->data.erase(it);
+      delete model;  //Manuel: free and then re-allocate memory?
+      model= new Model(initvars); 
+      delete casp;
+      casp= new Casper(model, df);
+      if (!(casp->isFragValid(f))) {
+        fi= casp->frame->data.erase(fi);
         deletedPath= 1;
         Rprintf("Observed exon path cannot be explained by defining any new variant. Removed the path\n"); 
-      }  
+      }
     }
   }
 
-  Model* model = new Model(initvars);
-  Casper* casp = new Casper(model, df);
+
+  //  int deletedPath= 0, newct=0;
+  //  list<Fragment*>::iterator it;
+  //  vector<Variant*>::iterator it2;
+  //  for (it=df->data.begin(); it != df->data.end(); it++) {
+  //    int posprob=0;
+  //    if (deletedPath==1) { it--; deletedPath=0; }
+  //    for (it2= initvars->begin(); (it2 != initvars->end()) && posprob==0; it2++) {
+  //      if (df->probability(*it2, *it) > 0) posprob=1;  //probability(Variant *v, Fragment *it)
+  //    }
+  //    //Add new variant containing observed exon path (plus all exons before & after the path)
+  //    if (posprob==0) {  
+  //      int eid; Exon *ex;
+  //      vector<Exon*>* el = new vector<Exon*>();
+  //      map<int, Exon*>::iterator itexon;
+  //      for (itexon= df->exons.begin(); (*itexon).first != (*it)->left[0]; itexon++) {
+  //        ex= (*itexon).second;
+  //        el->push_back(ex);
+  //      }
+  //      for (int i=0; i< (*it)->leftc; i++) {
+  //        eid = (*it)->left[i];
+  //        ex = df->exons[eid];
+  //       el->push_back(ex);
+  //      }
+  //      if (eid != (*it)->right[0]) {
+  //        eid = (*it)->right[0];
+  //        ex = df->exons[eid];
+  //        el->push_back(ex);
+  //      }
+  //      for (int i=1; i< (*it)->rightc; i++) {
+  //        eid = (*it)->right[i];
+  //        ex = df->exons[eid];
+  //        el->push_back(ex);
+  //      }
+  //      while ((*itexon).first != eid) { itexon++; }
+  //      itexon++;
+  //      while (itexon != df->exons.end()) {
+  //        ex= (*itexon).second;
+  //        el->push_back(ex);
+  //     itexon++;
+  //  }
+  //  Variant* v = new Variant(gene, el);
+  //  v->id = nt+newct;
+  //  newct++;
+  //  initvars->push_back(v);
+  //  //If path count still has 0 prob, remove path count
+    //  if (df->probability(v, *it)==0) { 
+  //  it= df->data.erase(it);
+  //    deletedPath= 1;
+  //    Rprintf("Observed exon path cannot be explained by defining any new variant. Removed the path\n"); 
+  //  }  
+  //  }
+  //}
+  //Model* model = new Model(initvars);
+  //Casper* casp = new Casper(model, df);
 
   return casp;
 }
 
+
+Variant* path2Variant(DataFrame *df, Fragment* f, Gene *gene) {
+  int eid; Exon *ex;
+  vector<Exon*>* el = new vector<Exon*>();
+  map<int, Exon*>::iterator itexon;
+  for (itexon= df->exons.begin(); (*itexon).first != f->left[0]; itexon++) {
+    ex= (*itexon).second;
+    el->push_back(ex);
+  }
+  for (int i=0; i< f->leftc; i++) {
+    eid = f->left[i];
+    ex = df->exons[eid];
+    el->push_back(ex);
+  }
+  if (eid != f->right[0]) {
+    eid = f->right[0];
+    ex = df->exons[eid];
+    el->push_back(ex);
+  }
+  for (int i=1; i< f->rightc; i++) {
+    eid = f->right[i];
+    ex = df->exons[eid];
+    el->push_back(ex);
+  }
+  while ((*itexon).first != eid) { itexon++; }
+  itexon++;
+  while (itexon != df->exons.end()) {
+    ex= (*itexon).second;
+    el->push_back(ex);
+    itexon++;
+  }
+  Variant* v = new Variant(gene, el);
+  return v;
+}

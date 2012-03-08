@@ -22,13 +22,15 @@ class Casper
 
   // returns whether the current model is valid
   bool isValid();
+  // returns whether specified fragment has positive prob under current model
+  bool isFragValid(Fragment *f);
 
   // random double between 0 and 1
   static double randd();
   // random int between 0 incl and n excl
   static int randi(int n);
  private:
-  Map<Fragment*, map<Variant*, double> > mempprobs;
+  map<Fragment*, map<Variant*, double> > mempprobs;
   map<Variant*, map<Fragment*, double> > memvprobs;
 
   static const int is_runs;

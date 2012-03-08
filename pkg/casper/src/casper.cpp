@@ -106,6 +106,10 @@ bool Casper::isValid()
 	return true;
 }
 
+bool Casper::isFragValid(Fragment *f) {
+  return(mempprobs.count(f) > 0 && mempprobs[f].size() > 0);
+}
+
 double Casper::priorLn(double* pi)
 {
 	int n = model->count();
