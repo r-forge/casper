@@ -21,8 +21,8 @@ public:
 	void addGene(Gene* g);
 
 	// probabilities of all the fragments given a variant
-	map<Fragment*, double> probabilities(Variant* v);
-	double probability(Variant* v, Fragment* f);
+	map<Fragment*, double> probabilities(Variant* v);  //uses cache if available, otherwise fills cache and returns prob
+	double probability(Variant* v, Fragment* f);  //does not use cache
 
 	// returns a list of all possible models that could explain this gene (explicit calculation)
 	vector<Model*>* allModels(Gene* gene);

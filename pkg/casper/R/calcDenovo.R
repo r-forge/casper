@@ -1,23 +1,24 @@
-calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid){
+calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, verbose=FALSE){
   #to do: based function on islands rather than genes
   if (missing(readLength)) stop("readLength must be specified")
   #if (class(genomeDB)!='') stop("class of genomeDB must be...")
-  stafun <- ecdf(distrs$stDis)
+  startcdf <- as.double(ecdf(distrs$stDis)(seq(0,1,.001)))
   lendis <- as.double(distrs$lenDis/sum(distrs$lenDis))
   lenvals <- as.integer(names(distrs$lenDis))
   readLength <- as.integer(readLength)
+  verbose <- as.integer(verbose)
   priorprob <- function(nexonsGene, nexonsVariant) { return(1) }
   if (!missing(geneid)) {
     args <- getDenovoArgs(genomeDB=genomeDB,pc=pc,geneid=geneid)
-    ans <- calcDenovoSingle(exons=args$exons,exonwidth=args$exonwidth,transcripts=args$transcripts,geneid=as.integer(geneid),pc=args$pc,stafun=stafun,lendis=lendis,lenvals=lenvals,readLength=readLength,priorprob=priorprob)
+    ans <- calcDenovoSingle(exons=args$exons,exonwidth=args$exonwidth,transcripts=args$transcripts,geneid=as.integer(geneid),pc=args$pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorprob=priorprob,verbose=verbose)
   } else {
   }
   return(ans)
 }
 
 
-calcDenovoSingle <- function(exons, exonwidth, transcripts, geneid, pc, stafun, lendis, lenvals, readLength, priorprob){
-  ans <- .Call("calcDenovo", as.integer(exons), as.integer(exonwidth), transcripts, geneid, pc, stafun, lendis, lenvals, readLength, priorprob)
+calcDenovoSingle <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, priorprob, verbose){
+  ans <- .Call("calcDenovo", as.integer(exons), as.integer(exonwidth), transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, priorprob, verbose)
   return(ans)
 }
 

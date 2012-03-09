@@ -78,25 +78,18 @@ int Variant::compare(const Variant* other)
 		return +1;
 	}*/
 
-	if (this->exonCount < other->exonCount)
-	{
-		return -1;
-	}
-	if (this->exonCount > other->exonCount)
-	{
-		return +1;
+	if (this->exonCount < other->exonCount) {
+	  return -1;
+	} else if (this->exonCount > other->exonCount) {
+	  return +1;
 	}
 
-	for (int c = 0; c < this->codelen; c++)
-	{
-		if (this->codes[c] < other->codes[c])
-		{
-			return -1;
-		}
-		if (this->codes[c] > other->codes[c])
-		{
-			return +1;
-		}
+	for (int c = 0; c < this->codelen; c++) {
+	  if (this->codes[c] < other->codes[c]) {
+            return -1;
+	  } else if (this->codes[c] > other->codes[c]) {
+	    return +1;
+	  }
 	}
 
 	return 0;

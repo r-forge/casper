@@ -1,3 +1,6 @@
+#ifndef CASPER
+#define CASPER
+
 #include "dataframe.h"
 #include "cstat.h"
 #include <list>
@@ -52,3 +55,5 @@ class Casper
   double*** vtHess(double* th, int n);
   double det(double** a, int n);
 };
+
+#endif

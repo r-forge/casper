@@ -17,7 +17,7 @@ Casper::Casper(Model* model, DataFrame* frame)
 	vector<Variant* >::const_iterator vi;
 	for (vi = model->items.begin(); vi != model->items.end(); vi++)
 	{
-		Variant* v = *vi;
+	  Variant *v = *vi;
 		map<Fragment*, double> table = this->frame->probabilities(v);
 
 		memvprobs[v] = table;
