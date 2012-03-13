@@ -1,4 +1,4 @@
-calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, verbose=FALSE){
+calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, verbose=FALSE) {
   #to do: based function on islands rather than genes
   if (missing(readLength)) stop("readLength must be specified")
   #if (class(genomeDB)!='') stop("class of genomeDB must be...")
@@ -13,6 +13,11 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, verbose=FALSE){
     ans <- calcDenovoSingle(exons=args$exons,exonwidth=args$exonwidth,transcripts=args$transcripts,geneid=as.integer(geneid),pc=args$pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorprob=priorprob,verbose=verbose)
   } else {
   }
+  colnames(ans[[1]]) <- c('model','posprob')
+  ans[[2]] <- data.frame(ans[[2]],ans[[3]])
+  ans[[3]] <- NULL
+  colnames(ans[[2]]) <- c('model','varID','expr','varName')
+  names(ans) <- c('posprob','expression')
   return(ans)
 }
 
@@ -26,22 +31,28 @@ getDenovoArgs <- function(genomeDB, pc, geneid) {
 #Returns arguments needed by calcDenovo
   #Select known transcripts for given gene
   sel <- unlist(values(genomeDB$txs)[['gene_id']]==geneid)
-  txName <- unlist(values(genomeDB$txs)[['tx_name']])[sel]
-  transcripts <- genomeDB$newTx[txName]
-  #Select list of exon ids & widths for given gene
-  exons <- unique(unlist(transcripts)); exons <- exons[order(exons)]  #to do: order based on strand. take exons from genomeDB$gene2exon[[geneid]]
-  sel <- genomeDB$exonsNI[['id']] %in% exons
-  exonwidth <- as.integer(width(genomeDB$exonsNI)[sel])
-  #Select path counts for given gene
-  n <- strsplit(names(pc),split='-|\\.')
-  n <- lapply(n,'[',-1)
-  exonchar <- as.character(exons)
-  sel <- sapply(n,function(z) any(z %in% exonchar))
-  #Type coercion
-  exons <- as.integer(exons)
-  exonwidth <- as.integer(exonwidth)
-  transcripts <- lapply(transcripts,as.integer)
-  pc <- as.integer(pc[sel])
-  list(exons=exons,exonwidth=exonwidth,transcripts=transcripts,pc=pc)
+  if (any(sel)) {
+    txName <- unlist(values(genomeDB$txs)[['tx_name']])[sel]
+    transcripts <- genomeDB$newTx[txName]
+    #Select list of exon ids & widths for given gene
+    exons <- unique(unlist(transcripts)); exons <- exons[order(exons)]  #to do: order based on strand. take exons from genomeDB$gene2exon[[geneid]]
+    sel <- genomeDB$exonsNI[['id']] %in% exons
+    exonwidth <- as.integer(width(genomeDB$exonsNI)[sel])
+    #Select path counts for given gene
+    n <- strsplit(names(pc),split='-|\\.')
+    n <- lapply(n,'[',-1)
+    exonchar <- as.character(exons)
+    sel <- sapply(n,function(z) any(z %in% exonchar))
+    #Type coercion
+    exons <- as.integer(exons)
+    exonwidth <- as.integer(exonwidth)
+    transcripts <- lapply(transcripts,as.integer)
+    pc <- pc[sel]; n <- names(pc)
+    pc <- as.integer(pc); names(pc) <- n
+    ans <- list(exons=exons,exonwidth=exonwidth,transcripts=transcripts,pc=pc)
+  } else {
+    ans <- list(exons=NULL,exonwidth=NULL,transcripts=NULL,pc=NULL)
+  }
+  return(ans)
 }
 

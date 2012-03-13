@@ -20,8 +20,10 @@ class Casper
 
   // gives the mode given the current model and data
   double* calculateMode();
+
   // gives the integral given the current model and data
-  double calculateIntegral();
+  double calculateIntegral();  //uses mode=calculateMode() and n= model->count()
+  double calculateIntegral(double* mode, int n);  //do integral with pre-computed mode
 
   // returns whether the current model is valid
   bool isValid();

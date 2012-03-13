@@ -1,3 +1,4 @@
+#include <sstream>
 #include <R.h>
 #include <Rinternals.h>
 #include "stdafx.h"
@@ -35,7 +36,7 @@ extern "C"
   //Compute expression for known variants.
   SEXP calc(SEXP exons, SEXP transcripts, SEXP pathCounts, SEXP fragsta, SEXP fraglen, SEXP lenvals, SEXP readLength) 
 	{
-	  lencdf= length(fragsta);
+	  lencdf= Rf_length(fragsta);
           startcdf= REAL(fragsta);
 	  //::fun_fragsta = fragsta;
 		
@@ -270,38 +271,71 @@ extern "C"
   // - priorprob: unfinished. This should somehow allow to compute prior prob on model space
   // - verbose: set verbose != 0 to print warnings & progress info
 
-    int i, geneid=INTEGER(geneidR)[0], nexons=length(exonsR), nfraglen=length(fraglenR), readLength=INTEGER(readLengthR)[0], verbose=INTEGER(verboseR)[0];
+    int i, geneid=INTEGER(geneidR)[0], nexons=Rf_length(exonsR), nfraglen=Rf_length(fraglenR), readLength=INTEGER(readLengthR)[0], verbose=INTEGER(verboseR)[0];
     int *exons=INTEGER(exonsR), *exonwidth=INTEGER(exonwidthR), *lenvals=INTEGER(lenvalsR);
     double *fraglen= REAL(fraglenR); 
     SEXP ans;
 
     Casper* casp = initCasper(exons, exonwidth, transcriptsR, geneid, nexons, pathCountsR, fraglen, lenvals, nfraglen, readLength, fragstaR, verbose);
+    SeppelExact* sepex;
+    SeppelSmart* sepsm;
 
-    map<Model*, double, ModelCmp> res;
+    map<Model*, double, ModelCmp> posprob;
+    map<Model*, double*, ModelCmp> mode;
     if (nexons<=4) {
-      SeppelExact* sep = new SeppelExact(casp->frame, casp->frame->genes[geneid]);
-      res = sep->calculate();
+      sepex = new SeppelExact(casp->frame, casp->frame->genes[geneid]);
+      sepex->calculate();
+      posprob = sepex->posprob;
+      mode = sepex->mode;
     } else {
-      SeppelSmart* sep = new SeppelSmart(casp->frame, casp->frame->genes[geneid]);
-      res = sep->calculate(casp->model);
+      SeppelSmart* sepsm = new SeppelSmart(casp->frame, casp->frame->genes[geneid]);
+      posprob = sepsm->calculate(casp->model);
     }
 
-    PROTECT(ans= allocVector(VECSXP, 1));
+    PROTECT(ans= allocVector(VECSXP, 3));
 
     //Posterior probabilities
-    SET_VECTOR_ELT(ans, 0, allocVector(REALSXP,res.size()));
+    int nrowpi=0, nx= posprob.size();
+    SET_VECTOR_ELT(ans, 0, allocMatrix(REALSXP,nx,2));
+    double *posprobR= REAL(VECTOR_ELT(ans,0));
+
     map<Model*, double, ModelCmp>::const_iterator mi;
-    for (mi = res.begin(), i=0; mi != res.end(); mi++, i++) {
+    for (mi = posprob.begin(), i=0; mi != posprob.end(); mi++, i++) {
       Model* m = mi->first;
-      REAL(VECTOR_ELT(ans,0))[i]= res[m];
-      char *varchr= new char[0];
-      vector<Variant*>::const_iterator vi;
-      for (vi = m->items.begin(); vi != m->items.end(); vi++) {
-        for (int j=0; j< (*vi)->exonCount; j++) {
-          strcat(varchr, (*vi)->exons[j]->id);
-	}
+      posprobR[i]= i;
+      posprobR[i+nx]= posprob[m];
+      nrowpi+= m->count();
+    }
+
+    //Estimated expression
+    SET_VECTOR_ELT(ans, 1, allocMatrix(REALSXP,nrowpi,3));
+    SET_VECTOR_ELT(ans, 2, allocVector(STRSXP,nrowpi)); 
+    double *expr= REAL(VECTOR_ELT(ans,1));
+    SEXP varnamesR= VECTOR_ELT(ans,2);
+
+    int rowid=0;
+    for (mi = posprob.begin(), i=0; mi != posprob.end(); mi++, i++) {
+      Model* m = mi->first;
+      for (int j=0; j< m->count(); j++) {
+        expr[rowid]= i;  //model id
+        Variant* v = m->get(j);
+        int varidx= m->indexOf(v);
+        expr[rowid+nrowpi]= varidx; //variant id
+        expr[rowid+2*nrowpi]= sepex->mode[m][varidx]; //estimated expression
+        const char *cname= (v->name).c_str();
+        SET_STRING_ELT(varnamesR,rowid,mkChar(cname));  //variant name
+        rowid++;
       }
     }
+
+    //Models
+      //      char *varchr= new char[0];
+      //vector<Variant*>::const_iterator vi;
+      //for (vi = m->items.begin(); vi != m->items.end(); vi++) {
+      //  for (int j=0; j< (*vi)->exonCount; j++) {
+      //  strcat(varchr, (*vi)->exons[j]->id);  //TODO: convert int to chr and store in VECTOR_ELT(ans,1)
+      //}
+      //}
 
     UNPROTECT(1);
     return(ans);
@@ -315,7 +349,7 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
   //Define fragment length/start distributions and create DataFrame
   DiscreteDF* fraglen_dist = new DiscreteDF(fraglen, lenvals, nfraglen);
 
-  lencdf= length(fragstaR);
+  lencdf= Rf_length(fragstaR);
   startcdf= REAL(fragstaR);
   //::fun_fragsta = fragstaR;
 
@@ -377,7 +411,7 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
   //Set initial variants
   int nt = LENGTH(transcriptsR);
   vector<Variant*>* initvars = new vector<Variant*>();
-  //SEXP tnames = getAttrib(transcriptsR, R_NamesSymbol);
+  SEXP tnames = getAttrib(transcriptsR, R_NamesSymbol);
   Gene* gene;
   Variant *v;
   SEXP trow;
@@ -397,8 +431,8 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
     gene = df->genes[geneid];
     v = new Variant(gene, el);
     v->id= i;
-    //tid = atoi(CHAR(STRING_ELT(tnames, i)));
-    //v->id = tid;
+    int nbchar= Rf_length(STRING_ELT(tnames,i));
+    v->name= string(CHAR(STRING_ELT(tnames, i)), nbchar);
 
     initvars->push_back(v);
   }

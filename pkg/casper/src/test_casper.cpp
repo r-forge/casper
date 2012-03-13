@@ -152,7 +152,10 @@ int _tmain() {
 	printf("SMART\n");
 
 	SeppelExact* sep1 = new SeppelExact(c->frame, c->frame->genes[1]);
-	map<Model*, double, ModelCmp> res1 = sep1->calculate();
+	map<Model*, double, ModelCmp> res1;
+	sep1->calculate();
+	res1 = sep1->posprob;
+
 
 	printf("EXACT\n");
 	

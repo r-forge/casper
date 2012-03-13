@@ -3,6 +3,7 @@
 Variant::Variant(Gene* gene, vector<Exon*>* exons)
 {
 	this->id = -1;
+	this->name= "";
 	this->gene = gene;
 	//this->strand = strand;
 
@@ -22,17 +23,23 @@ Variant::Variant(Gene* gene, vector<Exon*>* exons)
 	vector<Exon*>::const_iterator ei;
 	for (ei = exons->begin(); ei != exons->end(); ei++)
 	{
-		Exon* exon = *ei;
+	  Exon* exon = *ei;
+
+	  std::ostringstream out;
+	  out << (exon->id);
+	  (*this).name += out.str();
+	  (*this).name += ",";
+
+	  this->idmap[exon->id] = i;
+	  this->exons[i] = exon;
+	  this->positions[i + 1] = this->positions[i] + exon->length;
 		
-		this->idmap[exon->id] = i;
-		this->exons[i] = exon;
-		this->positions[i + 1] = this->positions[i] + exon->length;
-		
-        int j = gene->indexOf(exon);
-        this->codes[j / 32] |= 1 << (j % 32);
-		i++;
+	  int j = gene->indexOf(exon);
+	  this->codes[j / 32] |= 1 << (j % 32);
+	  i++;
 	}
 
+	(*this).name = (*this).name.substr(0, (*this).name.size()-1); //remove last ","
 	this->length = this->positions[i] - 1;
 
 	this->hashcode = gethash();

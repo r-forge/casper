@@ -5,16 +5,16 @@ SeppelExact::SeppelExact(DataFrame* frame, Gene* gene)
 {
 	this->frame = frame;
 	this->gene = gene;
+        this->models= frame->allModels(gene);
 }
 
-map<Model*, double, ModelCmp> SeppelExact::calculate()
+//map<Model*, double, ModelCmp> SeppelExact::calculate()
+void SeppelExact::calculate()
 {
-	map<Model*, double, ModelCmp> result;
+  map<Model*, double, ModelCmp> posprobUnNorm;
 
-	vector<Model*>* models = frame->allModels(gene);
-
-	vector<Model*>::const_iterator mi;
-	double imax = -DBL_MAX;
+  vector<Model*>::const_iterator mi;
+  double imax = -DBL_MAX;
 	for (mi = models->begin(); mi != models->end(); mi++)
 	{
 		Model* model = *mi;
@@ -22,25 +22,26 @@ map<Model*, double, ModelCmp> SeppelExact::calculate()
 		Casper* casp = new Casper(model, frame);
 		if (casp->isValid())
 		{
-			double inte = casp->calculateIntegral();
-			result[model] = inte;
-			imax = max(inte, imax);
+		  mode[model]= casp->calculateMode();
+		  double inte= casp->calculateIntegral(mode[model], model->count());
+		  //double inte = casp->calculateIntegral();
+		  posprobUnNorm[model] = inte;
+		  imax = max(inte, imax);
 		}
 	}
 
 	double asum = 0;
 	map<Model*, double, ModelCmp>::const_iterator mvi;
-	for (mvi = result.begin(); mvi != result.end(); mvi++)
+	for (mvi = posprobUnNorm.begin(); mvi != posprobUnNorm.end(); mvi++)
 	{
 		asum += exp(mvi->second - imax);
 	}
 	double lsum = imax + log(asum);
 
-	map<Model*, double, ModelCmp> normalized;
-	for (mvi = result.begin(); mvi != result.end(); mvi++)
+	for (mvi = posprobUnNorm.begin(); mvi != posprobUnNorm.end(); mvi++)
 	{
-		normalized[mvi->first] = exp(mvi->second - lsum);
+		posprob[mvi->first] = exp(mvi->second - lsum);
 	}
 
-	return normalized;
+	//	return posprob;
 }

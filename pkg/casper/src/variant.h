@@ -1,5 +1,8 @@
 #include "gene.h"
 #include "fragment.h"
+#include <string>
+//#include <iostream>
+#include <sstream>
 
 using namespace std;
 
@@ -7,6 +10,8 @@ class Variant
 {
 public:
 	int id;
+	std::string name;
+
 	// ordered array of exons of this variant
 	Exon** exons;
 	int exonCount;

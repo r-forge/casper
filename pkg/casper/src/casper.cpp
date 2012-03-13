@@ -30,50 +30,48 @@ Casper::Casper(Model* model, DataFrame* frame)
 		}
 	}
 }
-double* Casper::calculateMode()
-{
-	int n = model->count();
+double* Casper::calculateMode() {
+  int n = model->count();
 
-	double* pi = new double[n];
-	for (int i = 0; i < n; i++)
-	{
-		pi[i] = 1.0 / (double)n;
-	}
+  double* pi = new double[n];
+  for (int i = 0; i < n; i++) {
+    pi[i] = 1.0 / (double)n;
+  }
 
-	double normali = (double)memvprobs.size() * (prior_q - 1.0);
-	map<Fragment*, map<Variant*, double> >::const_iterator ofi;
-	for (ofi = mempprobs.begin(); ofi != mempprobs.end(); ofi++)
-	{
-		normali += ofi->first->count;
-	}
+  double normali = (double)memvprobs.size() * (prior_q - 1.0);
+  map<Fragment*, map<Variant*, double> >::const_iterator ofi;
+  for (ofi = mempprobs.begin(); ofi != mempprobs.end(); ofi++) {
+    normali += ofi->first->count;
+  }
 
-	for (int r = 0; r < em_maxruns; r++)
-	{
-		map<Fragment*, double> mem = fragdist(pi);
+  for (int r = 0; r < em_maxruns; r++) {
+    map<Fragment*, double> mem = fragdist(pi);
 		
-		map<Variant*, map<Fragment*, double> >::const_iterator vi;
-		for (vi = memvprobs.begin(); vi != memvprobs.end(); vi++)
-		{
-			int i = model->indexOf(vi->first);
+    map<Variant*, map<Fragment*, double> >::const_iterator vi;
+    for (vi = memvprobs.begin(); vi != memvprobs.end(); vi++) {
+      int i = model->indexOf(vi->first);
 
-			double nsum = 0;
-			map<Fragment*, double>::const_iterator fi;
-			for (fi = vi->second.begin(); fi != vi->second.end(); fi++)
-			{
-				nsum += (double)fi->first->count * fi->second / mem[fi->first];
-			}
+      double nsum = 0;
+      map<Fragment*, double>::const_iterator fi;
+      for (fi = vi->second.begin(); fi != vi->second.end(); fi++) {
+	nsum += (double)fi->first->count * fi->second / mem[fi->first];
+      }
 
-            pi[i] = (prior_q - 1.0 + nsum * pi[i]) / normali;
-		}
-	}
+      pi[i] = (prior_q - 1.0 + nsum * pi[i]) / normali;
+    }
+  }
 
-	return pi;
+  return pi;
 }
-double Casper::calculateIntegral()
+double Casper::calculateIntegral() {
+  int n = model->count();
+  double* mode = calculateMode();
+  double ans= calculateIntegral(mode, n);
+  return ans;
+}
+double Casper::calculateIntegral(double *mode, int n)
 {
-	int n = model->count();
-	double* mode = calculateMode();
-	if (n == 1)
+ 	if (n == 1)
 	{
 		return priorLikelihoodLn(mode);
 	}
