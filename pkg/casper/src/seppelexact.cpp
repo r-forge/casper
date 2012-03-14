@@ -38,10 +38,24 @@ void SeppelExact::calculate()
 	}
 	double lsum = imax + log(asum);
 
-	for (mvi = posprobUnNorm.begin(); mvi != posprobUnNorm.end(); mvi++)
-	{
-		posprob[mvi->first] = exp(mvi->second - lsum);
+	double ppbest=0;
+	for (mvi = posprobUnNorm.begin(); mvi != posprobUnNorm.end(); mvi++) {
+	  double pp= exp(mvi->second - lsum);
+	  posprob[mvi->first] = pp;
+	  if (pp>ppbest) {
+	    bestModel= mvi->first;
+	    ppbest=pp;
+	  }
 	}
+}
 
-	//	return posprob;
+void SeppelExact::rmModels(double thre) {
+  map<Model*, double, ModelCmp>::iterator mvi;
+  for (mvi = posprob.begin(); mvi != posprob.end(); mvi++) {
+    double p= posprob[mvi->first];
+    if (!(p>=thre)) {
+      posprob.erase(mvi);
+      mode.erase(mvi->first);
+    }
+  }
 }

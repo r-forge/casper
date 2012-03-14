@@ -34,6 +34,9 @@ class Casper
   static double randd();
   // random int between 0 incl and n excl
   static int randi(int n);
+
+  double priorq;
+
  private:
   map<Fragment*, map<Variant*, double> > mempprobs;
   map<Variant*, map<Fragment*, double> > memvprobs;
@@ -41,7 +44,6 @@ class Casper
   static const int is_runs;
   static const int em_maxruns;
   static const double mh_gammah;
-  static const double prior_q;
   
   double priorLn(double* pi);
   double likelihoodLn(double* pi);

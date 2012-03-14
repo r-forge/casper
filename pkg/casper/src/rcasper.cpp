@@ -1,4 +1,5 @@
 #include <sstream>
+#include <set>
 #include <R.h>
 #include <Rinternals.h>
 #include "stdafx.h"
@@ -256,7 +257,7 @@ extern "C"
 	}
 
 
-  SEXP calcDenovo(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorprobR, SEXP verboseR) {
+  SEXP calcDenovo(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorprobR, SEXP priorqR, SEXP minppR, SEXP verboseR) {
   //Perform de novo isoform discovery and estimate expression for a single gene
   //Input
   // - exons: vector with exon ids
@@ -268,15 +269,17 @@ extern "C"
   // - fraglen: vector with fragment length distrib, i.e. P(length=lenvals[0]),P(length=lenvals[1]),... up to max length
   // - lenvals: vector with possibles values for length
   // - readLength: read length
-  // - priorprob: unfinished. This should somehow allow to compute prior prob on model space
+  // - priorprob: TO DO. This should somehow allow to compute prior prob on model space
+  // - priorq: prior on model-specific parameters pi ~ Dirichlet(priorq)
+  // - minpp: only models with post prob >= minpp are reported
   // - verbose: set verbose != 0 to print warnings & progress info
 
     int i, geneid=INTEGER(geneidR)[0], nexons=Rf_length(exonsR), nfraglen=Rf_length(fraglenR), readLength=INTEGER(readLengthR)[0], verbose=INTEGER(verboseR)[0];
     int *exons=INTEGER(exonsR), *exonwidth=INTEGER(exonwidthR), *lenvals=INTEGER(lenvalsR);
-    double *fraglen= REAL(fraglenR); 
+    double *fraglen= REAL(fraglenR), minpp=REAL(minppR)[0], priorq= REAL(priorqR)[0]; 
     SEXP ans;
 
-    Casper* casp = initCasper(exons, exonwidth, transcriptsR, geneid, nexons, pathCountsR, fraglen, lenvals, nfraglen, readLength, fragstaR, verbose);
+    Casper* casp = initCasper(exons, exonwidth, transcriptsR, geneid, nexons, pathCountsR, fraglen, lenvals, nfraglen, readLength, fragstaR, priorq, verbose);
     SeppelExact* sepex;
     SeppelSmart* sepsm;
 
@@ -285,6 +288,7 @@ extern "C"
     if (nexons<=4) {
       sepex = new SeppelExact(casp->frame, casp->frame->genes[geneid]);
       sepex->calculate();
+      sepex->rmModels(minpp);
       posprob = sepex->posprob;
       mode = sepex->mode;
     } else {
@@ -292,7 +296,7 @@ extern "C"
       posprob = sepsm->calculate(casp->model);
     }
 
-    PROTECT(ans= allocVector(VECSXP, 3));
+    PROTECT(ans= allocVector(VECSXP, 5));
 
     //Posterior probabilities
     int nrowpi=0, nx= posprob.size();
@@ -308,34 +312,47 @@ extern "C"
     }
 
     //Estimated expression
-    SET_VECTOR_ELT(ans, 1, allocMatrix(REALSXP,nrowpi,3));
-    SET_VECTOR_ELT(ans, 2, allocVector(STRSXP,nrowpi)); 
+    SET_VECTOR_ELT(ans, 1, allocMatrix(REALSXP,nrowpi,2));  //stores model id and estimated expression
+    SET_VECTOR_ELT(ans, 2, allocVector(STRSXP,nrowpi)); //stores variant names
     double *expr= REAL(VECTOR_ELT(ans,1));
     SEXP varnamesR= VECTOR_ELT(ans,2);
 
-    int rowid=0;
+    int rowid=0, nrowexons=0;
+    set<Variant*> allvariants;
     for (mi = posprob.begin(), i=0; mi != posprob.end(); mi++, i++) {
       Model* m = mi->first;
       for (int j=0; j< m->count(); j++) {
         expr[rowid]= i;  //model id
         Variant* v = m->get(j);
         int varidx= m->indexOf(v);
-        expr[rowid+nrowpi]= varidx; //variant id
-        expr[rowid+2*nrowpi]= sepex->mode[m][varidx]; //estimated expression
+        expr[rowid+nrowpi]= sepex->mode[m][varidx]; //estimated expression
         const char *cname= (v->name).c_str();
         SET_STRING_ELT(varnamesR,rowid,mkChar(cname));  //variant name
+	if (allvariants.count(v)==0) {
+	  allvariants.insert(v);
+	  nrowexons+= v->exonCount;
+	}
         rowid++;
       }
     }
 
-    //Models
-      //      char *varchr= new char[0];
-      //vector<Variant*>::const_iterator vi;
-      //for (vi = m->items.begin(); vi != m->items.end(); vi++) {
-      //  for (int j=0; j< (*vi)->exonCount; j++) {
-      //  strcat(varchr, (*vi)->exons[j]->id);  //TODO: convert int to chr and store in VECTOR_ELT(ans,1)
-      //}
-      //}
+    //Exons in each variant
+    SET_VECTOR_ELT(ans, 3, allocVector(INTSXP,nrowexons));  //stores exon id
+    SET_VECTOR_ELT(ans, 4, allocVector(STRSXP,nrowexons));   //stores variant name
+    int *ranges= INTEGER(VECTOR_ELT(ans,3));
+    SEXP varnames2R= VECTOR_ELT(ans,4);
+
+    set<Variant*>::iterator vi;
+    rowid=0;
+    for (vi= allvariants.begin(); vi != allvariants.end(); vi++) {
+      Variant *v= *vi;
+      for (int j=0; j< v->exonCount; j++) {
+	ranges[rowid]= v->exons[j]->id ; //exon id
+        const char *cname= (v->name).c_str();
+        SET_STRING_ELT(varnames2R,rowid,mkChar(cname));  //variant name
+	rowid++;
+      }
+    }
 
     UNPROTECT(1);
     return(ans);
@@ -344,7 +361,7 @@ extern "C"
 }
 
 
-Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, int nexons, SEXP pathCountsR, double *fraglen, int *lenvals, int nfraglen, int readLength, SEXP fragstaR, int verbose) {
+Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, int nexons, SEXP pathCountsR, double *fraglen, int *lenvals, int nfraglen, int readLength, SEXP fragstaR, double priorq, int verbose) {
 
   //Define fragment length/start distributions and create DataFrame
   DiscreteDF* fraglen_dist = new DiscreteDF(fraglen, lenvals, nfraglen);
@@ -471,28 +488,7 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
 
   Model* model = new Model(initvars);
   Casper* casp = new Casper(model, df);
-
-  //  int deletedPath=0, newct=nt, ndelpaths=0;
-  //list<Fragment*>::iterator fi;
-  //for (fi = casp->frame->data.begin(); fi != casp->frame->data.end(); fi++) {
-  //  if (deletedPath==1) { fi--; deletedPath=0; }
-  //  Fragment* f = *fi;
-  //  if (!(casp->isFragValid(f))) {
-  //    Variant* v = path2Variant(casp->frame, f, gene);
-  //    v->id= newct;
-  //    newct++;
-  //    initvars->push_back(v);
-  //    delete model;  
-  //      model= new Model(initvars); 
-  //  delete casp;
-  //  casp= new Casper(model, df);
-  //  if (!(casp->isFragValid(f))) {
-  //    fi= casp->frame->data.erase(fi);
-  //    deletedPath= 1;
-  //    ndelpaths++;
-  //  }
-  //}
-  //  }
+  casp->priorq= priorq;
 
   return casp;
 }

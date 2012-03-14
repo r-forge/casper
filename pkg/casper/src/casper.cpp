@@ -7,12 +7,12 @@ using namespace std;
 const int Casper::is_runs = 100;
 const int Casper::em_maxruns = 100;
 const double Casper::mh_gammah = 2;
-const double Casper::prior_q = 2;
 
 Casper::Casper(Model* model, DataFrame* frame)
 {
 	this->model = model;
 	this->frame = frame;
+	this->priorq = 3;
 
 	vector<Variant* >::const_iterator vi;
 	for (vi = model->items.begin(); vi != model->items.end(); vi++)
@@ -38,7 +38,7 @@ double* Casper::calculateMode() {
     pi[i] = 1.0 / (double)n;
   }
 
-  double normali = (double)memvprobs.size() * (prior_q - 1.0);
+  double normali = (double)memvprobs.size() * (priorq - 1.0);
   map<Fragment*, map<Variant*, double> >::const_iterator ofi;
   for (ofi = mempprobs.begin(); ofi != mempprobs.end(); ofi++) {
     normali += ofi->first->count;
@@ -57,7 +57,7 @@ double* Casper::calculateMode() {
 	nsum += (double)fi->first->count * fi->second / mem[fi->first];
       }
 
-      pi[i] = (prior_q - 1.0 + nsum * pi[i]) / normali;
+      pi[i] = (priorq - 1.0 + nsum * pi[i]) / normali;
     }
   }
 
@@ -115,7 +115,7 @@ double Casper::priorLn(double* pi)
 	double* alpha = new double[n];
 	for (int i = 0; i < n; i++)
     {
-		alpha[i] = prior_q;
+		alpha[i] = priorq;
 	}
 
 	int log = 1;
@@ -197,7 +197,7 @@ double** Casper::normapprox(double** G, double*** H, double* mode, double* thmod
 			}
 			for (int d = 0; d < n; d++)
 			{
-				S[l][m] -= (prior_q - 1.0) * (H[d][l][m] * mode[d] - G[d][l] * G[d][m]) / pow(mode[d], 2);
+				S[l][m] -= (priorq - 1.0) * (H[d][l][m] * mode[d] - G[d][l] * G[d][m]) / pow(mode[d], 2);
 			}
 			if (l != m)
 			{
