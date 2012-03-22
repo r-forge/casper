@@ -1,7 +1,6 @@
 #include "gene.h"
 #include "fragment.h"
 #include <string>
-//#include <iostream>
 #include <sstream>
 
 using namespace std;

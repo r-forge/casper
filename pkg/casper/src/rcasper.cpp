@@ -257,8 +257,24 @@ extern "C"
 	}
 
 
-  SEXP calcDenovo(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorprobR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP verboseR) {
-  //Perform de novo isoform discovery and estimate expression for a single gene
+  SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorprobR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP verboseR) {
+  //De novo isoform discovery and estimate expression for multiple genes. Calls calcDenovoSingle repeadtedly
+    int i, ngenes=LENGTH(geneidR);
+    SEXP ansMultiple, ansSingle;
+
+    PROTECT(ansMultiple= allocVector(VECSXP, ngenes));
+
+    for (i=0; i<ngenes; i++) {
+      ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(geneidR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, priorprobR, priorqR, minppR, selectBest, verboseR);
+      SET_VECTOR_ELT(ansMultiple,i,ansSingle);
+    }
+
+    UNPROTECT(1);
+    return ansMultiple;
+  }
+
+  SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorprobR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP verboseR) {
+  //De novo isoform discovery and estimate expression for a single gene
   //Input
   // - exons: vector with exon ids
   // - exonwidth: vector exon widths
@@ -462,6 +478,7 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
   //Set initial variants
   int nt = LENGTH(transcriptsR);
   vector<Variant*>* initvars = new vector<Variant*>();
+  map<int, Variant*> hash2var;
   SEXP tnames = getAttrib(transcriptsR, R_NamesSymbol);
   Gene* gene;
   Variant *v;
@@ -485,6 +502,7 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
     int nbchar= Rf_length(STRING_ELT(tnames,i));
     v->name= string(CHAR(STRING_ELT(tnames, i)), nbchar);
 
+    hash2var[v->hashcode]= v;
     initvars->push_back(v);
   }
 
@@ -500,7 +518,6 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
   int deletedPath=0, newct=nt, ndelpaths=0, posprob;
   list<Fragment*>::iterator fi;
   for (fi = df->data.begin(); fi != df->data.end(); fi++) {
-    if (deletedPath==1) { fi--; deletedPath=0; }
     Fragment* f = *fi;
     for (vi = initvars->begin(), posprob=0; vi != initvars->end() && posprob==0; vi++) {
       varprobs = df->probabilities(*vi);
@@ -509,13 +526,22 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
     if (posprob==0) {
       Variant* v = path2Variant(df, f, gene);
       v->id= newct;
-      newct++;
-      initvars->push_back(v);
-      varprobs = df->probabilities(v);
-      deletedPath= varprobs.count(f)==0 || !(varprobs[f]>0);
+      if (hash2var.count(v->hashcode)==0) {  //if the new variant not in initvars
+	newct++;
+        initvars->push_back(v);
+        varprobs = df->probabilities(v);
+        deletedPath= varprobs.count(f)==0 || !(varprobs[f]>0);
+	hash2var[v->hashcode]= v;
+      } else {
+	deletedPath= true;
+	delete v;
+      }
       if (deletedPath) {
         fi= df->data.erase(fi);
         ndelpaths++;
+	deletedPath= 0;
+	fi--;
+	//	if (fi != df->data.end()) fi--;
       }
     }
   }

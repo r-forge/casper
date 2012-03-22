@@ -3,8 +3,13 @@
 
 int lencdf;  //define global variables needed by cumu_fragsta
 double *startcdf;
-//SEXP fun_fragsta;  
 double cumu_fragsta(double x);
+
+extern "C" {
+
+  SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorprobR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP verboseR);
+
+}
 
 Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, int nexons, SEXP pathCountsR, double *fraglen, int *lenvals, int nfraglen, int readLength, SEXP fragstaR, double priorq, int verbose);
 
