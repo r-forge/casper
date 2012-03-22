@@ -257,7 +257,7 @@ extern "C"
 	}
 
 
-  SEXP calcDenovo(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorprobR, SEXP priorqR, SEXP minppR, SEXP verboseR) {
+  SEXP calcDenovo(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorprobR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP verboseR) {
   //Perform de novo isoform discovery and estimate expression for a single gene
   //Input
   // - exons: vector with exon ids
@@ -272,9 +272,10 @@ extern "C"
   // - priorprob: TO DO. This should somehow allow to compute prior prob on model space
   // - priorq: prior on model-specific parameters pi ~ Dirichlet(priorq)
   // - minpp: only models with post prob >= minpp are reported
+  // - selectBest: set to !=0 to return only results for model with highest posterior probability
   // - verbose: set verbose != 0 to print warnings & progress info
 
-    int i, geneid=INTEGER(geneidR)[0], nexons=Rf_length(exonsR), nfraglen=Rf_length(fraglenR), readLength=INTEGER(readLengthR)[0], verbose=INTEGER(verboseR)[0];
+    int i, geneid=INTEGER(geneidR)[0], nexons=Rf_length(exonsR), nfraglen=Rf_length(fraglenR), readLength=INTEGER(readLengthR)[0], verbose=INTEGER(verboseR)[0], selBest=INTEGER(selectBest)[0];
     int *exons=INTEGER(exonsR), *exonwidth=INTEGER(exonwidthR), *lenvals=INTEGER(lenvalsR);
     double *fraglen= REAL(fraglenR), minpp=REAL(minppR)[0], priorq= REAL(priorqR)[0]; 
     SEXP ans;
@@ -285,12 +286,17 @@ extern "C"
 
     map<Model*, double, ModelCmp> posprob;
     map<Model*, double*, ModelCmp> mode;
+    Model* bestModel;
+    double* modeBest;
+
     if (nexons<=4) {
       sepex = new SeppelExact(casp->frame, casp->frame->genes[geneid]);
       sepex->calculate();
       sepex->rmModels(minpp);
       posprob = sepex->posprob;
       mode = sepex->mode;
+      bestModel= sepex->bestModel;
+      modeBest= sepex->modeBest;
     } else {
       SeppelSmart* sepsm = new SeppelSmart(casp->frame, casp->frame->genes[geneid]);
       posprob = sepsm->calculate(casp->model);
@@ -298,37 +304,65 @@ extern "C"
 
     PROTECT(ans= allocVector(VECSXP, 5));
 
-    //Posterior probabilities
-    int nrowpi=0, nx= posprob.size();
+    //Report posterior probabilities
+    int nrowpi=0, nx;
+    if (selBest==0) { nx= posprob.size(); } else { nx=1; }
     SET_VECTOR_ELT(ans, 0, allocMatrix(REALSXP,nx,2));
     double *posprobR= REAL(VECTOR_ELT(ans,0));
 
     map<Model*, double, ModelCmp>::const_iterator mi;
-    for (mi = posprob.begin(), i=0; mi != posprob.end(); mi++, i++) {
-      Model* m = mi->first;
-      posprobR[i]= i;
-      posprobR[i+nx]= posprob[m];
-      nrowpi+= m->count();
+    if (selBest==0) {
+      for (mi = posprob.begin(), i=0; mi != posprob.end(); mi++, i++) {
+        Model* m = mi->first;
+        posprobR[i]= i;
+        posprobR[i+nx]= posprob[m];
+        nrowpi+= m->count();
+      }
+    } else {
+      posprobR[0]= 0;
+      posprobR[nx]= posprob[bestModel];
+      nrowpi+= bestModel->count();
     }
 
-    //Estimated expression
+    //Report estimated expression
     SET_VECTOR_ELT(ans, 1, allocMatrix(REALSXP,nrowpi,2));  //stores model id and estimated expression
     SET_VECTOR_ELT(ans, 2, allocVector(STRSXP,nrowpi)); //stores variant names
     double *expr= REAL(VECTOR_ELT(ans,1));
     SEXP varnamesR= VECTOR_ELT(ans,2);
+    map<int, Variant*> variantHash;
+    variantHash= casp->model->getVarHash();
 
     int rowid=0, nrowexons=0;
     set<Variant*> allvariants;
-    for (mi = posprob.begin(), i=0; mi != posprob.end(); mi++, i++) {
-      Model* m = mi->first;
+    if (selBest==0) {
+      for (mi = posprob.begin(), i=0; mi != posprob.end(); mi++, i++) {
+        Model* m = mi->first;
+        for (int j=0; j< m->count(); j++) {
+          expr[rowid]= i;  //model id
+          Variant* v = m->get(j);
+          int varidx= m->indexOf(v);
+          expr[rowid+nrowpi]= sepex->mode[m][varidx]; //estimated expression
+	  if (variantHash.count(v->hashcode)>0) v->name= (variantHash[v->hashcode])->name;  //respect initial variant names
+	  const char *cname= (v->name).c_str();;
+          SET_STRING_ELT(varnamesR,rowid,mkChar(cname));  //variant name
+	  if (allvariants.count(v)==0) {
+	    allvariants.insert(v);
+	    nrowexons+= v->exonCount;
+	  }
+          rowid++;
+        }
+      }
+    } else {
+      Model* m = bestModel;
       for (int j=0; j< m->count(); j++) {
-        expr[rowid]= i;  //model id
-        Variant* v = m->get(j);
+	expr[rowid]= i;  //model id
+	Variant* v = m->get(j);
         int varidx= m->indexOf(v);
         expr[rowid+nrowpi]= sepex->mode[m][varidx]; //estimated expression
+        if (variantHash.count(v->hashcode)>0) v->name= (variantHash[v->hashcode])->name;  //respect initial variant names
         const char *cname= (v->name).c_str();
         SET_STRING_ELT(varnamesR,rowid,mkChar(cname));  //variant name
-	if (allvariants.count(v)==0) {
+        if (allvariants.count(v)==0) {
 	  allvariants.insert(v);
 	  nrowexons+= v->exonCount;
 	}
@@ -336,7 +370,7 @@ extern "C"
       }
     }
 
-    //Exons in each variant
+    //Report exons in each variant
     SET_VECTOR_ELT(ans, 3, allocVector(INTSXP,nrowexons));  //stores exon id
     SET_VECTOR_ELT(ans, 4, allocVector(STRSXP,nrowexons));   //stores variant name
     int *ranges= INTEGER(VECTOR_ELT(ans,3));
@@ -458,7 +492,8 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
   vector<Variant*>::iterator vi;
   map <Fragment*, double> varprobs;
   for (vi = initvars->begin(); vi != initvars->end(); vi++) {
-    varprobs = df->probabilities(*vi);
+    Variant *v= *vi;
+    varprobs = df->probabilities(v);
   }
 
   //Add variants to initial set so that all observed exon paths have positive probability

@@ -33,6 +33,17 @@ int Model::indexOf(Variant* v)
 	return this->idmap[v];
 }
 
+map<int, Variant*> Model::getVarHash() {
+  map<int, Variant*> ans;
+  vector<Variant*>::iterator vi;
+  for (vi = this->items.begin(); vi != this->items.end(); vi++) {
+    Variant *v= *vi;
+    ans[v->hashcode]= v;
+  }
+  return ans;
+}
+
+
 int Model::compare(Model* other)
 {
 	if (this->count() < other->count())

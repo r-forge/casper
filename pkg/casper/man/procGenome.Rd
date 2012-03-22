@@ -29,18 +29,7 @@ procGenome(genome, mc.cores = mc.cores)
   functions.
 }
 \value{
-  %%  ~Describe the value returned
-  \item{gene}{Named chracter vector with mapping from gene ENTREZ id to
-    transcript id.}
-  \item{exonsNI}{RangedData object containing non overlapping exons.}
-  \item{exons}{GRangesList object with original exon coordinates. List
-    elements correspond to a known transcripts.}
-  \item{txs}{GRanges object with original transcripts annotation.}
-  \item{newTxs}{Named list mapping transcript id's to non-overlapping exons.}
-  \item{exonmap}{Named list mapping original exon id's to
-    non-overlapping exon id's.}
-
-
+  Object of class \code{knownGenome}.
 }
 \references{
 %% ~put references to the literature/web site here ~

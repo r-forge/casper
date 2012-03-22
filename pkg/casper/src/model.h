@@ -20,7 +20,10 @@ public:
 
 	// list of variants
 	vector<Variant*> items;
-	// hashcode
+        //return hash for each variant
+	map<int, Variant*> getVarHash(); 
+
+	// hashcode for model
 	int hashcode;
 
 	// compares two models. returns 0 if equal. -1 and +1 used for sorting in map

@@ -8,7 +8,6 @@ export(procBam, procGenome, pathCounts, getDistrs, calcExp, calcDenovo, buildGen
 #export general methods
 #exportMethods("calc")
 
-#export classes
-#exportClassess()
+
 
 

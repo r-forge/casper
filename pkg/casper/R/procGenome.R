@@ -1,3 +1,23 @@
+require(methods)
+
+setClass("knownGenome", representation(gene = "character", exonsNI="RangedData", exons="GRangesList", txs="GRanges", newTxs="list", exonmap="list", gene2ex="array"))
+
+
+valid_knownGenome <- function(object) {
+  msg <- NULL
+  #validity checks go here
+  if (is.null(msg)) { TRUE } else { msg }
+}
+
+setValidity("knownGenome", valid_knownGenome)
+
+setMethod("show", signature(object="knownGenome"), function(object) {
+  cat("knownGenome object with",length(object@gene),"gene islands\n")
+}
+)
+
+
+
 generateNOexons<-function(exByTx, ExonsU, mc.cores){
     
     exByTx<-unlist(exByTx)
@@ -112,6 +132,6 @@ procGenome<-function(genome, mc.cores=mc.cores){
   geneids<-txs@elementMetadata$gene_id
   geneids<-unlist(geneids)
   names(geneids)<- unlist(txs@elementMetadata$tx_id)
-  txsNewExonID<-list(gene=geneids, exonsNI=exonsNI, exons=Exons, txs=txs, newTxs=newTxs, exonmap=exkey)
+  txsNewExonID<-new("knownGenome", gene=geneids, exonsNI=exonsNI, exons=Exons, txs=txs, newTxs=newTxs, exonmap=exkey)
   txsNewExonID
  } 

@@ -1,3 +1,25 @@
+require(methods)
+
+setClass("denovoGenome", representation(genes = "list", transcripts = "list", exon2gene= "data.frame"))
+
+valid_denovoGenome <- function(object) {
+  msg <- NULL
+  tab <- table(sapply(object@genes,class))
+  if (any(names(tab) != 'IRanges')) msg <- "All elements in genes must be of class IRanges"
+  if (any(!sapply(object@transcripts,is.list))) msg <- "All elements in transcripts must be of class list"
+  if (!(all(c('space','start','end','width','id','gene') %in% names(object@exon2gene)))) msg <- "Incorrect column names in 'exon2gene'"
+  if (is.null(msg)) { TRUE } else { msg }
+}
+
+setValidity("denovoGenome", valid_denovoGenome)
+
+setMethod("show", signature(object="denovoGenome"), function(object) {
+  cat("denovoGenome object with",length(object@genes),"gene islands,",length(object@transcripts),"transcripts and",nrow(object@exon2gene),"exons.\n")
+}
+)
+
+
+
 findNewExons <- function(reads, DB, minReads=1, readLen=NA, stranded=FALSE, pvalFilter=0.05){
   if(is.na(readLen)) stop("No readLen specified")
   if(stranded){
@@ -115,12 +137,11 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=5000, stranded=FALSE, mc.
 
       
 createDenovoGenome <- function(reads, DB, readLen, stranded, mc.cores=1){
-  setClass("denovoGenome", representation(genes = "list", exon2gene= "data.frame"))
-  denovo <- new("denovoGenome")
   cat("Finding new exons\n")
   newex <- findNewExons(reads, DB, readLen=readLen, pvalFilter=0.05)
   cat("Done...\nCreating denovo genome\n")
-  denovo <- assignExons2Gene(newex, DB, reads, maxDist=5000, stranded=stranded, mc.cores=mc.cores) 
+  denovo <- assignExons2Gene(newex, DB, reads, maxDist=5000, stranded=stranded, mc.cores=mc.cores)
+  denovo <- new("denovoGenome",genes=denovo$genes,transcripts=denovo$transcripts,exon2gene=denovo$exon2gene)
   denovo
 }
 

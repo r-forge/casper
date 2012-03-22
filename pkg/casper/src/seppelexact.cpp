@@ -1,11 +1,10 @@
 #include "seppelexact.h"
 #define DBL_MAX 1.79769e+308;
 
-SeppelExact::SeppelExact(DataFrame* frame, Gene* gene)
-{
-	this->frame = frame;
-	this->gene = gene;
-        this->models= frame->allModels(gene);
+SeppelExact::SeppelExact(DataFrame* frame, Gene* gene) {
+  this->frame = frame;
+  this->gene = gene;
+  this->models= frame->allModels(gene);
 }
 
 //map<Model*, double, ModelCmp> SeppelExact::calculate()
