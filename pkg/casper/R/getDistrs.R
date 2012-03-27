@@ -10,7 +10,7 @@ firstBamReads <- function(bam, nreads) {
 
 getDistrs<-function(txs, exons, bam, nreads=4*10^6){
   
-  #Format exons as RangeData
+  #Format exons as RangedData
   cat("Calculating fragment length distribution\n")
   exonsRD<-as.data.frame(exons@unlistData)
   exonsRD<-exonsRD[,-7]

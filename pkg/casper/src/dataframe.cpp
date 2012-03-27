@@ -72,34 +72,27 @@ double DataFrame::prob(int fs, int fe, int bs, int be, int* pos, double T)
 
 	double psum = 0;
 
-        for (int i=0; i< fraglen_dist->size; i++)  //stop before T
-	//	for (double l = this->fraglen_minx; l <= this->fraglen_maxx; l++)
-	{
-	        double l= fraglen_dist->value(i);
-		double mb = 1.0 - l / T;
-		double rb = min(min(b1, b2 - l) / T, mb);
-		double lb = min((max(a1, a2 - l) - 1.0) / T, mb);
+        for (int i=0; i< fraglen_dist->size; i++) { //stop before T
+	  double l= fraglen_dist->value(i);
+	  double mb = 1.0 - l / T;
+	  double rb = min(min(b1, b2 - l) / T, mb);
+	  double lb = min((max(a1, a2 - l) - 1.0) / T, mb);
 
-		if (lb >= rb)
-		{
-			continue;
-		}
+	  if (lb >= rb) { continue; }
 
-		double punc = (fragsta_cumu(rb) - fragsta_cumu(lb)) / fragsta_cumu(mb);
+	  double punc = (fragsta_cumu(rb) - fragsta_cumu(lb)) / fragsta_cumu(mb);
 
-		double factor = 0;
-		if (l <= T && punc > 0)
-		{
-			factor = fraglen_dist->probability(i);
-		  //			factor = fraglen_dist->probability((int)l);
-			if (T < fraglen_maxx)
-			{
-			  factor /= fraglen_dist->cumulativeProbability((int)(T-fraglen_minx));
-			  //				factor /= fraglen_dist->cumulativeProbability((int)T);
-			}
-		}
+	  double factor = 0;
+	  if (l <= T && punc > 0) {
+	    factor = fraglen_dist->probability(i);
+	    //			factor = fraglen_dist->probability((int)l);
+	    if (T < fraglen_maxx) {
+	      factor /= fraglen_dist->cumulativeProbability((int)(T-fraglen_minx));
+	      //				factor /= fraglen_dist->cumulativeProbability((int)T);
+	    }
+	  }
 
-		psum += punc * factor;
+	  psum += punc * factor;
 	}
 	return psum;
 }

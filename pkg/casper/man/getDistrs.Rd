@@ -7,9 +7,12 @@
 }
 \description{
   %%  ~~ A concise (1-5 lines) description of what the function does. ~~
-  This function calculates fragment start distributions for reads
-  aligned to genes with only one annotated variant and fragment length
-  distribution for fragments aligned to long exons (>1000nt)
+  Compute fragment start distributions by using reads
+  aligned to genes with only one annotated variant.
+  Estimate fragment length
+  distribution using fragments aligned to long exons (>1000nt).
+  Fragment length is defined as the distance between the start of the
+  left-end read and the end of the right-end read.
 }
 \usage{
 getDistrs(txs, exons, frags, nreads=4*10^6)
@@ -38,7 +41,7 @@ getDistrs(txs, exons, frags, nreads=4*10^6)
 \value{
   %%  ~Describe the value returned
   %%  If it is a LIST, use
-  \item{lenDis}{Table with fragment counts for each existing length}
+  \item{lenDis}{Table with number of fragments with a given length}
   \item{stDis}{Numeric vector with relative fragment start positions}
 }
 \author{

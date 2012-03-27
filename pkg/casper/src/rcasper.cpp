@@ -11,7 +11,10 @@ double cumu_fragsta(double x) {
   if (x<=0) return 0;
   if (x>=1) return 1;
   int idx= (int) (x*lencdf);
-  return startcdf[idx];
+  double y1= startcdf[idx], x1= (double) idx / (lencdf-1);
+  idx++;
+  double y2= startcdf[idx], x2= (double) idx / (lencdf-1);
+  return y1 + (x-x1) * (y2-y1)/(x2-x1);
 }
 
 /*double cumu_fragsta(double x) {
@@ -257,7 +260,7 @@ extern "C"
 	}
 
 
-  SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorprobR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP verboseR) {
+  SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP verboseR) {
   //De novo isoform discovery and estimate expression for multiple genes. Calls calcDenovoSingle repeadtedly
     int i, ngenes=LENGTH(geneidR);
     SEXP ansMultiple, ansSingle;
@@ -265,7 +268,7 @@ extern "C"
     PROTECT(ansMultiple= allocVector(VECSXP, ngenes));
 
     for (i=0; i<ngenes; i++) {
-      ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(geneidR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, priorprobR, priorqR, minppR, selectBest, verboseR);
+      ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(geneidR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, nvarPriorR, nexonPriorR, priorqR, minppR, selectBest, verboseR);
       SET_VECTOR_ELT(ansMultiple,i,ansSingle);
     }
 
@@ -273,7 +276,7 @@ extern "C"
     return ansMultiple;
   }
 
-  SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorprobR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP verboseR) {
+  SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP verboseR) {
   //De novo isoform discovery and estimate expression for a single gene
   //Input
   // - exons: vector with exon ids
@@ -285,7 +288,8 @@ extern "C"
   // - fraglen: vector with fragment length distrib, i.e. P(length=lenvals[0]),P(length=lenvals[1]),... up to max length
   // - lenvals: vector with possibles values for length
   // - readLength: read length
-  // - priorprob: TO DO. This should somehow allow to compute prior prob on model space
+  // - nvarPrior: prior prob of nb expressed variants. i^th elem has NegBinom param for genes with i exons
+  // - nexonPrior: prior prob of nb exons in a variant. i^th elem has Beta-Binomial param for genes with i exons
   // - priorq: prior on model-specific parameters pi ~ Dirichlet(priorq)
   // - minpp: only models with post prob >= minpp are reported
   // - selectBest: set to !=0 to return only results for model with highest posterior probability
@@ -541,7 +545,6 @@ Casper* initCasper(int *exons, int *exonwidth, SEXP transcriptsR, int geneid, in
         ndelpaths++;
 	deletedPath= 0;
 	fi--;
-	//	if (fi != df->data.end()) fi--;
       }
     }
   }
