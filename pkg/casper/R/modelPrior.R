@@ -66,12 +66,13 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
 
   #smooth parameter estimates for genes with >=10 exons
   if (smooth==TRUE) {
+    require(mgcv)
     m <- bbpar[2:nrow(tab),1]/rowSums(bbpar)[2:nrow(tab)]
     m <- data.frame(logitm= log(m/(1-m)), E= as.numeric(rownames(bbpar)[2:nrow(tab)]))
-    fit <- gam(logitm ~ s(E,cv=TRUE), data=m)
+    fit <- gam(logitm ~ s(E, sp= -1), data=m)
     msmooth <- 1/(1+exp(-predict(fit)))
     b <- data.frame(b=bbpar[2:nrow(tab),2], E= as.numeric(rownames(bbpar)[2:nrow(tab)]))
-    fit <- gam(b ~ s(E,cv=TRUE), data=b, family=gaussian(link="log"))
+    fit <- gam(b ~ s(E, sp= -1), data=b, family=gaussian(link="log"))
     bsmooth <- exp(predict(fit))
     asmooth <- bsmooth*msmooth/(1-msmooth)
      
@@ -85,6 +86,7 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
   #predicted frequencies
   pred[[1]] <- obs[[1]] <- tab['1',]
   names(pred[[1]]) <- names(obs[[1]]) <- '1'
+  nkeep <- nrow(tab)+1
   tab <- rbind(tab,extrapolate)
   for (n in names(pred)[-1]) {
     i <- as.numeric(n)
@@ -96,7 +98,7 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
     names(obs[[n]]) <- names(pred[[n]])
   }
 
-  return(list(bbpar=bbpar,obs=obs,pred=pred))
+  return(list(bbpar=bbpar[1:nkeep,],obs=obs,pred=pred))
 }
 
 

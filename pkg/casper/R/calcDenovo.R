@@ -58,8 +58,10 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   lenvals <- as.integer(names(distrs$lenDis))
   readLength <- as.integer(readLength)
   priorq <- as.double(priorq)
-  nvarPrior <- mprior$nvarPrior$nbpar  #format as list 1:40, larger numbers just use 40th elem. Ensure all 1:40 are included.
-  nexonPrior <- mprior$nexonPrior$bbpar
+  nvarPrior <- as.list(data.frame(t(mprior$nvarPrior$nbpar)))
+  nvarPrior <- lapply(nvarPrior,as.double)
+  nexonPrior <- as.list(data.frame(t(mprior$nexonPrior$bbpar)))
+  nexonPrior <- lapply(nexonPrior,as.double)
   minpp <- as.double(minpp)
   selectBest <- as.integer(selectBest)
   verbose <- as.integer(verbose)

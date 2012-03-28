@@ -4,7 +4,7 @@ Date: 2012-03-22
 Title: Characterization of Alternative Splicing based on Paired-End Reads
 Author: Manuel Kroiss, Camille Stephan-Otto, Almond Stocker, David Rossell
 Maintainer: David Rossell <david.rossell@irbbarcelona.org>
-Depends: R (>= 2.14.1), Biobase, IRanges, methods, gtools, GenomicFeatures, GenomicRanges, VGAM
+Depends: R (>= 2.14.1), Biobase, IRanges, methods, gtools, GenomicFeatures, GenomicRanges, VGAM, mgcv
 Enhances: multicore
 Description: The package provides methodology to infer alternative splicing patterns for paired-end based on high-throughput sequencing data. Both quantification of known splicing variants and de novo splice variant discovery are considered. The approach is based on a flexible Bayesian model which estimates the RNA fragment size distribution, allows the user to set part of the data to missing values to remove artifacts, and is computationally efficient. 
 License: GPL (>=2)
