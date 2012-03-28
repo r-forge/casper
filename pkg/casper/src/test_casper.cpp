@@ -120,7 +120,7 @@ Casper* example()
 	return casp;
 }
 
-int _tmain() {
+int main() {
 //int _tmain(int argc, _TCHAR* argv[])
 	srand((unsigned)time( NULL ));
 
