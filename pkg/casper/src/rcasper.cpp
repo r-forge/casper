@@ -252,8 +252,13 @@ extern "C"
 		int selBest=INTEGER(selectBest)[0];
 		double minpp=REAL(minppR)[0], priorq= REAL(priorqR)[0];
 
-		DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR, geneid);
-		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR, geneid);
+		PROTECT(geneidR= allocVector(INTEGERSXP, LENGTH(transcriptsR)));
+		for (int i=0; i< LENGTH(transcriptsR); i++) INTEGER(geneidR)[i]= geneid;
+
+		DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR, geneidR);
+		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR, geneidR);
+
+		UNPROTECT(1);		
 
 		// EMD OF INPUT READING
 

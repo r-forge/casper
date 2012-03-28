@@ -1,4 +1,73 @@
+require(methods)
 
+setClass("modelPriorAS", representation(nvarPrior = "list", nexonPrior = "list"))
+
+valid_modelPriorAS <- function(object) {
+  msg <- NULL
+  if (!all(names(object@nvarPrior) %in% c('nbpar','obs','pred'))) msg <- "nvarPrior must contain elements nbpar, obs, pred"
+  if (!all(names(object@nexonPrior) %in% c('bbpar','obs','pred'))) msg <- "nexonPrior must contain elements bbpar, obs, pred"
+  if (is.null(msg)) { TRUE } else { msg }
+}
+
+setValidity("modelPriorAS", valid_modelPriorAS)
+
+setMethod("show", signature(object="modelPriorAS"), function(object) {
+  cat("modelPriorAS object\n\n")
+  cat("Prior on number of exons per transcript. Beta-Binomial parameters\n")
+  show(head(object@nexonPrior$bbpar,n=4))
+  if (nrow(object@nexonPrior$bbpar)>4) cat("...\n\n") else cat("\n\n")
+  cat("Prior on number of expressed variants. Truncated Negative Binomial parameters\n")
+  show(head(object@nvarPrior$nbpar,n=4))
+  if (nrow(object@nvarPrior$nbpar)>4) cat("...\n") else cat("\n")
+}
+)
+
+setMethod("[",signature(x='modelPriorAS'),function(x,i) {
+  sel <- names(x@nvarPrior$obs) %in% as.character(i)
+  nvarPrior <- list(nbpar=x@nvarPrior$nbpar[i,], obs=x@nvarPrior$obs[sel], pred=x@nvarPrior$pred[sel])
+  sel <- names(x@nexonPrior$obs) %in% as.character(i)
+  nexonPrior <- list(bbpar=x@nexonPrior$bbpar[i,], obs=x@nexonPrior$obs[sel], pred=x@nexonPrior$pred[sel])
+  new("modelPriorAS",nvarPrior=nvarPrior,nexonPrior=nexonPrior)
+}
+)
+
+setMethod("coef",signature('modelPriorAS'),function(object) {
+  list(nvarPrior=object@nvarPrior$nbpar, nexonPrior=object@nexonPrior$bbpar)
+}
+)
+
+setGeneric("plotPriorAS",function(object,type='nbVariants',exons=1:9,xlab,ylab="Probability",col=c('red','blue')) standardGeneric("plotPriorAS"))
+
+setMethod("plotPriorAS",signature(object='modelPriorAS'), function(object,type='nbVariants',exons=2:10,xlab,ylab="Probability",col=c('red','blue')) {
+  if (type=='nbVariants') {
+    isel <- names(object@nvarPrior$obs)[names(object@nvarPrior$obs) %in% as.character(exons)]
+    isel <- isel[isel != '1']
+    mfrow <- ceiling(sqrt(length(isel))); mfcol <- floor(sqrt(length(isel)))
+    if (mfrow*mfcol < length(isel)) mfcol <- mfcol+1
+    par(mfrow=c(mfrow,mfcol))
+    for (i in isel) {
+      x2plot <- rbind(object@nvarPrior$obs[[i]],object@nvarPrior$pred[[i]])
+      rownames(x2plot) <- c('Observed','Predicted')
+      if (missing(xlab)) xlab <- 'Number of variants'
+      barplot(x2plot,beside=TRUE,xlab=xlab,ylab=ylab,main=paste('Genes with',i,'exons'),legend=TRUE,col=col,border=NA)
+    }
+  } else if (type=='nbExons') {
+    isel <- names(object@nexonPrior$obs)[names(object@nexonPrior$obs) %in% as.character(exons)]
+    isel <- isel[isel != '1']
+    mfrow <- ceiling(sqrt(length(isel))); mfcol <- floor(sqrt(length(isel)))
+    if (mfrow*mfcol < length(isel)) mfcol <- mfcol+1
+    par(mfrow=c(mfrow,mfcol))
+    for (i in isel) {
+      x2plot <- rbind(object@nexonPrior$obs[[i]],object@nexonPrior$pred[[i]])
+      rownames(x2plot) <- c('Observed','Predicted')
+      xlab <- 'Number of exons in the variant'
+      barplot(x2plot,beside=TRUE,xlab=xlab,ylab=ylab,main=paste('Genes with',i,'exons'),legend=TRUE,args.legend=list(x='topleft'),col=col,border=NA)
+    }
+  } else {
+    stop('type must be nbVariants or nbExons')
+  }
+}
+)
 
 modelPrior <- function(genomeDB, maxExons=40, smooth=TRUE, verbose=TRUE) {
   if (class(genomeDB) != "knownGenome") stop("genomeDB must be of class 'knownGenome'")
@@ -19,7 +88,8 @@ modelPrior <- function(genomeDB, maxExons=40, smooth=TRUE, verbose=TRUE) {
   nvarPrior <- nbVariantsDistrib(txsPerGene,maxExons=maxExons) #zero-truncated Negative Binomial fit
   nexonPrior <- nbExonsDistrib(exonsPerGene,maxExons=maxExons) #Beta-Binomial fit
   if (verbose) cat("Done.\n")
-  return(list(nvarPrior=nvarPrior,nexonPrior=nexonPrior))
+  
+  new("modelPriorAS",nvarPrior=nvarPrior,nexonPrior=nexonPrior)
 }
 
 ######################################################################
@@ -50,17 +120,18 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
   obs <- pred <- vector("list",nrow(tab)+nrow(extrapolate))
   rownames(bbpar) <- names(obs) <- names(pred) <- c(rownames(tab),rownames(extrapolate))
   bbpar[1,] <- c(0,0)
+  n <- rownames(tab)
   for (i in nrow(tab):2) {
-    y <- tab[i,tab[i,]>0]
-    if (i==2) {
-      bbpar[i,1] <- sum((as.numeric(names(y))-1) * y / sum(y)) * sum(bbpar[i+1,])
-      bbpar[i,2] <- sum(bbpar[i+1,]) - bbpar[i,1]
+    y <- tab[n[i],tab[n[i],]>0]
+    if (n[i]=='2') {
+      bbpar[n[i],1] <- sum((as.numeric(names(y))-1) * y / sum(y)) * sum(bbpar[n[i+1],])
+      bbpar[n[i],2] <- sum(bbpar[n[i+1],]) - bbpar[n[i],1]
     } else {
       ydf <- rep(as.numeric(names(y))-1,y) #start at 0
-      ydf <- data.frame(succ=ydf,fail=i-ydf-1)
+      ydf <- data.frame(succ=ydf,fail=as.numeric(n[i])-ydf-1)
       fit <- vglm(cbind(succ, fail) ~ 1, betabinomial.ab, data=ydf, trace=FALSE)
       #fit <- vglm(cbind(succ,fail) ~ 1, family=betabinomial, data=y, trace=FALSE)
-      bbpar[i,] <- Coef(fit)
+      bbpar[n[i],] <- Coef(fit)
     }
   }
 
@@ -98,7 +169,16 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
     names(obs[[n]]) <- names(pred[[n]])
   }
 
-  return(list(bbpar=bbpar[1:nkeep,],obs=obs,pred=pred))
+  #Fill in missing values
+  bbpar <- bbpar[1:nkeep,]
+  bbparFull <- matrix(NA,nrow=maxExons+1,ncol=2); colnames(bbparFull) <- colnames(bbpar)
+  rownames(bbparFull) <- 1:nrow(bbparFull)
+  notmis <- rownames(bbparFull) %in% rownames(bbpar)
+  for (i in 1:nrow(bbparFull)) {
+    if (notmis[i]) { bbparFull[i,] <- bbpar[as.character(i),] } else { bbparFull[i,] <- bbparFull[i-1,] }
+  }
+
+  return(list(bbpar=bbparFull,obs=obs,pred=pred))
 }
 
 
@@ -117,13 +197,14 @@ nbVariantsDistrib <- function(tab,maxExons=40) {
   
   sel <- as.numeric(rownames(tab))>maxExons
   tab <- rbind(tab[!sel,],colSums(tab[sel,,drop=FALSE]))
-  rownames(tab)[maxExons+1] <- as.character(maxExons+1)
+  rownames(tab)[nrow(tab)] <- as.character(maxExons+1)
   
   n <- as.numeric(colnames(tab))
   maxtxs <- log2(2^(as.numeric(rownames(tab))) - 1) #nb variants cannot be > 2^p -1
-  nbpar <- matrix(NA,nrow=nrow(tab),ncol=2); colnames(nbpar) <- c('prob','size')
+  nbpar <- matrix(NA,nrow=maxExons+1,ncol=2); colnames(nbpar) <- c('prob','size')
+  rownames(nbpar) <- 1:(maxExons+1)
   obs <- pred <- vector("list",nrow(tab))
-  names(maxtxs) <- rownames(nbpar) <- names(obs) <- names(pred) <- rownames(tab)
+  names(maxtxs) <- names(obs) <- names(pred) <- rownames(tab)
   nbpar[1,] <- c(0,0)
   ichar <- rownames(tab)
   for (i in 2:nrow(tab)) {
@@ -142,6 +223,11 @@ nbVariantsDistrib <- function(tab,maxExons=40) {
     obs[[ichar[i]]][is.na(obs[[ichar[i]]])] <- 0
     names(obs[[ichar[i]]]) <- names(pred[[ichar[i]]])
   }
+
+  #Fill in missing values
+  sel <- which(rowSums(is.na(nbpar))>0)
+  if (length(sel)>0) { for (i in 1:length(sel)) nbpar[sel[i],] <- nbpar[sel[i]-1,] }
+  
   return(list(nbpar=nbpar,obs=obs,pred=pred))
 }
 
