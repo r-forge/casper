@@ -4,6 +4,7 @@ DataFrame::DataFrame(DiscreteDF* fraglen_dist, double (*fragsta_cumu)(double))
 {
 	this->fraglen_dist = fraglen_dist;
 	this->fragsta_cumu = fragsta_cumu;
+	this->frag_readlen = 75;
 
         fraglen_minx= fraglen_dist->value(0);
         fraglen_maxx= fraglen_dist->value((fraglen_dist->size)-1);
