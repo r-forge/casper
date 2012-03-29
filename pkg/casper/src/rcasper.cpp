@@ -73,10 +73,10 @@ int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, DataFrame* df, Gene* gen
 
 	return discarded;
 }
-DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, int geneid) 
+DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP exongenesR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR) 
 {
 	int nexons=Rf_length(exonsR), nfraglen=Rf_length(fraglenR), readLength=INTEGER(readLengthR)[0];
-	int *exons=INTEGER(exonsR), *exonwidth=INTEGER(exonwidthR), *lenvals=INTEGER(lenvalsR);
+	int *exons=INTEGER(exonsR), *exonwidth=INTEGER(exonwidthR), *exongenes=INTEGER(exongenesR), *lenvals=INTEGER(lenvalsR);
 	double *fraglen= REAL(fraglenR);
 
 	//Define fragment length/start distributions and create DataFrame
@@ -90,20 +90,33 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP 
 	df->frag_readlen= readLength;
 
 	//Add exons & gene to DataFrame
-	Gene* g= new Gene(geneid);
-	for (int i=0; i<nexons; i++) {
+	for (int i = 0; i < nexons; i++) 
+	{
+		int gid = exongenes[i];
+
+		Gene* g;
+		if (df->genes.count(gid) == 0)
+		{
+			g = new Gene(gid);
+			df->addGene(g);
+		}
+		else
+		{
+			g = df->genes[gid];
+		}
+
 		Exon *ex= new Exon(exons[i], exonwidth[i]);
 		df->addExon(ex);
 		g->addExon(ex);
 	}
-	df->addGene(g);
 
 	//Add exon path counts
 	int np = LENGTH(pathCountsR);
 	SEXP pnames = getAttrib(pathCountsR, R_NamesSymbol);
 	int* pathCounts = INTEGER(pathCountsR);  
 
-	for (int i=0; i<np; i++) {
+	for (int i = 0; i < np; i++) 
+	{
 		//Set counts
 		int count = pathCounts[i];
 
@@ -143,8 +156,10 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP 
 
 	return df;
 }
-set<Variant*, VariantCmp>* importTranscripts(DataFrame* df, SEXP transcriptsR, int geneid)
+set<Variant*, VariantCmp>* importTranscripts(DataFrame* df, SEXP transcriptsR, SEXP transgenesR)
 {
+	int* transgenes = INTEGER(transgenesR);
+
 	int nt = LENGTH(transcriptsR);
 	set<Variant*, VariantCmp>* initvars = new set<Variant*, VariantCmp>();
 	SEXP tnames = getAttrib(transcriptsR, R_NamesSymbol);
@@ -164,6 +179,7 @@ set<Variant*, VariantCmp>* importTranscripts(DataFrame* df, SEXP transcriptsR, i
 			el->push_back(ex);
 		}
 
+		int geneid = transgenes[i];
 		gene = df->genes[geneid];
 		v = new Variant(gene, el);
 		v->id= i;
@@ -212,7 +228,33 @@ Variant* path2Variant(DataFrame *df, Fragment* f, Gene *gene)
 
 extern "C"
 {
-	SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP verboseR) {
+	SEXP calcMode(SEXP exonsR, SEXP exonwidthR, SEXP exongenesR, SEXP transcriptsR, SEXP transgenesR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR)
+	{
+		DataFrame* df = importDataFrame(exonsR, exonwidthR, exongenesR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR);
+		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR, transgenesR);
+		
+		double priorq = REAL(priorqR)[0];
+
+		Model* model = new Model(new vector<Variant*>(initvars->begin(), initvars->end()));
+		Casper* casp = new Casper(model, df);
+		casp->priorq = priorq;
+
+		int vc = model->count();
+		double* em = casp->calculateMode();
+
+		SEXP Rc;
+		PROTECT(Rc = allocVector(REALSXP, vc));
+		double* res = REAL(Rc);
+		for (int i = 0; i < vc; i++)
+		{
+			res[i] = em[i];
+		}
+		UNPROTECT(1);
+
+		return Rc;
+	}
+	SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP verboseR) 
+	{
 		//De novo isoform discovery and estimate expression for multiple genes. Calls calcDenovoSingle repeadtedly
 		int i, ngenes=LENGTH(geneidR);
 		SEXP ansMultiple, ansSingle;
@@ -223,12 +265,12 @@ extern "C"
 			ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(geneidR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, nvarPriorR, nexonPriorR, priorqR, minppR, selectBest, verboseR);
 			SET_VECTOR_ELT(ansMultiple,i,ansSingle);
 		}
-
+		
 		UNPROTECT(1);
 		return ansMultiple;
 	}
 
-	SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP verboseR)
+	SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP geneidR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP verboseR)
 	{
 		//De novo isoform discovery and estimate expression for a single gene
 		//Input
@@ -248,24 +290,31 @@ extern "C"
 		// - selectBest: set to !=0 to return only results for model with highest posterior probability
 		// - verbose: set verbose != 0 to print warnings & progress info
 
-		int geneid=INTEGER(geneidR)[0];
-		int selBest=INTEGER(selectBest)[0];
-		double minpp=REAL(minppR)[0], priorq= REAL(priorqR)[0];
+		int geneid = INTEGER(geneidR)[0];
+		int selBest = INTEGER(selectBest)[0];
+		double minpp = REAL(minppR)[0];
+		double priorq = REAL(priorqR)[0];
+		verbose = INTEGER(verboseR)[0];
 
-		PROTECT(geneidR= allocVector(INTEGERSXP, LENGTH(transcriptsR)));
-		for (int i=0; i< LENGTH(transcriptsR); i++) INTEGER(geneidR)[i]= geneid;
+		SEXP exongenesR, transgenesR;
+		PROTECT(exongenesR = allocVector(INTSXP, LENGTH(exonsR)));
+		PROTECT(transgenesR = allocVector(INTSXP, LENGTH(transcriptsR)));
+		for (int i = 0; i < LENGTH(exonsR); i++) INTEGER(exongenesR)[i] = geneid;
+		for (int i = 0; i < LENGTH(transcriptsR); i++) INTEGER(transgenesR)[i] = geneid;
 
-		DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR, geneidR);
-		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR, geneidR);
+		DataFrame* df = importDataFrame(exonsR, exonwidthR, exongenesR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR);
+		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR, transgenesR);
 
 		UNPROTECT(1);		
+		UNPROTECT(1);		
 
-		// EMD OF INPUT READING
+		// END OF INPUT READING
 
-		fixUnexplFrags(initvars, df, df->genes[geneid]);
+		Gene* gene = df->genes[geneid];
+
+		fixUnexplFrags(initvars, df, gene);
 		Model* model = new Model(new vector<Variant*>(initvars->begin(), initvars->end()));
-		Casper* casp = new Casper(model, df);
-		casp->priorq= priorq;
+		Casper::priorq = priorq;
 
 		SeppelExact* sepex;
 		SeppelSmart* sepsm;
@@ -275,16 +324,19 @@ extern "C"
 		Model* bestModel;
 		double* modeBest;
 
-		if (df->exons.size() <= 4) {
-			sepex = new SeppelExact(df, df->genes[geneid]);
+		if (df->exons.size() <= 4) 
+		{
+			sepex = new SeppelExact(df, gene);
 			sepex->calculate();
 			sepex->rmModels(minpp);
 			posprob = sepex->posprob;
 			mode = sepex->mode;
 			bestModel= sepex->bestModel;
 			modeBest= sepex->modeBest;
-		} else {
-			SeppelSmart* sepsm = new SeppelSmart(df, df->genes[geneid]);
+		} 
+		else 
+		{
+			SeppelSmart* sepsm = new SeppelSmart(df, gene);
 			posprob = sepsm->calculate(model);
 		}
 
@@ -320,7 +372,7 @@ extern "C"
 		double *expr= REAL(VECTOR_ELT(ans,1));
 		SEXP varnamesR= VECTOR_ELT(ans,2);
 		map<int, Variant*> variantHash;
-		variantHash= casp->model->getVarHash();
+		variantHash= model->getVarHash();
 
 		int rowid=0, nrowexons=0;
 		set<Variant*> allvariants;

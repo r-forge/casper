@@ -35,7 +35,7 @@ class Casper
   // random int between 0 incl and n excl
   static int randi(int n);
 
-  double priorq;
+  static double priorq;
 
  private:
   map<Fragment*, map<Variant*, double> > mempprobs;
