@@ -47,6 +47,7 @@ setMethod("plotPriorAS",signature(object='modelPriorAS'), function(object,type='
     par(mfrow=c(mfrow,mfcol))
     for (i in isel) {
       x2plot <- rbind(object@nvarPrior$obs[[i]],object@nvarPrior$pred[[i]])
+      x2plot <- x2plot/rowSums(x2plot)
       rownames(x2plot) <- c('Observed','Predicted')
       if (missing(xlab)) xlab <- 'Number of variants'
       barplot(x2plot,beside=TRUE,xlab=xlab,ylab=ylab,main=paste('Genes with',i,'exons'),legend=TRUE,col=col,border=NA)
@@ -59,6 +60,7 @@ setMethod("plotPriorAS",signature(object='modelPriorAS'), function(object,type='
     par(mfrow=c(mfrow,mfcol))
     for (i in isel) {
       x2plot <- rbind(object@nexonPrior$obs[[i]],object@nexonPrior$pred[[i]])
+      x2plot <- x2plot/rowSums(x2plot)
       rownames(x2plot) <- c('Observed','Predicted')
       xlab <- 'Number of exons in the variant'
       barplot(x2plot,beside=TRUE,xlab=xlab,ylab=ylab,main=paste('Genes with',i,'exons'),legend=TRUE,args.legend=list(x='topleft'),col=col,border=NA)

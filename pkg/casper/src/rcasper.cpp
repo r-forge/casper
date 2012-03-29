@@ -253,7 +253,7 @@ extern "C"
 
 		return Rc;
 	}
-	SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP verboseR) 
+  SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP verboseR) 
 	{
 		//De novo isoform discovery and estimate expression for multiple genes. Calls calcDenovoSingle repeadtedly
 		int i, ngenes=LENGTH(geneidR);
@@ -262,7 +262,7 @@ extern "C"
 		PROTECT(ansMultiple= allocVector(VECSXP, ngenes));
 
 		for (i=0; i<ngenes; i++) {
-			ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(geneidR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, nvarPriorR, nexonPriorR, priorqR, minppR, selectBest, verboseR);
+		  ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, VECTOR_ELT(geneidR,i), nvarPriorR, nexonPriorR, priorqR, minppR, selectBest, methodR, verboseR);
 			SET_VECTOR_ELT(ansMultiple,i,ansSingle);
 		}
 		
@@ -270,7 +270,7 @@ extern "C"
 		return ansMultiple;
 	}
 
-	SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP geneidR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP verboseR)
+  SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP geneidR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP verboseR)
 	{
 		//De novo isoform discovery and estimate expression for a single gene
 		//Input
@@ -288,12 +288,14 @@ extern "C"
 		// - priorq: prior on model-specific parameters pi ~ Dirichlet(priorq)
 		// - minpp: only models with post prob >= minpp are reported
 		// - selectBest: set to !=0 to return only results for model with highest posterior probability
+	        // - methodR: set to 1 for exact; 2 for random walk MCMC; 3 for prior proposal MCMC; 0 for auto (exact for genes with <=4 exons, RW-MCMC for >4 exons)
 		// - verbose: set verbose != 0 to print warnings & progress info
 
 		int geneid = INTEGER(geneidR)[0];
 		int selBest = INTEGER(selectBest)[0];
 		double minpp = REAL(minppR)[0];
 		double priorq = REAL(priorqR)[0];
+                int method= INTEGER(methodR)[0];
 		verbose = INTEGER(verboseR)[0];
 
 		SEXP exongenesR, transgenesR;
