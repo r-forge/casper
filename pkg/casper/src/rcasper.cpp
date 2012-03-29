@@ -323,7 +323,10 @@ extern "C"
 
 		Gene* gene = df->genes[geneid];
 
-		fixUnexplFrags(initvars, df, gene);
+		int before = initvars->size();
+		int discarded = fixUnexplFrags(initvars, df, gene);
+		Rprintf("discarded %i elements\n", discarded);
+		Rprintf("before: %i and after: %i\n", before, initvars->size());
 		Model* model = new Model(new vector<Variant*>(initvars->begin(), initvars->end()));
 		Casper::priorq = priorq;
 
