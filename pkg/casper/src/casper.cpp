@@ -7,12 +7,12 @@ using namespace std;
 const int Casper::is_runs = 100;
 const int Casper::em_maxruns = 100;
 const double Casper::mh_gammah = 2;
+double Casper::priorq = 3;
 
 Casper::Casper(Model* model, DataFrame* frame)
 {
 	this->model = model;
 	this->frame = frame;
-	this->priorq = 3;
 
 	vector<Variant* >::const_iterator vi;
 	for (vi = model->items.begin(); vi != model->items.end(); vi++)
