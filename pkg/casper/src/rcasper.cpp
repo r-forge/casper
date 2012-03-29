@@ -75,6 +75,7 @@ int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, DataFrame* df, Gene* gen
 			{
 				// this fragment cant be explained
 				discarded++;
+				df->data.remove(frag);
 			}
 		}
 	}
