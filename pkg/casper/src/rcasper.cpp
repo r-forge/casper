@@ -34,7 +34,11 @@ int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, DataFrame* df, Gene* gen
 		map<Fragment*, double>::iterator si;
 		for (si = probs.begin(); si != probs.end(); si++) 
 		{
-			queue->erase(queue->find(si->first));
+			set<Fragment*>::iterator ri = queue->find(si->first);
+			if (ri != queue->end())
+			{
+				queue->erase(ri);
+			}
 		}
 	}
 
@@ -60,7 +64,11 @@ int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, DataFrame* df, Gene* gen
 				map<Fragment*, double>::iterator si;
 				for (si = probs.begin(); si != probs.end(); si++) 
 				{
-					queue->erase(queue->find(si->first));
+					set<Fragment*>::iterator ri = queue->find(si->first);
+					if (ri != queue->end())
+					{
+						queue->erase(ri);
+					}
 				}
 			}
 			else
