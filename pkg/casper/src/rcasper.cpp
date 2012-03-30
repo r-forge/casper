@@ -380,24 +380,22 @@ extern "C"
 		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR, transgenesR);
 
 		UNPROTECT(1);		
-		UNPROTECT(1);		
-
-		debugdf(df);
-		debugmodel(new Model(initvars));
+		UNPROTECT(1);
 
 		// END OF INPUT READING
 
 		Gene* gene = df->genes[geneid];
 
 		int discarded = fixUnexplFrags(initvars, df, gene);
-		Rprintf("discarded %i fragments\n", discarded);
+		if (verbose > 0)
+		{
+			Rprintf("discarded %i fragments\n", discarded);
+		}
 
 		Casper::priorq = priorq;
 
 		map<Model*, double, ModelCmp> resProbs;
 		map<Model*, double*, ModelCmp> resModes;
-
-		method == 3;
 
 		if (method == 1 || method == 0 && df->exons.size() <= 4) 
 		{
