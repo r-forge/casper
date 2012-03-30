@@ -293,7 +293,7 @@ void debugmodel(Model* model)
 	}
 	REprintf("\n");
 }
-char* getmodelcode(vector<Variant*>* allvariants, Model* model)
+const char* getmodelcode(vector<Variant*>* allvariants, Model* model)
 {
 	int n = allvariants->size();
 	char* str = new char[n + 1];
@@ -466,13 +466,14 @@ extern "C"
 		// END OF FILTERING
 		
 		SEXP ans;
-		PROTECT(ans= allocVector(VECSXP, 5));
+		PROTECT(ans= allocVector(VECSXP, 6));
 
 		//Report posterior probabilities
 		int i;
 		int nrowpi=0, nx;
 		if (selBest==0) { nx= resProbs.size(); } else { nx=1; }
 		SET_VECTOR_ELT(ans, 0, allocMatrix(REALSXP,nx,2));
+		SET_VECTOR_ELT(ans, 5, allocVector(STRSXP,nx));
 		double *resProbsR= REAL(VECTOR_ELT(ans,0));
 		
 		set<Variant*, VariantCmp>::const_iterator vi;
@@ -483,11 +484,13 @@ extern "C"
 				resProbsR[i]= i;
 				resProbsR[i+nx]= resProbs[m];
 				nrowpi+= m->count();
+				SET_STRING_ELT(VECTOR_ELT(ans,5),i,mkChar(getmodelcode(allpossvariants,m)));  //model name
 			}
 		} else {
 			resProbsR[0]= 0;
 			resProbsR[nx]= resProbs[bestModel];
 			nrowpi+= bestModel->count();
+		        SET_STRING_ELT(VECTOR_ELT(ans,5),0,mkChar(getmodelcode(allpossvariants,bestModel)));  //model name
 		}
 
 		//Report estimated expression

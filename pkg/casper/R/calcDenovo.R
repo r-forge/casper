@@ -1,7 +1,7 @@
 require(methods)
 
 #Class denovoGeneExpr
-setClass("denovoGeneExpr", representation(posprob = "matrix", expression = "data.frame", variants = "RangedData"))
+setClass("denovoGeneExpr", representation(posprob = "data.frame", expression = "data.frame", variants = "RangedData"))
 
 valid_denovoGeneExpr <- function(object) {
   msg <- NULL
@@ -107,7 +107,9 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
 
 
 formatDenovoOut <- function(ans, genesel) {
-  colnames(ans[[1]]) <- c('model','posprob')
+  ans[[1]] <- data.frame(ans[[1]],ans[[6]])
+  ans[[6]] <- NULL
+  colnames(ans[[1]]) <- c('model','posprob','modelid')
   ans[[2]] <- data.frame(ans[[2]],ans[[3]])
   ans[[3]] <- NULL
   colnames(ans[[2]]) <- c('model','expr','varName')
