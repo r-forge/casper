@@ -428,7 +428,7 @@ extern "C"
 		map<Model*, double, ModelCmp>::iterator mvi;
 		for (mvi = resProbs.begin(); mvi != resProbs.end(); mvi++) 
 		{
-			if (mvi->second < minpp && false) 
+			if (mvi->second < minpp) 
 			{
 				resModes.erase(mvi->first);
 				resProbs.erase(mvi);
