@@ -413,6 +413,7 @@ extern "C"
 				else
 				{
 					debugmodel(model);
+					break;
 				}
 			}
 
