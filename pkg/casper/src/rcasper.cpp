@@ -299,7 +299,7 @@ char* getmodelcode(vector<Variant*>* allvariants, Model* model)
 	char* str = new char[n + 1];
 	str[n] = '\0';
 
-	for (int i = 0; i < allvariants->size(); i++)
+	for (int i = 0; i < (int)allvariants->size(); i++)
 	{
 		if (model->contains(allvariants->at(i)))
 		{
