@@ -1,5 +1,4 @@
 #include <sstream>
-#include <set>
 #include <R.h>
 #include <Rinternals.h>
 #include "stdafx.h"
@@ -235,6 +234,65 @@ Variant* path2Variant(DataFrame *df, Fragment* f, Gene *gene)
 	return v;
 }
 
+void debugprint(set<Variant*, VariantCmp>* initvars, DataFrame* df)
+{		
+	REprintf("Genes:\n");
+	map<int, Gene*>::const_iterator gi;
+	for (gi = df->genes.begin(); gi != df->genes.end(); gi++)
+	{
+		Gene* g = gi->second;
+		REprintf("%i\t%i\n", g->id, g->exons.size());
+		vector<Exon*>::const_iterator ei;
+		for (ei = g->exons.begin(); ei != g->exons.end(); ei++)
+		{
+			REprintf("%i\n", (*ei)->id);
+		}
+	}
+	REprintf("\n");
+
+	// Exons
+	REprintf("Exons:\n");
+	map<int, Exon*>::const_iterator ei;
+	for (ei = df->exons.begin(); ei != df->exons.end(); ei++)
+	{
+		Exon* e = ei->second;
+		REprintf("%i\t%i\n", e->id, e->length);
+	}
+	REprintf("\n");
+
+	// Fragments
+	REprintf("Fragments:\n");
+	list<Fragment*>::const_iterator fi;
+	for (fi = df->data.begin(); fi != df->data.end(); fi++)
+	{
+		Fragment* f = *fi;
+		REprintf("%i\t%i\t%i\n", f->leftc, f->rightc, f->count);
+		for (int l = 0; l < f->leftc; l++)
+		{
+			REprintf("%i\n", f->left[l]);
+		}
+		for (int r = 0; r < f->rightc; r++)
+		{
+			REprintf("%i\n", f->right[r]);
+		}
+	}
+	REprintf("\n");
+
+	// Transcripts
+	REprintf("Transcripts:\n");
+	set<Variant*, VariantCmp>::const_iterator vi;
+	for (vi = initvars->begin(); vi != initvars->end(); vi++)
+	{
+		Variant* v = *vi;
+		REprintf("%i\t%i\n", v->id, v->exonCount);
+		for (int e = 0; e < v->exonCount; e++)
+		{
+			REprintf("%i\n", v->exons[e]);
+		}
+	}
+	REprintf("\n");
+}
+
 extern "C"
 {
 	SEXP calcMode(SEXP exonsR, SEXP exonwidthR, SEXP exongenesR, SEXP transcriptsR, SEXP transgenesR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR)
@@ -319,6 +377,8 @@ extern "C"
 		UNPROTECT(1);		
 		UNPROTECT(1);		
 
+		debugprint(initvars, df);
+
 		// END OF INPUT READING
 
 		Gene* gene = df->genes[geneid];
@@ -327,34 +387,46 @@ extern "C"
 		int discarded = fixUnexplFrags(initvars, df, gene);
 		Rprintf("discarded %i elements\n", discarded);
 		Rprintf("before: %i and after: %i\n", before, initvars->size());
-		Model* model = new Model(new vector<Variant*>(initvars->begin(), initvars->end()));
+		Model* model = new Model(initvars);
 		Casper::priorq = priorq;
 
-		SeppelExact* sepex;
-		SeppelSmart* sepsm;
-
-		map<Model*, double, ModelCmp> posprob;
-		map<Model*, double*, ModelCmp> mode;
-		Model* bestModel;
-		double* modeBest;
+		map<Model*, double, ModelCmp> resProbs;
+		map<Model*, double*, ModelCmp> resModes;
 
 		if (df->exons.size() <= 4) 
 		{
-			sepex = new SeppelExact(df, gene);
+			SeppelExact* sepex = new SeppelExact(df, gene);
 			sepex->calculate();
-			sepex->rmModels(minpp);
-			posprob = sepex->posprob;
-			mode = sepex->mode;
-			bestModel= sepex->bestModel;
-			modeBest= sepex->modeBest;
+			resProbs = sepex->resProbs;
+			resModes = sepex->resModes;
 		} 
 		else 
 		{
 			SeppelSmart* sepsm = new SeppelSmart(df, gene);
-			posprob = sepsm->calculate(model);
+			//resProbs = sepsm->calculate(model);
 		}
 
 		// END OF CALCULATIONS
+		
+		Model* bestModel;
+		double bestModelProb = -1;
+
+		map<Model*, double, ModelCmp>::iterator mvi;
+		for (mvi = resProbs.begin(); mvi != resProbs.end(); mvi++) 
+		{
+			if (mvi->second < minpp) 
+			{
+				resModes.erase(mvi->first);
+				resProbs.erase(mvi);
+			}
+			if (mvi->second > bestModelProb)
+			{
+				bestModelProb = mvi->second;
+				bestModel = mvi->first;
+			}
+		}
+
+		// END OF FILTERING
 		
 		SEXP ans;
 		PROTECT(ans= allocVector(VECSXP, 5));
@@ -362,21 +434,21 @@ extern "C"
 		//Report posterior probabilities
 		int i;
 		int nrowpi=0, nx;
-		if (selBest==0) { nx= posprob.size(); } else { nx=1; }
+		if (selBest==0) { nx= resProbs.size(); } else { nx=1; }
 		SET_VECTOR_ELT(ans, 0, allocMatrix(REALSXP,nx,2));
-		double *posprobR= REAL(VECTOR_ELT(ans,0));
+		double *resProbsR= REAL(VECTOR_ELT(ans,0));
 
 		map<Model*, double, ModelCmp>::const_iterator mi;
 		if (selBest==0) {
-			for (mi = posprob.begin(), i=0; mi != posprob.end(); mi++, i++) {
+			for (mi = resProbs.begin(), i=0; mi != resProbs.end(); mi++, i++) {
 				Model* m = mi->first;
-				posprobR[i]= i;
-				posprobR[i+nx]= posprob[m];
+				resProbsR[i]= i;
+				resProbsR[i+nx]= resProbs[m];
 				nrowpi+= m->count();
 			}
 		} else {
-			posprobR[0]= 0;
-			posprobR[nx]= posprob[bestModel];
+			resProbsR[0]= 0;
+			resProbsR[nx]= resProbs[bestModel];
 			nrowpi+= bestModel->count();
 		}
 
@@ -391,13 +463,13 @@ extern "C"
 		int rowid=0, nrowexons=0;
 		set<Variant*> allvariants;
 		if (selBest==0) {
-			for (mi = posprob.begin(), i=0; mi != posprob.end(); mi++, i++) {
+			for (mi = resProbs.begin(), i=0; mi != resProbs.end(); mi++, i++) {
 				Model* m = mi->first;
 				for (int j=0; j< m->count(); j++) {
 					expr[rowid]= i;  //model id
 					Variant* v = m->get(j);
 					int varidx= m->indexOf(v);
-					expr[rowid+nrowpi]= sepex->mode[m][varidx]; //estimated expression
+					expr[rowid+nrowpi]= resModes[m][varidx]; //estimated expression
 					if (variantHash.count(v->hashcode)>0) v->name= (variantHash[v->hashcode])->name;  //respect initial variant names
 					const char *cname= (v->name).c_str();;
 					SET_STRING_ELT(varnamesR,rowid,mkChar(cname));  //variant name
@@ -414,7 +486,7 @@ extern "C"
 				expr[rowid]= i;  //model id
 				Variant* v = m->get(j);
 				int varidx= m->indexOf(v);
-				expr[rowid+nrowpi]= sepex->mode[m][varidx]; //estimated expression
+				expr[rowid+nrowpi]= resModes[m][varidx]; //estimated expression
 				if (variantHash.count(v->hashcode)>0) v->name= (variantHash[v->hashcode])->name;  //respect initial variant names
 				const char *cname= (v->name).c_str();
 				SET_STRING_ELT(varnamesR,rowid,mkChar(cname));  //variant name

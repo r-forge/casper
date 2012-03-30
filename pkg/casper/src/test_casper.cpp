@@ -154,7 +154,7 @@ int main() {
 	SeppelExact* sep1 = new SeppelExact(c->frame, c->frame->genes[1]);
 	map<Model*, double, ModelCmp> res1;
 	sep1->calculate();
-	res1 = sep1->posprob;
+	res1 = sep1->resProbs;
 
 
 	printf("EXACT\n");

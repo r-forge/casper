@@ -15,6 +15,10 @@ Model::Model(vector<Variant*>* variants)
 
 	hashcode = gethash();
 }
+Model::Model(set<Variant*, VariantCmp>* variants)
+{	
+	Model(new vector<Variant*>(variants->begin(), variants->end()));
+}
 
 bool Model::contains(Variant* v)
 {
