@@ -397,7 +397,9 @@ extern "C"
 		map<Model*, double, ModelCmp> resProbs;
 		map<Model*, double*, ModelCmp> resModes;
 
-		if (method == 0 && df->exons.size() <= 4 || method == 1) 
+		method == 3;
+
+		if (method == 1 || method == 0 && df->exons.size() <= 4) 
 		{
 			SeppelExact* sepex = new SeppelExact(df, gene);
 			sepex->calculate();
