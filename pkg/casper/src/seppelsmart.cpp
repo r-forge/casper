@@ -68,19 +68,13 @@ void SeppelSmart::calculate(Model* center)
 		}
 	}
 	
-	map<Model*, double, ModelCmp> normalized;
-	map<Model*, double*, ModelCmp> normodes;
-	
 	map<Model*, double, ModelCmp>::const_iterator mvi;
 	for (mvi = result.begin(); mvi != result.end(); mvi++)
 	{
 		if (mvi->second > 0)
 		{
-			normalized[mvi->first] = mvi->second / rescounts;
-			normodes[mvi->first] = modes[mvi->first];
+			resProbs[mvi->first] = mvi->second / rescounts;
+			resModes[mvi->first] = modes[mvi->first];
 		}
 	}
-
-	resProbs = normalized;
-	resModes = normodes;
 }

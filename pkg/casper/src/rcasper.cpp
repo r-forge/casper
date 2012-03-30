@@ -380,7 +380,6 @@ extern "C"
 		UNPROTECT(1);		
 
 		debugdf(df);
-		Rprintf("CoUNT: %i VS %i\n", initvars->size(), (new Model(initvars))->items.size());
 		debugmodel(new Model(initvars));
 
 		// END OF INPUT READING
@@ -399,9 +398,8 @@ extern "C"
 		map<Model*, double*, ModelCmp> resModes;
 
 		if (df->exons.size() <= 4) 
-		{
+		{		
 			vector<Model*>* models = df->allModels(gene);
-			
 			vector<Model*>::const_iterator mi;
 			for (mi = models->begin(); mi != models->end(); mi++)
 			{
@@ -410,11 +408,11 @@ extern "C"
 				Casper* casp = new Casper(model, df);
 				if (casp->isValid())
 				{
-					Rprintf("OK");
+					Rprintf("FINALLY");
 				}
 				else
 				{
-					Rprintf("NOT");
+					debugmodel(model);
 				}
 			}
 
@@ -422,8 +420,6 @@ extern "C"
 			sepex->calculate();
 			resProbs = sepex->resProbs;
 			resModes = sepex->resModes;
-
-			Rprintf("COUNT::: %i AND %i\n", models->size(), resProbs.size());
 		} 
 		else 
 		{

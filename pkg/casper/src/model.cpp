@@ -17,7 +17,6 @@ Model::Model(vector<Variant*>* variants)
 }
 Model::Model(set<Variant*, VariantCmp>* variants)
 {	
-	printf("IWAS HERE");
 	set<Variant*, VariantCmp>::const_iterator vi;
 	for (vi = variants->begin(); vi != variants->end(); vi++)
 	{
