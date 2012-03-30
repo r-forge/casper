@@ -10,13 +10,14 @@ SeppelSmart::SeppelSmart(DataFrame* frame, Gene* gene)
 	this->thinning = 1;
 }
 
-map<Model*, double, ModelCmp> SeppelSmart::calculate(Model* center)
+void SeppelSmart::calculate(Model* center)
 {
 	Model* omodl = center;
 	Casper* ocasp = new Casper(omodl, frame);
 	double olike = ocasp->calculateIntegral();
 	SmartModelDist* odist = new SmartModelDist(omodl, gene, 0.8);
 	
+	map<Model*, double*, ModelCmp> modes;
 	map<Model*, double, ModelCmp> result;
 	double rescounts = 0;
 	int accepted = 0;
@@ -30,7 +31,9 @@ map<Model*, double, ModelCmp> SeppelSmart::calculate(Model* center)
 			Casper* ncasp = new Casper(nmodl, frame);
 			if (ncasp->isValid())
 			{
-				nlike = ncasp->calculateIntegral();
+				double* mode = ncasp->calculateMode();
+				modes[nmodl] = mode;
+				nlike = ncasp->calculateIntegral(mode, nmodl->count());
 			}
 		}
 
@@ -66,6 +69,7 @@ map<Model*, double, ModelCmp> SeppelSmart::calculate(Model* center)
 	}
 	
 	map<Model*, double, ModelCmp> normalized;
+	map<Model*, double*, ModelCmp> normodes;
 	
 	map<Model*, double, ModelCmp>::const_iterator mvi;
 	for (mvi = result.begin(); mvi != result.end(); mvi++)
@@ -73,8 +77,10 @@ map<Model*, double, ModelCmp> SeppelSmart::calculate(Model* center)
 		if (mvi->second > 0)
 		{
 			normalized[mvi->first] = mvi->second / rescounts;
+			normodes[mvi->first] = modes[mvi->first];
 		}
 	}
 
-	return normalized;
+	resProbs = normalized;
+	resModes = normodes;
 }

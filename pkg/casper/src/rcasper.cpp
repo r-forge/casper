@@ -234,7 +234,7 @@ Variant* path2Variant(DataFrame *df, Fragment* f, Gene *gene)
 	return v;
 }
 
-void debugprint(set<Variant*, VariantCmp>* initvars, DataFrame* df)
+void debugdf(DataFrame* df)
 {		
 	REprintf("Genes:\n");
 	map<int, Gene*>::const_iterator gi;
@@ -277,17 +277,19 @@ void debugprint(set<Variant*, VariantCmp>* initvars, DataFrame* df)
 		}
 	}
 	REprintf("\n");
-
+}
+void debugmodel(Model* model)
+{
 	// Transcripts
-	REprintf("Transcripts:\n");
-	set<Variant*, VariantCmp>::const_iterator vi;
-	for (vi = initvars->begin(); vi != initvars->end(); vi++)
+	REprintf("Model:\n");
+	vector<Variant*>::const_iterator vi;
+	for (vi = model->items.begin(); vi != model->items.end(); vi++)
 	{
 		Variant* v = *vi;
 		REprintf("%i\t%i\n", v->id, v->exonCount);
 		for (int e = 0; e < v->exonCount; e++)
 		{
-			REprintf("%i\n", v->exons[e]);
+			REprintf("%i\n", v->exons[e]->id);
 		}
 	}
 	REprintf("\n");
@@ -377,7 +379,9 @@ extern "C"
 		UNPROTECT(1);		
 		UNPROTECT(1);		
 
-		debugprint(initvars, df);
+		debugdf(df);
+		Rprintf("CoUNT: %i VS %i\n", initvars->size(), (new Model(initvars))->items.size());
+		debugmodel(new Model(initvars));
 
 		// END OF INPUT READING
 
@@ -385,6 +389,7 @@ extern "C"
 
 		int before = initvars->size();
 		int discarded = fixUnexplFrags(initvars, df, gene);
+		debugmodel(new Model(initvars));
 		Rprintf("discarded %i elements\n", discarded);
 		Rprintf("before: %i and after: %i\n", before, initvars->size());
 		Model* model = new Model(initvars);
@@ -395,10 +400,30 @@ extern "C"
 
 		if (df->exons.size() <= 4) 
 		{
+			vector<Model*>* models = df->allModels(gene);
+			
+			vector<Model*>::const_iterator mi;
+			for (mi = models->begin(); mi != models->end(); mi++)
+			{
+				Model* model = *mi;
+
+				Casper* casp = new Casper(model, df);
+				if (casp->isValid())
+				{
+					Rprintf("OK");
+				}
+				else
+				{
+					Rprintf("NOT");
+				}
+			}
+
 			SeppelExact* sepex = new SeppelExact(df, gene);
 			sepex->calculate();
 			resProbs = sepex->resProbs;
 			resModes = sepex->resModes;
+
+			Rprintf("COUNT::: %i AND %i\n", models->size(), resProbs.size());
 		} 
 		else 
 		{
@@ -414,7 +439,7 @@ extern "C"
 		map<Model*, double, ModelCmp>::iterator mvi;
 		for (mvi = resProbs.begin(); mvi != resProbs.end(); mvi++) 
 		{
-			if (mvi->second < minpp) 
+			if (mvi->second < minpp && false) 
 			{
 				resModes.erase(mvi->first);
 				resProbs.erase(mvi);

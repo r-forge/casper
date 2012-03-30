@@ -147,7 +147,8 @@ int main() {
 	printf("PRIOR\n");
 
 	SeppelSmart* sep3 = new SeppelSmart(c->frame, c->frame->genes[1]);
-	map<Model*, double, ModelCmp> res3 = sep3->calculate(c->model);
+	sep3->calculate(c->model);
+	map<Model*, double, ModelCmp> res3 = sep3->resProbs;
 
 	printf("SMART\n");
 
@@ -155,7 +156,6 @@ int main() {
 	map<Model*, double, ModelCmp> res1;
 	sep1->calculate();
 	res1 = sep1->resProbs;
-
 
 	printf("EXACT\n");
 	

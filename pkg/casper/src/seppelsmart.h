@@ -4,12 +4,17 @@ class SeppelSmart
 {
 public:
 	SeppelSmart(DataFrame* frame, Gene* gene);
+
 	// does metropolis hastings given a start model, uses SeppelSmartDist as proposal
-	map<Model*, double, ModelCmp> calculate(Model* center);
+	void calculate(Model* model); 	// calculate posterior probability of all possible models
+
+	map<Model*, double, ModelCmp> resProbs; 	// stores posterior probabilities
+	map<Model*, double*, ModelCmp> resModes; 	// stores modes (estimated expression)
 
 	int runs;
 	int burning;
 	int thinning;
+
 private:
 	DataFrame* frame;
 	Gene* gene;

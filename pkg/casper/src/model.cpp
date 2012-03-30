@@ -17,7 +17,17 @@ Model::Model(vector<Variant*>* variants)
 }
 Model::Model(set<Variant*, VariantCmp>* variants)
 {	
-	Model(new vector<Variant*>(variants->begin(), variants->end()));
+	printf("IWAS HERE");
+	set<Variant*, VariantCmp>::const_iterator vi;
+	for (vi = variants->begin(); vi != variants->end(); vi++)
+	{
+		Variant* v = *vi;
+		int i = this->items.size();
+		this->items.push_back(v);
+		this->idmap[v] = i;
+	}
+
+	hashcode = gethash();
 }
 
 bool Model::contains(Variant* v)
