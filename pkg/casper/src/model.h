@@ -22,8 +22,6 @@ public:
 
 	// list of variants
 	vector<Variant*> items;
-        //return hash for each variant
-	map<int, Variant*> getVarHash(); 
 
 	// hashcode for model
 	int hashcode;

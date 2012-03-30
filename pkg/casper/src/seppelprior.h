@@ -4,7 +4,10 @@ class SeppelPrior
 {
 public:
 	SeppelPrior(DataFrame* frame, Gene* gene);
-	map<Model*, double, ModelCmp> calculate();
+	void calculate();
+	
+	map<Model*, double, ModelCmp> resProbs; 	// stores posterior probabilities
+	map<Model*, double*, ModelCmp> resModes; 	// stores modes (estimated expression)
 
 	int runs;
 

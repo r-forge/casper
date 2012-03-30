@@ -9,7 +9,7 @@ SeppelPrior::SeppelPrior(DataFrame* frame, Gene* gene)
 	this->runs = 10000;
 }
 
-map<Model*, double, ModelCmp> SeppelPrior::calculate()
+void SeppelPrior::calculate()
 {
 	map<Model*, double, ModelCmp> result;
 
@@ -31,6 +31,8 @@ map<Model*, double, ModelCmp> SeppelPrior::calculate()
 	Casper* ocasp = new Casper(omodl, frame);
 	double olike = ocasp->calculateIntegral();
 
+	map<Model*, double*, ModelCmp> modes;
+
 	double rescounts = 0;
 	int accepted = 0;
 	
@@ -40,7 +42,9 @@ map<Model*, double, ModelCmp> SeppelPrior::calculate()
 		Model* nmodl = models->at(nnum);
 		Casper* ncasp = new Casper(nmodl, frame);
 
-		double nlike = ncasp->calculateIntegral();
+		double * nmode = ncasp->calculateMode();
+		modes[nmodl] = nmode;
+		double nlike = ncasp->calculateIntegral(nmode, nmodl->count());
 		
 		double l = nlike - olike;
 		double p = exp(l);
@@ -56,16 +60,13 @@ map<Model*, double, ModelCmp> SeppelPrior::calculate()
 		rescounts++;
 	}
 
-	map<Model*, double, ModelCmp> normalized;
-
 	map<Model*, double, ModelCmp>::const_iterator mvi;
 	for (mvi = result.begin(); mvi != result.end(); mvi++)
 	{
 		if (mvi->second > 0)
 		{
-			normalized[mvi->first] = mvi->second / rescounts;
+			resProbs[mvi->first] = mvi->second / rescounts;
+			resModes[mvi->first] = modes[mvi->first];
 		}
 	}
-
-	return normalized;
 }

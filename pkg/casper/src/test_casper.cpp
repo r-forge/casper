@@ -142,12 +142,13 @@ int main() {
 	//Model* n2 = m2->at(0);
 
 	SeppelPrior* sep2 = new SeppelPrior(c->frame, c->frame->genes[1]);
-	map<Model*, double, ModelCmp> res2 = sep2->calculate();
+	sep2->calculate();
+	map<Model*, double, ModelCmp> res2 =  sep2->resProbs;
 
 	printf("PRIOR\n");
 
-	SeppelSmart* sep3 = new SeppelSmart(c->frame, c->frame->genes[1]);
-	sep3->calculate(c->model);
+	SeppelSmart* sep3 = new SeppelSmart(c->frame, c->frame->genes[1], c->model);
+	sep3->calculate();
 	map<Model*, double, ModelCmp> res3 = sep3->resProbs;
 
 	printf("SMART\n");

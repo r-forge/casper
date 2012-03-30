@@ -1,18 +1,19 @@
 #include "seppelsmart.h"
 
-SeppelSmart::SeppelSmart(DataFrame* frame, Gene* gene)
+SeppelSmart::SeppelSmart(DataFrame* frame, Gene* gene, Model* startmodel)
 {
 	this->frame = frame;
 	this->gene = gene;
+	this->startmodel = startmodel;
 
 	this->runs = 10000;
 	this->burning = 0;
 	this->thinning = 1;
 }
 
-void SeppelSmart::calculate(Model* center)
+void SeppelSmart::calculate()
 {
-	Model* omodl = center;
+	Model* omodl = startmodel;
 	Casper* ocasp = new Casper(omodl, frame);
 	double olike = ocasp->calculateIntegral();
 	SmartModelDist* odist = new SmartModelDist(omodl, gene, 0.8);

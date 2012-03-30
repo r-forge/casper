@@ -51,31 +51,29 @@ int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, DataFrame* df, Gene* gen
 		queue->erase(queue->begin());
 
 		Variant* nv = path2Variant(df, frag, gene);
-		if (initvars->count(nv) == 0) 
-		{
-			// check if the new variant can explain the fragment
-			map<Fragment*, double> probs = df->probabilities(nv);
-			if (probs.count(frag) > 0)
-			{
-				initvars->insert(nv);
 
-				// delete all fragments that this variant can explain
-				map<Fragment*, double>::iterator si;
-				for (si = probs.begin(); si != probs.end(); si++) 
+		// check if the new variant can explain the fragment
+		map<Fragment*, double> probs = df->probabilities(nv);
+		if (probs.count(frag) > 0)
+		{
+			initvars->insert(nv);
+
+			// delete all fragments that this variant can explain
+			map<Fragment*, double>::iterator si;
+			for (si = probs.begin(); si != probs.end(); si++) 
+			{
+				set<Fragment*>::iterator ri = queue->find(si->first);
+				if (ri != queue->end())
 				{
-					set<Fragment*>::iterator ri = queue->find(si->first);
-					if (ri != queue->end())
-					{
-						queue->erase(ri);
-					}
+					queue->erase(ri);
 				}
 			}
-			else
-			{
-				// this fragment cant be explained
-				discarded++;
-				df->data.remove(frag);
-			}
+		}
+		else
+		{
+			// this fragment cant be explained
+			discarded++;
+			df->data.remove(frag);
 		}
 	}
 
@@ -386,46 +384,35 @@ extern "C"
 
 		Gene* gene = df->genes[geneid];
 
-		int before = initvars->size();
 		int discarded = fixUnexplFrags(initvars, df, gene);
-		debugmodel(new Model(initvars));
-		Rprintf("discarded %i elements\n", discarded);
-		Rprintf("before: %i and after: %i\n", before, initvars->size());
-		Model* model = new Model(initvars);
+		Rprintf("discarded %i fragments\n", discarded);
+
 		Casper::priorq = priorq;
 
 		map<Model*, double, ModelCmp> resProbs;
 		map<Model*, double*, ModelCmp> resModes;
 
-		if (df->exons.size() <= 4) 
-		{		
-			vector<Model*>* models = df->allModels(gene);
-			vector<Model*>::const_iterator mi;
-			for (mi = models->begin(); mi != models->end(); mi++)
-			{
-				Model* model = *mi;
-
-				Casper* casp = new Casper(model, df);
-				if (casp->isValid())
-				{
-					Rprintf("FINALLY");
-				}
-				else
-				{
-					debugmodel(model);
-					break;
-				}
-			}
-
+		if (method == 0 && df->exons.size() <= 4 || method == 1) 
+		{
 			SeppelExact* sepex = new SeppelExact(df, gene);
 			sepex->calculate();
 			resProbs = sepex->resProbs;
 			resModes = sepex->resModes;
 		} 
-		else 
+		else if (method == 3)
 		{
-			SeppelSmart* sepsm = new SeppelSmart(df, gene);
-			//resProbs = sepsm->calculate(model);
+			SeppelPrior* sepsm = new SeppelPrior(df, gene);
+			sepsm->calculate();
+			resProbs = sepsm->resProbs;
+			resModes = sepsm->resModes;
+		}
+		else
+		{
+			Model* startmodel = new Model(initvars);
+			SeppelSmart* sepsm = new SeppelSmart(df, gene, startmodel);
+			sepsm->calculate();
+			resProbs = sepsm->resProbs;
+			resModes = sepsm->resModes;
 		}
 
 		// END OF CALCULATIONS
@@ -479,11 +466,16 @@ extern "C"
 		SET_VECTOR_ELT(ans, 2, allocVector(STRSXP,nrowpi)); //stores variant names
 		double *expr= REAL(VECTOR_ELT(ans,1));
 		SEXP varnamesR= VECTOR_ELT(ans,2);
-		map<int, Variant*> variantHash;
-		variantHash= model->getVarHash();
+	
+		map<Variant*, Variant*, VariantCmp> variantHash;
+		set<Variant*, VariantCmp>::const_iterator vi;
+		for (vi = initvars->begin(); vi != initvars->end(); vi++)
+		{
+			variantHash[*vi] = *vi;
+		}
 
 		int rowid=0, nrowexons=0;
-		set<Variant*> allvariants;
+		set<Variant*, VariantCmp> allvariants;
 		if (selBest==0) {
 			for (mi = resProbs.begin(), i=0; mi != resProbs.end(); mi++, i++) {
 				Model* m = mi->first;
@@ -492,7 +484,7 @@ extern "C"
 					Variant* v = m->get(j);
 					int varidx= m->indexOf(v);
 					expr[rowid+nrowpi]= resModes[m][varidx]; //estimated expression
-					if (variantHash.count(v->hashcode)>0) v->name= (variantHash[v->hashcode])->name;  //respect initial variant names
+					if (variantHash.count(v)>0) v->name= (variantHash[v])->name;  //respect initial variant names
 					const char *cname= (v->name).c_str();;
 					SET_STRING_ELT(varnamesR,rowid,mkChar(cname));  //variant name
 					if (allvariants.count(v)==0) {
@@ -509,7 +501,7 @@ extern "C"
 				Variant* v = m->get(j);
 				int varidx= m->indexOf(v);
 				expr[rowid+nrowpi]= resModes[m][varidx]; //estimated expression
-				if (variantHash.count(v->hashcode)>0) v->name= (variantHash[v->hashcode])->name;  //respect initial variant names
+				if (variantHash.count(v)>0) v->name= (variantHash[v])->name;  //respect initial variant names
 				const char *cname= (v->name).c_str();
 				SET_STRING_ELT(varnamesR,rowid,mkChar(cname));  //variant name
 				if (allvariants.count(v)==0) {
@@ -526,7 +518,6 @@ extern "C"
 		int *ranges= INTEGER(VECTOR_ELT(ans,3));
 		SEXP varnames2R= VECTOR_ELT(ans,4);
 
-		set<Variant*>::iterator vi;
 		rowid=0;
 		for (vi= allvariants.begin(); vi != allvariants.end(); vi++) {
 			Variant *v= *vi;
