@@ -1,4 +1,5 @@
 #include <sstream>
+#include <time.h>
 #include <R.h>
 #include <Rinternals.h>
 #include "stdafx.h"
@@ -297,6 +298,8 @@ extern "C"
 {
 	SEXP calcMode(SEXP exonsR, SEXP exonwidthR, SEXP exongenesR, SEXP transcriptsR, SEXP transgenesR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR)
 	{
+		srand((unsigned)time( NULL ));
+
 		DataFrame* df = importDataFrame(exonsR, exonwidthR, exongenesR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR);
 		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR, transgenesR);
 		
@@ -339,6 +342,8 @@ extern "C"
 
   SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP geneidR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP verboseR)
 	{
+		srand((unsigned)time( NULL ));
+
 		//De novo isoform discovery and estimate expression for a single gene
 		//Input
 		// - exons: vector with exon ids
@@ -391,6 +396,8 @@ extern "C"
 
 		map<Model*, double, ModelCmp> resProbs;
 		map<Model*, double*, ModelCmp> resModes;
+
+		method = 3;
 
 		if (method == 0 && df->exons.size() <= 4 || method == 1) 
 		{

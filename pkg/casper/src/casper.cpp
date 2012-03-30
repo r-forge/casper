@@ -383,7 +383,7 @@ double Casper::det(double** a, int n)
 
 double Casper::randd()
 {
-	return (double)rand() / (double)(RAND_MAX + 1);
+	return (double)rand() / ((double)(RAND_MAX) + 1.0);
 }
 int Casper::randi(int n)
 {

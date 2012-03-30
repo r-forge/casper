@@ -26,7 +26,10 @@ void SeppelPrior::calculate()
 		}
 	}
 
+	printf("OK HERE\n");
+
 	int onum = Casper::randi(models->size());
+	printf("picked %i out of %i:\n", onum, models->size());
 	Model* omodl = models->at(onum);
 	Casper* ocasp = new Casper(omodl, frame);
 	double olike = ocasp->calculateIntegral();
@@ -39,6 +42,7 @@ void SeppelPrior::calculate()
 	for (int r = 0; r < runs; r++)
 	{
 		int nnum = Casper::randi(models->size());
+		printf("picked %i out of %i:\n", nnum, models->size());
 		Model* nmodl = models->at(nnum);
 		Casper* ncasp = new Casper(nmodl, frame);
 
@@ -59,6 +63,7 @@ void SeppelPrior::calculate()
 		result[omodl]++;
 		rescounts++;
 	}
+	printf("ALL OK");
 
 	map<Model*, double, ModelCmp>::const_iterator mvi;
 	for (mvi = result.begin(); mvi != result.end(); mvi++)
