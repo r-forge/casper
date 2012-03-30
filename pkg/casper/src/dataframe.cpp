@@ -146,3 +146,10 @@ vector<Model*>* DataFrame::allModels(Gene* gene)
 	allModelsRec(vstack, 0, varis, models);
 	return models;
 }
+vector<Variant*>* DataFrame::allVariants(Gene* gene)
+{
+	vector<Variant*>* varis = new vector<Variant*>();
+	vector<Exon*>* estack = new vector<Exon*>();
+	allVariantsRec(estack, 0, gene, varis);
+	return varis;
+}

@@ -26,6 +26,7 @@ public:
 
 	// returns a list of all possible models that could explain this gene (explicit calculation)
 	vector<Model*>* allModels(Gene* gene);
+	vector<Variant*>* allVariants(Gene* gene);
 	int frag_readlen;
 private:
 

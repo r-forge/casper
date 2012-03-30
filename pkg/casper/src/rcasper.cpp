@@ -293,6 +293,26 @@ void debugmodel(Model* model)
 	}
 	REprintf("\n");
 }
+char* getmodelcode(vector<Variant*>* allvariants, Model* model)
+{
+	int n = allvariants->size();
+	char* str = new char[n + 1];
+	str[n] = '\0';
+
+	for (int i = 0; i < allvariants->size(); i++)
+	{
+		if (model->contains(allvariants->at(i)))
+		{
+			str[i] = '1';
+		}
+		else
+		{
+			str[i] = '0';
+		}
+	}
+
+	return str;
+}
 
 extern "C"
 {
@@ -420,6 +440,9 @@ extern "C"
 			resModes = sepsm->resModes;
 		}
 
+		vector<Variant*>* allpossvariants = df->allVariants(gene);
+		printf("%s OK DONE", getmodelcode(allpossvariants, new Model(initvars)));
+
 		// END OF CALCULATIONS
 		
 		Model* bestModel;
@@ -451,7 +474,8 @@ extern "C"
 		if (selBest==0) { nx= resProbs.size(); } else { nx=1; }
 		SET_VECTOR_ELT(ans, 0, allocMatrix(REALSXP,nx,2));
 		double *resProbsR= REAL(VECTOR_ELT(ans,0));
-
+		
+		set<Variant*, VariantCmp>::const_iterator vi;
 		map<Model*, double, ModelCmp>::const_iterator mi;
 		if (selBest==0) {
 			for (mi = resProbs.begin(), i=0; mi != resProbs.end(); mi++, i++) {
@@ -471,13 +495,6 @@ extern "C"
 		SET_VECTOR_ELT(ans, 2, allocVector(STRSXP,nrowpi)); //stores variant names
 		double *expr= REAL(VECTOR_ELT(ans,1));
 		SEXP varnamesR= VECTOR_ELT(ans,2);
-	
-		map<Variant*, Variant*, VariantCmp> variantHash;
-		set<Variant*, VariantCmp>::const_iterator vi;
-		for (vi = initvars->begin(); vi != initvars->end(); vi++)
-		{
-			variantHash[*vi] = *vi;
-		}
 
 		int rowid=0, nrowexons=0;
 		set<Variant*, VariantCmp> allvariants;
@@ -489,7 +506,7 @@ extern "C"
 					Variant* v = m->get(j);
 					int varidx= m->indexOf(v);
 					expr[rowid+nrowpi]= resModes[m][varidx]; //estimated expression
-					if (variantHash.count(v)>0) v->name= (variantHash[v])->name;  //respect initial variant names
+					if (initvars->count(v)>0) v->name= (*initvars->find(v))->name;  //respect initial variant names
 					const char *cname= (v->name).c_str();;
 					SET_STRING_ELT(varnamesR,rowid,mkChar(cname));  //variant name
 					if (allvariants.count(v)==0) {
@@ -506,7 +523,7 @@ extern "C"
 				Variant* v = m->get(j);
 				int varidx= m->indexOf(v);
 				expr[rowid+nrowpi]= resModes[m][varidx]; //estimated expression
-				if (variantHash.count(v)>0) v->name= (variantHash[v])->name;  //respect initial variant names
+				if (initvars->count(v)>0) v->name= (*initvars->find(v))->name;  //respect initial variant names
 				const char *cname= (v->name).c_str();
 				SET_STRING_ELT(varnamesR,rowid,mkChar(cname));  //variant name
 				if (allvariants.count(v)==0) {
