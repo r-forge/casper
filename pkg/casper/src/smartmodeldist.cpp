@@ -3,7 +3,7 @@
 const double SmartModelDist::exon_weight = 1.0;
 const double SmartModelDist::create_prob = 0.5;
 
-SmartModelDist::SmartModelDist(Model* center, Gene* gene, double exp_exons)
+SmartModelDist::SmartModelDist(Model* center, Gene* gene, double exp_exons, Seppel* seppel)
 {
 	this->center = center;
 	this->gene = gene;
@@ -28,9 +28,13 @@ SmartModelDist::SmartModelDist(Model* center, Gene* gene, double exp_exons)
 		Variant* v = *vi;
 		pnull += prob(v);
 	}
-	pnull *= pcreate;
+	pnull += prob(0);
 
 	if (varis.size() == 1)
+	{
+		pcreate = 1;
+	}
+	else if (gene->exons.size() == (int)(log((center->count() + 1.0) / log(2.0)) + 0.5))
 	{
 		pcreate = 0;
 	}
@@ -45,7 +49,7 @@ void SmartModelDist::updatepks()
 	int maxexused = 0;
 	int sumexused = 0;
 	exon_used = new int[gene->exons.size()];
-	for (unsigned int u = 0; u < gene->exons.size(); u++)
+	for (int u = 0; u < gene->exons.size(); u++)
 	{
 		exon_used[u] = 0;
 	}
@@ -79,7 +83,7 @@ void SmartModelDist::updatepks()
 	double fact = max(esti + 0.001, exon_weight);
 
 	exon_prob = new double[gene->exons.size()];
-	for (unsigned int i = 0; i < gene->exons.size(); i++)
+	for (int i = 0; i < gene->exons.size(); i++)
 	{
 		double k = exon_used[i];
 		exon_prob[i] = explen * ((double)k + fact) / (sumexused + fact * gex);
@@ -94,7 +98,7 @@ Variant* SmartModelDist::makevar()
 	Gene* gene = var->gene;
 
 	vector<Exon*>* nex = new vector<Exon*>();
-	for (unsigned int i = 0; i < gene->exons.size(); i++)
+	for (int i = 0; i < gene->exons.size(); i++)
 	{
 		double pk = exon_prob[i];
 
@@ -111,7 +115,7 @@ Variant* SmartModelDist::makevar()
 double SmartModelDist::prob(Variant* v)
 {
 	double p = 1;
-	for (unsigned int i = 0; i < gene->exons.size(); i++)
+	for (int i = 0; i < gene->exons.size(); i++)
 	{
 		double pk = exon_prob[i];
 		if (v != NULL && v->contains(gene->exons[i]))
@@ -134,15 +138,12 @@ Model* SmartModelDist::Sample()
 	double x = Casper::randd();
 	if (x < pcreate)
 	{
-		Variant* v = makevar();
-		if (v->exonCount == 0)
+		Variant* v;
+		do
 		{
-			return center;
+			v = makevar();
 		}
-		if (center->contains(v))
-		{
-			return NULL;
-		}
+		while (v->exonCount == 0 || center->contains(v));
 		
 		for (vi = center->items.begin(); vi != center->items.end(); vi++)
 		{
@@ -168,11 +169,14 @@ Model* SmartModelDist::Sample()
 }
 double SmartModelDist::DensityLn(Model* model)
 {
-	double p = -log(1.0 - pnull);
-	if (center->count() == model->count())
+	if (center->count() > model->count())
 	{
-		p += log(1.0 - pcreate) - log((double)varis.size());
+		return log(1.0 - pcreate) - log((double)center->count());
 	}
+	/*else if (center->count() == model->count())
+	{
+		return log(pcreate) + log(
+	}*/
 	else
 	{
 		Variant* var = NULL;
@@ -187,7 +191,7 @@ double SmartModelDist::DensityLn(Model* model)
 			}
 		}
 
-		p += log(pcreate * prob(var));
+		return log(pcreate) + log(prob(var)) - log(1.0 - pnull);
 	}
-	return p;
+	return DBL_MIN;
 }

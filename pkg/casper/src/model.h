@@ -26,11 +26,13 @@ public:
 	// hashcode for model
 	int hashcode;
 
+	char* toString();
+
 	// compares two models. returns 0 if equal. -1 and +1 used for sorting in map
 	int compare(Model* other);
 	// hash for this model
 	int gethash();
 
-private:
 	map<Variant*, int, VariantCmp> idmap;
+private:
 };

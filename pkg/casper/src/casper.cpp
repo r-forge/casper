@@ -86,7 +86,7 @@ double Casper::calculateIntegral(double *mode, int n)
 	double sdet = log(det(S, n - 1));
 
 	double integral = emlk + gdet + (double)(n - 1) / 2.0 * log(2 * M_PI) - 0.5 * sdet;
-
+	
     return integral;
 }
 
@@ -101,11 +101,8 @@ bool Casper::isValid()
 	        return false;
 		}
 	}
-	return true;
-}
 
-bool Casper::isFragValid(Fragment *f) {
-  return(mempprobs.count(f) > 0 && mempprobs[f].size() > 0);
+	return true;
 }
 
 double Casper::priorLn(double* pi)

@@ -36,6 +36,8 @@ public:
 	// checks whether the exon is used in this variant
 	bool contains(Exon* v);
 	
+	char* toString();
+
 	// compares two variants, 0 if equal. -1 and +1 used for sorting in maps
 	int compare(const Variant* other);
 	// hash for this variant

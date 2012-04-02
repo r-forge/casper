@@ -46,6 +46,21 @@ int Model::indexOf(Variant* v)
 	return this->idmap[v];
 }
 
+char* Model::toString()
+{
+	char* str = new char[3000];
+	str[0] = '\0';
+
+	map<Variant*, int, VariantCmp>::const_iterator vi;
+	for (vi = idmap.begin(); vi != idmap.end(); vi++)
+	{
+		Variant* v = vi->first;
+		sprintf(str, "%s {%s}", str, v->toString());
+	}
+
+	return str;
+}
+
 int Model::compare(Model* other)
 {
 	if (this->count() < other->count())
@@ -79,7 +94,7 @@ int Model::gethash()
 	map<Variant*, int, VariantCmp>::const_iterator ti;
 	for (ti = idmap.begin(); ti != idmap.end(); ti++)
 	{
-		h ^= ti->first->hashcode;
+		h += h * 7 + ti->first->hashcode;
 	}
 	return h;
 }

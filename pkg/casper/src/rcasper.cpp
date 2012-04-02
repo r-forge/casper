@@ -402,6 +402,9 @@ extern "C"
 		UNPROTECT(1);		
 		UNPROTECT(1);
 
+		debugdf(df);
+		debugmodel(new Model(initvars));
+
 		// END OF INPUT READING
 
 		Gene* gene = df->genes[geneid];
@@ -441,7 +444,6 @@ extern "C"
 		}
 
 		vector<Variant*>* allpossvariants = df->allVariants(gene);
-		printf("%s OK DONE", getmodelcode(allpossvariants, new Model(initvars)));
 
 		// END OF CALCULATIONS
 		

@@ -25,10 +25,8 @@ class Casper
   double calculateIntegral();  //uses mode=calculateMode() and n= model->count()
   double calculateIntegral(double* mode, int n);  //do integral with pre-computed mode
 
-  // returns whether the current model is valid
+  // indicates whether the model can explain all fragments
   bool isValid();
-  // returns whether specified fragment has positive prob under current model
-  bool isFragValid(Fragment *f);
 
   // random double between 0 and 1
   static double randd();

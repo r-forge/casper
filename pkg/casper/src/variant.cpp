@@ -74,42 +74,59 @@ bool Variant::contains(Fragment* frag)
 	return true;
 }
 
+char* Variant::toString()
+{
+	char* str = new char[exonCount*16];
+	str[0] = '\0';
+
+	for (int e = 0; e < exonCount; e++)
+	{
+		sprintf(str, "%s,%i", str, exons[e]->id);
+	}
+	return str;
+}
+
 int Variant::compare(const Variant* other)
 {
-	/*if (this->strand && !other->strand)
+	if (this->gene < other->gene)
 	{
 		return -1;
 	}
-	if (!this->strand && other->strand)
+	else if (this->gene > other->gene)
 	{
 		return +1;
-	}*/
-
-	if (this->exonCount < other->exonCount) {
-	  return -1;
-	} else if (this->exonCount > other->exonCount) {
-	  return +1;
+	}
+	if (this->exonCount < other->exonCount) 
+	{
+		return -1;
+	} 
+	else if (this->exonCount > other->exonCount) 
+	{
+		return +1;
 	}
 
-	for (int c = 0; c < this->codelen; c++) {
-	  if (this->codes[c] < other->codes[c]) {
+	for (int c = 0; c < this->codelen; c++) 
+	{
+		if (this->codes[c] < other->codes[c])
+		{
             return -1;
-	  } else if (this->codes[c] > other->codes[c]) {
-	    return +1;
-	  }
+		} 
+		else if (this->codes[c] > other->codes[c]) 
+		{
+			return +1;
+	    }
 	}
 
 	return 0;
 }
 int Variant::gethash()
 {
-	int h = 0;
+	int h = gene->id;
 
 	for (int c = 0; c < codelen; c++)
 	{
-		h ^= codes[c];
+		h = h * 13 + codes[c];
 	}
-	h += gene->id;
 
 	return h;
 }

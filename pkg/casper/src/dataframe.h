@@ -37,6 +37,6 @@ private:
         map<Variant*, map<Fragment*, double>, VariantCmp > cache;
 
 	double prob(int fs, int fe, int bs, int be, int* pos, double T);
-	void allVariantsRec(vector<Exon*>* stack, unsigned int level, Gene* gene, vector<Variant*>* vars);
-	void allModelsRec(vector<Variant*>* stack, unsigned int level, vector<Variant*>* vars, vector<Model*>* models);
+	void allVariantsRec(vector<Exon*>* stack, int level, Gene* gene, vector<Variant*>* vars);
+	void allModelsRec(vector<Variant*>* stack, int level, vector<Variant*>* vars, vector<Model*>* models);
 };

@@ -1,9 +1,11 @@
-#include "seppelprior.h"
+#include "casper.h"
+
+class Seppel;
 
 class SmartModelDist
 {
 public:
-	SmartModelDist(Model* center, Gene* gene, double exp_exons);
+	SmartModelDist(Model* center, Gene* gene, double exp_exons, Seppel* seppel);
 	
 	// sample a proposal
 	Model* Sample();
@@ -15,7 +17,7 @@ private:
 	static const double exon_weight;
 	// probability to create, delete is 1-pcreate
     static const double create_prob;
-
+	
     Model* center;
     vector<Variant*> varis;
     Gene* gene;
