@@ -102,7 +102,7 @@ void SmartModelDist::buildrmtable()
 		copy->push_back(v);
 
 		double like = seppel->calcIntegral(m);
-		if (like != 1)
+		if (like != 2)
 		{
 			possible[n] = m;
 			integrals[n] = like;
@@ -115,11 +115,11 @@ void SmartModelDist::buildrmtable()
 		return;
 	}
 
-	double* probs = Seppel::normalizeIntegrals(integrals, n);
-	//double* probs = new double[n];
+	//double* probs = Seppel::normalizeIntegrals(integrals, n);
+	double* probs = new double[n];
 	for (int i = 0; i < n; i++)
 	{
-		//probs[i] = (double)1 / (double)n;
+		probs[i] = (double)1 / (double)n;
 		Model* m = possible[i];
 		removeprobs[m] = probs[i];
 	}
