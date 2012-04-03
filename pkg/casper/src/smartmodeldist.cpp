@@ -36,9 +36,13 @@ SmartModelDist::SmartModelDist(Seppel* seppel, Model* center, double exp_exons)
 	{
 		pcreate = 1;
 	}
-	else if (gene->exons.size() == (int)(log((center->count() + 1.0) / log(2.0)) + 0.5))
+	else if (gene->exons.size() == (unsigned int)(log((center->count() + 1.0) / log(2.0)) + 0.5))
 	{
 		pcreate = 0;
+	}
+	else if (removeprobs.size() == 0)
+	{
+		pcreate = 1;
 	}
 	else
 	{
@@ -51,7 +55,7 @@ void SmartModelDist::updatepks()
 	int maxexused = 0;
 	int sumexused = 0;
 	exon_used = new int[gene->exons.size()];
-	for (int u = 0; u < gene->exons.size(); u++)
+	for (unsigned int u = 0; u < gene->exons.size(); u++)
 	{
 		exon_used[u] = 0;
 	}
@@ -86,7 +90,7 @@ void SmartModelDist::updatepks()
 	double fact = max(esti + 0.001, exon_weight);
 
 	exon_prob = new double[gene->exons.size()];
-	for (int i = 0; i < gene->exons.size(); i++)
+	for (unsigned int i = 0; i < gene->exons.size(); i++)
 	{
 		double k = exon_used[i];
 		exon_prob[i] = explen * ((double)k + fact) / (sumexused + fact * gex);
@@ -100,7 +104,7 @@ void SmartModelDist::buildrmtable()
 	int n = 0;
 
 	list<Variant*>* copy = new list<Variant*>(varis.begin(), varis.end());
-	for (int i = 0; i < varis.size(); i++)
+	for (unsigned int i = 0; i < varis.size(); i++)
 	{
 		Variant* v = copy->front();
 		copy->pop_front();
@@ -139,7 +143,7 @@ Variant* SmartModelDist::makevar()
 	Gene* gene = var->gene;
 
 	vector<Exon*>* nex = new vector<Exon*>();
-	for (int i = 0; i < gene->exons.size(); i++)
+	for (unsigned int i = 0; i < gene->exons.size(); i++)
 	{
 		double pk = exon_prob[i];
 
@@ -156,7 +160,7 @@ Variant* SmartModelDist::makevar()
 double SmartModelDist::prob(Variant* v)
 {
 	double p = 1;
-	for (int i = 0; i < gene->exons.size(); i++)
+	for (unsigned int i = 0; i < gene->exons.size(); i++)
 	{
 		double pk = exon_prob[i];
 		if (v != NULL && v->contains(gene->exons[i]))
