@@ -3,6 +3,7 @@
 #include <set>
 #include <list>
 #include <vector>
+#include <float.h>
 
 using namespace std;
 

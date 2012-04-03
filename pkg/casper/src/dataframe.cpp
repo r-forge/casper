@@ -98,7 +98,7 @@ double DataFrame::prob(int fs, int fe, int bs, int be, int* pos, double T)
 	return psum;
 }
 
-void DataFrame::allVariantsRec(vector<Exon*>* stack, int level, Gene* gene, vector<Variant*>* varis)
+void DataFrame::allVariantsRec(vector<Exon*>* stack, unsigned int level, Gene* gene, vector<Variant*>* varis)
 {
 	if (gene->exons.size() == level)
 	{
@@ -115,7 +115,7 @@ void DataFrame::allVariantsRec(vector<Exon*>* stack, int level, Gene* gene, vect
 	stack->pop_back();
 	allVariantsRec(stack, level + 1, gene, varis);
 }
-void DataFrame::allModelsRec(vector<Variant*>* stack, int level, vector<Variant*>* vars, vector<Model*>* models)
+void DataFrame::allModelsRec(vector<Variant*>* stack, unsigned int level, vector<Variant*>* vars, vector<Model*>* models)
 {
 	if (vars->size() == level)
 	{
