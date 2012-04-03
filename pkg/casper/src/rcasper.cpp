@@ -221,8 +221,7 @@ extern "C"
 		DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR);
 		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR);
 
-		UNPROTECT(1);		
-		UNPROTECT(1);
+		UNPROTECT(1);	
 
 		df->debugprint();
 		Model* m = new Model(initvars);
