@@ -13,5 +13,5 @@ extern "C" {
 
 }
 
-Variant* path2Variant(DataFrame *df, Fragment* f, Gene *gene);
+Variant* path2Variant(DataFrame *df, Fragment* f);
 #endif

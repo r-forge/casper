@@ -20,7 +20,7 @@ double cumu_fragsta(double x)
 	return y1 + (x-x1) * (y2-y1)/(x2-x1);
 }
 
-int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, DataFrame* df, Gene* gene)
+int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, DataFrame* df)
 {
 	// copy all fragments
 	set<Fragment*>* queue = new set<Fragment*>(df->data.begin(), df->data.end());
@@ -51,7 +51,7 @@ int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, DataFrame* df, Gene* gen
 		Fragment* frag = *queue->begin();
 		queue->erase(queue->begin());
 
-		Variant* nv = path2Variant(df, frag, gene);
+		Variant* nv = path2Variant(df, frag);
 
 		// check if the new variant can explain the fragment
 		map<Fragment*, double> probs = df->probabilities(nv);
@@ -80,10 +80,10 @@ int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, DataFrame* df, Gene* gen
 
 	return discarded;
 }
-DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP exongenesR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR) 
+DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR) 
 {
 	int nexons=Rf_length(exonsR), nfraglen=Rf_length(fraglenR), readLength=INTEGER(readLengthR)[0];
-	int *exons=INTEGER(exonsR), *exonwidth=INTEGER(exonwidthR), *exongenes=INTEGER(exongenesR), *lenvals=INTEGER(lenvalsR);
+	int *exons=INTEGER(exonsR), *exonwidth=INTEGER(exonwidthR), *lenvals=INTEGER(lenvalsR);
 	double *fraglen= REAL(fraglenR);
 
 	//Define fragment length/start distributions and create DataFrame
@@ -96,25 +96,11 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP exongenesR, SEXP p
 	DataFrame* df = new DataFrame(fraglen_dist, cumu_fragsta);
 	df->frag_readlen= readLength;
 
-	//Add exons & gene to DataFrame
+	//Add exons to DataFrame
 	for (int i = 0; i < nexons; i++) 
 	{
-		int gid = exongenes[i];
-
-		Gene* g;
-		if (df->genes.count(gid) == 0)
-		{
-			g = new Gene(gid);
-			df->addGene(g);
-		}
-		else
-		{
-			g = df->genes[gid];
-		}
-
 		Exon *ex= new Exon(exons[i], exonwidth[i]);
 		df->addExon(ex);
-		g->addExon(ex);
 	}
 
 	//Add exon path counts
@@ -163,14 +149,11 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP exongenesR, SEXP p
 
 	return df;
 }
-set<Variant*, VariantCmp>* importTranscripts(DataFrame* df, SEXP transcriptsR, SEXP transgenesR)
+set<Variant*, VariantCmp>* importTranscripts(DataFrame* df, SEXP transcriptsR)
 {
-	int* transgenes = INTEGER(transgenesR);
-
 	int nt = LENGTH(transcriptsR);
 	set<Variant*, VariantCmp>* initvars = new set<Variant*, VariantCmp>();
 	SEXP tnames = getAttrib(transcriptsR, R_NamesSymbol);
-	Gene* gene;
 	Variant *v;
 	SEXP trow;
 	int ntsub, *tvals;
@@ -186,9 +169,7 @@ set<Variant*, VariantCmp>* importTranscripts(DataFrame* df, SEXP transcriptsR, S
 			el->push_back(ex);
 		}
 
-		int geneid = transgenes[i];
-		gene = df->genes[geneid];
-		v = new Variant(gene, el);
+		v = new Variant(el);
 		v->id= i;
 		int nbchar= Rf_length(STRING_ELT(tnames,i));
 		v->name= string(CHAR(STRING_ELT(tnames, i)), nbchar);
@@ -198,23 +179,28 @@ set<Variant*, VariantCmp>* importTranscripts(DataFrame* df, SEXP transcriptsR, S
 
 	return initvars;
 }
-Variant* path2Variant(DataFrame *df, Fragment* f, Gene *gene) 
+Variant* path2Variant(DataFrame *df, Fragment* f) 
 {
 	int eid; Exon *ex;
+	vector<Exon*>::iterator itexon;
+	map<int, Exon*> id2exon;
+	for (itexon= df->exons.begin(); itexon != df->exons.end(); itexon++) {
+		ex= (*itexon);
+		id2exon[ex->id] = ex;
+	}
 	vector<Exon*>* el = new vector<Exon*>();
-	map<int, Exon*>::iterator itexon;
-	for (itexon= df->exons.begin(); (*itexon).first != f->left[0]; itexon++) {
-		ex= (*itexon).second;
+	for (itexon= df->exons.begin(); (*itexon)->id != f->left[0]; itexon++) {
+		ex= (*itexon);
 		el->push_back(ex);
 	}
 	for (int i=0; i< f->leftc; i++) {
 		eid = f->left[i];
-		ex = df->exons[eid];
+		ex = id2exon[eid];
 		el->push_back(ex);
 	}
 	if (eid != f->right[0]) {
 		eid = f->right[0];
-		ex = df->exons[eid];
+		ex = id2exon[eid];
 		el->push_back(ex);
 	}
 	for (int i=1; i< f->rightc; i++) {
@@ -222,60 +208,46 @@ Variant* path2Variant(DataFrame *df, Fragment* f, Gene *gene)
 		ex = df->exons[eid];
 		el->push_back(ex);
 	}
-	while ((*itexon).first != eid) { itexon++; }
+	while ((*itexon)->id != eid) { itexon++; }
 	itexon++;
 	while (itexon != df->exons.end()) {
-		ex= (*itexon).second;
+		ex= (*itexon);
 		el->push_back(ex);
 		itexon++;
 	}
-	Variant* v = new Variant(gene, el);
+	Variant* v = new Variant(el);
 	return v;
 }
 
 void debugdf(DataFrame* df)
 {		
-	REprintf("Genes:\n");
-	map<int, Gene*>::const_iterator gi;
-	for (gi = df->genes.begin(); gi != df->genes.end(); gi++)
-	{
-		Gene* g = gi->second;
-		REprintf("%i\t%i\n", g->id, g->exons.size());
-		vector<Exon*>::const_iterator ei;
-		for (ei = g->exons.begin(); ei != g->exons.end(); ei++)
-		{
-			REprintf("%i\n", (*ei)->id);
-		}
-	}
-	REprintf("\n");
-
 	// Exons
-	REprintf("Exons:\n");
-	map<int, Exon*>::const_iterator ei;
+	printf("Exons:\n");
+	vector<Exon*>::const_iterator ei;
 	for (ei = df->exons.begin(); ei != df->exons.end(); ei++)
 	{
-		Exon* e = ei->second;
-		REprintf("%i\t%i\n", e->id, e->length);
+		Exon* e = *ei;
+		printf("%i\t%i\n", e->id, e->length);
 	}
-	REprintf("\n");
+	printf("\n");
 
 	// Fragments
-	REprintf("Fragments:\n");
+	printf("Fragments:\n");
 	list<Fragment*>::const_iterator fi;
 	for (fi = df->data.begin(); fi != df->data.end(); fi++)
 	{
 		Fragment* f = *fi;
-		REprintf("%i\t%i\t%i\n", f->leftc, f->rightc, f->count);
+		printf("%i\t%i\t%i\n", f->leftc, f->rightc, f->count);
 		for (int l = 0; l < f->leftc; l++)
 		{
-			REprintf("%i\n", f->left[l]);
+			printf("%i\n", f->left[l]);
 		}
 		for (int r = 0; r < f->rightc; r++)
 		{
-			REprintf("%i\n", f->right[r]);
+			printf("%i\n", f->right[r]);
 		}
 	}
-	REprintf("\n");
+	printf("\n");
 }
 void debugmodel(Model* model)
 {
@@ -321,8 +293,8 @@ extern "C"
 	{
 		srand((unsigned)time( NULL ));
 
-		DataFrame* df = importDataFrame(exonsR, exonwidthR, exongenesR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR);
-		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR, transgenesR);
+		DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR);
+		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR);
 		
 		double priorq = REAL(priorqR)[0];
 
@@ -398,8 +370,8 @@ extern "C"
 		for (int i = 0; i < LENGTH(exonsR); i++) INTEGER(exongenesR)[i] = geneid;
 		for (int i = 0; i < LENGTH(transcriptsR); i++) INTEGER(transgenesR)[i] = geneid;
 
-		DataFrame* df = importDataFrame(exonsR, exonwidthR, exongenesR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR);
-		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR, transgenesR);
+		DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR);
+		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR);
 
 		UNPROTECT(1);		
 		UNPROTECT(1);
@@ -409,9 +381,7 @@ extern "C"
 
 		// END OF INPUT READING
 
-		Gene* gene = df->genes[geneid];
-
-		int discarded = fixUnexplFrags(initvars, df, gene);
+		int discarded = fixUnexplFrags(initvars, df);
 		if (verbose > 0)
 		{
 			Rprintf("discarded %i fragments\n", discarded);
@@ -422,7 +392,7 @@ extern "C"
 		map<Model*, double, ModelCmp> resProbs;
 		map<Model*, double*, ModelCmp> resModes;
 		
-		Seppel* seppl = new Seppel(df, gene);
+		Seppel* seppl = new Seppel(df);
 
 		if (method == 1 || method == 0 && df->exons.size() <= 4) 
 		{
@@ -442,7 +412,7 @@ extern "C"
 		}
 		resModes = seppl->resultModes();
 
-		vector<Variant*>* allpossvariants = df->allVariants(gene);
+		vector<Variant*>* allpossvariants = df->allVariants();
 
 		// END OF CALCULATIONS
 		
