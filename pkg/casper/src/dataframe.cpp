@@ -19,6 +19,7 @@ void DataFrame::addData(Fragment* f)
 void DataFrame::addExon(Exon* e)
 {
 	e->num = this->exons.size();
+	this->id2exon[e->id] = e;
 	this->exons.push_back(e);
 }
 
@@ -99,11 +100,6 @@ Variant* DataFrame::path2Variant(Fragment* f)
 {
 	int eid; Exon *ex;
 	vector<Exon*>::iterator itexon;
-	map<int, Exon*> id2exon;
-	for (itexon= exons.begin(); itexon != exons.end(); itexon++) {
-		ex= (*itexon);
-		id2exon[ex->id] = ex;
-	}
 	vector<Exon*>* el = new vector<Exon*>();
 	for (itexon= exons.begin(); (*itexon)->id != f->left[0]; itexon++) {
 		ex= (*itexon);

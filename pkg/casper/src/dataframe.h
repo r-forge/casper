@@ -8,6 +8,7 @@ class DataFrame
 public:
 	// all exons mapped by their id
 	vector<Exon*> exons;
+	map<int, Exon*> id2exon;
 	// all fragments
 	list<Fragment*> data;
 

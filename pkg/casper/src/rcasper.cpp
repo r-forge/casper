@@ -105,7 +105,7 @@ set<Variant*, VariantCmp>* importTranscripts(DataFrame* df, SEXP transcriptsR)
 		vector<Exon*>* el = new vector<Exon*>();
 		for (int s = 0; s < ntsub; s++) {
 			int eid = tvals[s];
-			Exon* ex = df->exons[eid];
+			Exon* ex = df->id2exon[eid];
 			el->push_back(ex);
 		}
 
