@@ -185,10 +185,13 @@ Casper* david1()
 }
 Casper* david2()
 {	
-	double* fraglens = new double[1];
-        int* lenvals= new int[1];
-        fraglens[0]= 1;
-        lenvals[0]= 200;
+	double* fraglens = new double[128];
+        int* lenvals= new int[128];
+		for (int i = 0; i < 128; i++)
+		{
+			fraglens[i] = 1.0 / 128.0;
+			lenvals[i] = 151 + i;
+		}
 	DiscreteDF* fraglen_dist = new DiscreteDF(fraglens, lenvals, 1);
 
 	Casper::priorq = 3;
