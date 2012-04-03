@@ -214,11 +214,9 @@ extern "C"
                 int method= INTEGER(methodR)[0];
 		verbose = INTEGER(verboseR)[0];
 
-		SEXP exongenesR, transgenesR;
+		SEXP exongenesR;
 		PROTECT(exongenesR = allocVector(INTSXP, LENGTH(exonsR)));
-		PROTECT(transgenesR = allocVector(INTSXP, LENGTH(transcriptsR)));
 		for (int i = 0; i < LENGTH(exonsR); i++) INTEGER(exongenesR)[i] = geneid;
-		for (int i = 0; i < LENGTH(transcriptsR); i++) INTEGER(transgenesR)[i] = geneid;
 
 		DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR);
 		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR);
