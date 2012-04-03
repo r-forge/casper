@@ -28,6 +28,19 @@ Model::Model(set<Variant*, VariantCmp>* variants)
 
 	hashcode = gethash();
 }
+Model::Model(list<Variant*>* variants)
+{	
+	list<Variant*>::const_iterator vi;
+	for (vi = variants->begin(); vi != variants->end(); vi++)
+	{
+		Variant* v = *vi;
+		int i = this->items.size();
+		this->items.push_back(v);
+		this->idmap[v] = i;
+	}
+
+	hashcode = gethash();
+}
 
 bool Model::contains(Variant* v)
 {

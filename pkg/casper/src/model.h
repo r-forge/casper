@@ -1,6 +1,7 @@
 #include "variant_cmp.h"
 #include <map>
 #include <set>
+#include <list>
 #include <vector>
 
 using namespace std;
@@ -10,6 +11,7 @@ class Model
 public:
 	Model(vector<Variant*>* variants);
 	Model(set<Variant*, VariantCmp>* variants);
+	Model(list<Variant*>* variants);
 
 	// amount of variants in this model
 	int count();

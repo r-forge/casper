@@ -1,6 +1,5 @@
 #include "model_cmp.h"
 #include "discretedf.h"
-#include <list>
 #include <vector>
 using namespace std;
 

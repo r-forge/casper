@@ -3,7 +3,6 @@
 
 #include "dataframe.h"
 #include "cstat.h"
-#include <list>
 #include <vector>
 
 using namespace std;

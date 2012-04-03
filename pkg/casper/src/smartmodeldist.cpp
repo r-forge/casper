@@ -1,12 +1,13 @@
-#include "smartmodeldist.h"
+#include "seppel.h"
 
 const double SmartModelDist::exon_weight = 1.0;
 const double SmartModelDist::create_prob = 0.5;
 
-SmartModelDist::SmartModelDist(Model* center, Gene* gene, double exp_exons, Seppel* seppel)
+SmartModelDist::SmartModelDist(Seppel* seppel, Model* center, double exp_exons)
 {
+	this->seppel = seppel;
 	this->center = center;
-	this->gene = gene;
+	this->gene = seppel->gene;
 	this->exp_exons = exp_exons;
 
 	vector<Variant*>::const_iterator vi;
@@ -130,7 +131,7 @@ double SmartModelDist::prob(Variant* v)
 	return p;
 }
 
-Model* SmartModelDist::Sample()
+Model* SmartModelDist::sample()
 {
 	vector<Variant*>* newm = new vector<Variant*>();
 	vector<Variant*>::const_iterator vi;
@@ -150,10 +151,59 @@ Model* SmartModelDist::Sample()
 			newm->push_back(*vi);
 		}
 		newm->push_back(v);
+		return new Model(newm);
 	}
 	else
 	{
-		int ri = Casper::randi(varis.size());
+		Model** possible = new Model*[varis.size()];
+		double* integrals = new double[varis.size()];
+		int n = 0;
+		
+		list<Variant*>* copy = new list<Variant*>(varis.begin(), varis.end());
+		for (int i = 0; i < varis.size(); i++)
+		{
+			Variant* v = copy->front();
+			copy->pop_front();
+			Model* m = new Model(copy);
+			copy->push_back(v);
+
+			double like = seppel->calcIntegral(m);
+			if (like != 1)
+			{
+				possible[n] = m;
+				integrals[n] = like;
+				n++;
+			}
+		}
+
+		if (n == 0)
+		{
+			return NULL;
+		}
+
+		double* probs = Seppel::normalizeIntegrals(integrals, n);
+		for (int i = 0; i < n; i++)
+		{
+			Model* m = possible[i];
+			removeprobs[m] = probs[i];
+		}
+
+		double r = Casper::randd();
+
+		int i = -1;
+		double psum = 0;
+		do
+		{
+			i++;
+			psum += probs[i];
+		}
+		while (r > psum);
+
+		i = min(i, n - 1);
+		
+		return possible[i];
+
+		/*int ri = Casper::randi(varis.size());
 		Variant* r = varis[ri];
 
 		for (vi = center->items.begin(); vi != center->items.end(); vi++)
@@ -164,14 +214,15 @@ Model* SmartModelDist::Sample()
 				newm->push_back(v);
 			}
 		}
+		return new Model(newm);*/
 	}
-	return new Model(newm);
 }
-double SmartModelDist::DensityLn(Model* model)
+double SmartModelDist::densityLn(Model* model)
 {
-	if (center->count() > model->count())
+	if (model->count() < center->count())
 	{
-		return log(1.0 - pcreate) - log((double)center->count());
+		//return log(1.0 - pcreate) - log((double)center->count());
+		return log(1.0 - pcreate) + log(removeprobs[model]);
 	}
 	/*else if (center->count() == model->count())
 	{

@@ -535,6 +535,12 @@ int main() {
 		printf("%s@%i\t%f\t%f\n", getmodelcode(allvariants, xi->first), xi->first->count(), xi->second / nums, exp(dis->DensityLn(xi->first)));
 	}*/
 
+	Seppel* sep3 = new Seppel(c->frame, gene);
+	sep3->exploreSmart(c->model, 100000);
+	map<Model*, double, ModelCmp> res3 = sep3->resultPPMCMC();
+
+	printf("SMART\n");
+
 	Seppel* sep1 = new Seppel(c->frame, gene);
 	sep1->exploreExact();
 	map<Model*, double, ModelCmp> res1 = sep1->resultPPIntegral();
@@ -543,15 +549,9 @@ int main() {
 
 	Seppel* sep2 = new Seppel(c->frame, gene);
 	sep2->explorePrior(100000);
-	map<Model*, double, ModelCmp> res2 = sep2->resultPPIntegral();
+	map<Model*, double, ModelCmp> res2 = sep2->resultPPMCMC();
 
 	printf("PRIOR\n");
-
-	Seppel* sep3 = new Seppel(c->frame, gene);
-	sep3->exploreSmart(c->model, 100000);
-	map<Model*, double, ModelCmp> res3 = sep3->resultPPIntegral();
-
-	printf("SMART\n");
 	
 	map<Model*, double, ModelCmp>::const_iterator mi;
 	for (mi = res1.begin(); mi != res1.end(); mi++)
@@ -560,10 +560,6 @@ int main() {
 		if (res1[m] > 0.0001)
 		{
 			const char* code = getmodelcode(allvariants, m);
-			if (strcmp(code, "10111111100") == 0)
-			{
-				printf("%s\n", m->toString());
-			}
 			printf("%s\t%f\t%f\t%f\n", code, res1[m], res2[m], res3[m]);
 		}
 	}
