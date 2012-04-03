@@ -39,5 +39,6 @@ public:
 	map<Variant*, int, VariantCmp> idmap;
 
 	const char* getCodeStr(vector<Variant*>* allvariants);
+	void debugprint();
 private:
 };

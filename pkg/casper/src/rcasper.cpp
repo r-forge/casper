@@ -20,66 +20,6 @@ double cumu_fragsta(double x)
 	return y1 + (x-x1) * (y2-y1)/(x2-x1);
 }
 
-int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, DataFrame* df)
-{
-	// copy all fragments
-	set<Fragment*>* queue = new set<Fragment*>(df->data.begin(), df->data.end());
-
-	// remove the fragments from the queue we can explain with our variants
-	set<Variant*, VariantCmp>::iterator vi;
-	for (vi = initvars->begin(); vi != initvars->end(); vi++) 
-	{
-		// remove the fragments that this variant can explain from our queue
-		map<Fragment*, double> probs = df->probabilities(*vi);
-		map<Fragment*, double>::iterator si;
-		for (si = probs.begin(); si != probs.end(); si++) 
-		{
-			set<Fragment*>::iterator ri = queue->find(si->first);
-			if (ri != queue->end())
-			{
-				queue->erase(ri);
-			}
-		}
-	}
-
-	int discarded = 0;
-
-	// while we still have unexplained fragments
-	while (queue->size() > 0)
-	{
-		// pop the first fragment
-		Fragment* frag = *queue->begin();
-		queue->erase(queue->begin());
-
-		Variant* nv = path2Variant(df, frag);
-
-		// check if the new variant can explain the fragment
-		map<Fragment*, double> probs = df->probabilities(nv);
-		if (probs.count(frag) > 0)
-		{
-			initvars->insert(nv);
-
-			// delete all fragments that this variant can explain
-			map<Fragment*, double>::iterator si;
-			for (si = probs.begin(); si != probs.end(); si++) 
-			{
-				set<Fragment*>::iterator ri = queue->find(si->first);
-				if (ri != queue->end())
-				{
-					queue->erase(ri);
-				}
-			}
-		}
-		else
-		{
-			// this fragment cant be explained
-			discarded++;
-			df->data.remove(frag);
-		}
-	}
-
-	return discarded;
-}
 DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR) 
 {
 	int nexons=Rf_length(exonsR), nfraglen=Rf_length(fraglenR), readLength=INTEGER(readLengthR)[0];
@@ -179,92 +119,6 @@ set<Variant*, VariantCmp>* importTranscripts(DataFrame* df, SEXP transcriptsR)
 
 	return initvars;
 }
-Variant* path2Variant(DataFrame *df, Fragment* f) 
-{
-	int eid; Exon *ex;
-	vector<Exon*>::iterator itexon;
-	map<int, Exon*> id2exon;
-	for (itexon= df->exons.begin(); itexon != df->exons.end(); itexon++) {
-		ex= (*itexon);
-		id2exon[ex->id] = ex;
-	}
-	vector<Exon*>* el = new vector<Exon*>();
-	for (itexon= df->exons.begin(); (*itexon)->id != f->left[0]; itexon++) {
-		ex= (*itexon);
-		el->push_back(ex);
-	}
-	for (int i=0; i< f->leftc; i++) {
-		eid = f->left[i];
-		ex = id2exon[eid];
-		el->push_back(ex);
-	}
-	if (eid != f->right[0]) {
-		eid = f->right[0];
-		ex = id2exon[eid];
-		el->push_back(ex);
-	}
-	for (int i=1; i< f->rightc; i++) {
-		eid = f->right[i];
-		ex = df->exons[eid];
-		el->push_back(ex);
-	}
-	while ((*itexon)->id != eid) { itexon++; }
-	itexon++;
-	while (itexon != df->exons.end()) {
-		ex= (*itexon);
-		el->push_back(ex);
-		itexon++;
-	}
-	Variant* v = new Variant(el);
-	return v;
-}
-
-void debugdf(DataFrame* df)
-{		
-	// Exons
-	printf("Exons:\n");
-	vector<Exon*>::const_iterator ei;
-	for (ei = df->exons.begin(); ei != df->exons.end(); ei++)
-	{
-		Exon* e = *ei;
-		printf("%i\t%i\n", e->id, e->length);
-	}
-	printf("\n");
-
-	// Fragments
-	printf("Fragments:\n");
-	list<Fragment*>::const_iterator fi;
-	for (fi = df->data.begin(); fi != df->data.end(); fi++)
-	{
-		Fragment* f = *fi;
-		printf("%i\t%i\t%i\n", f->leftc, f->rightc, f->count);
-		for (int l = 0; l < f->leftc; l++)
-		{
-			printf("%i\n", f->left[l]);
-		}
-		for (int r = 0; r < f->rightc; r++)
-		{
-			printf("%i\n", f->right[r]);
-		}
-	}
-	printf("\n");
-}
-void debugmodel(Model* model)
-{
-	// Transcripts
-	REprintf("Model:\n");
-	vector<Variant*>::const_iterator vi;
-	for (vi = model->items.begin(); vi != model->items.end(); vi++)
-	{
-		Variant* v = *vi;
-		REprintf("%i\t%i\n", v->id, v->exonCount);
-		for (int e = 0; e < v->exonCount; e++)
-		{
-			REprintf("%i\n", v->exons[e]->id);
-		}
-	}
-	REprintf("\n");
-}
 
 extern "C"
 {
@@ -291,8 +145,6 @@ extern "C"
   //Input args same as for calcDenovoSingle
   SEXP calcKnownSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP geneidR, SEXP priorqR)
 	{
-		srand((unsigned)time( NULL ));
-
 		DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR);
 		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR);
 		
@@ -336,8 +188,6 @@ extern "C"
 
   SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP geneidR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP verboseR)
 	{
-		srand((unsigned)time( NULL ));
-
 		//De novo isoform discovery and estimate expression for a single gene
 		//Input
 		// - exons: vector with exon ids
@@ -376,12 +226,13 @@ extern "C"
 		UNPROTECT(1);		
 		UNPROTECT(1);
 
-		//debugdf(df);
-		//debugmodel(new Model(initvars));
+		df->debugprint();
+		Model* m = new Model(initvars);
+		m->debugprint();
 
 		// END OF INPUT READING
 
-		int discarded = fixUnexplFrags(initvars, df);
+		int discarded = df->fixUnexplFrags(initvars);
 		if (verbose > 0)
 		{
 			Rprintf("discarded %i fragments\n", discarded);

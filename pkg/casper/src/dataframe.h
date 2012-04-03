@@ -20,10 +20,16 @@ public:
 	map<Fragment*, double> probabilities(Variant* v);  //uses cache if available, otherwise fills cache and returns prob
 	double probability(Variant* v, Fragment* f);  //does not use cache
 
+	// create variant from fragment
+	Variant* path2Variant(Fragment* f); 
+	int fixUnexplFrags(set<Variant*, VariantCmp>* initvars);
+
 	// returns a list of all possible models that could explain this data
 	vector<Model*>* allModels();
 	vector<Variant*>* allVariants();
 	int frag_readlen;
+
+	void debugprint();
 private:
 
 	int fraglen_minx;

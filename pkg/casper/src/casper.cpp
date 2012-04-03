@@ -1,6 +1,5 @@
 #include "casper.h"
 #include <algorithm>
-#include <time.h>
 
 using namespace std;
 

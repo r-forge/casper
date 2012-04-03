@@ -95,6 +95,108 @@ double DataFrame::prob(int fs, int fe, int bs, int be, int* pos, double T)
 	return psum;
 }
 
+Variant* DataFrame::path2Variant(Fragment* f) 
+{
+	int eid; Exon *ex;
+	vector<Exon*>::iterator itexon;
+	map<int, Exon*> id2exon;
+	for (itexon= exons.begin(); itexon != exons.end(); itexon++) {
+		ex= (*itexon);
+		id2exon[ex->id] = ex;
+	}
+	vector<Exon*>* el = new vector<Exon*>();
+	for (itexon= exons.begin(); (*itexon)->id != f->left[0]; itexon++) {
+		ex= (*itexon);
+		el->push_back(ex);
+	}
+	for (int i=0; i< f->leftc; i++) {
+		eid = f->left[i];
+		ex = id2exon[eid];
+		el->push_back(ex);
+	}
+	if (eid != f->right[0]) {
+		eid = f->right[0];
+		ex = id2exon[eid];
+		el->push_back(ex);
+	}
+	for (int i=1; i< f->rightc; i++) {
+		eid = f->right[i];
+		ex = exons[eid];
+		el->push_back(ex);
+	}
+	while ((*itexon)->id != eid) { itexon++; }
+	itexon++;
+	while (itexon != exons.end()) {
+		ex= (*itexon);
+		el->push_back(ex);
+		itexon++;
+	}
+	Variant* v = new Variant(el);
+	return v;
+}
+
+
+int DataFrame::fixUnexplFrags(set<Variant*, VariantCmp>* initvars)
+{
+	// copy all fragments
+	set<Fragment*>* queue = new set<Fragment*>(data.begin(), data.end());
+
+	// remove the fragments from the queue we can explain with our variants
+	set<Variant*, VariantCmp>::iterator vi;
+	for (vi = initvars->begin(); vi != initvars->end(); vi++) 
+	{
+		// remove the fragments that this variant can explain from our queue
+		map<Fragment*, double> probs = probabilities(*vi);
+		map<Fragment*, double>::iterator si;
+		for (si = probs.begin(); si != probs.end(); si++) 
+		{
+			set<Fragment*>::iterator ri = queue->find(si->first);
+			if (ri != queue->end())
+			{
+				queue->erase(ri);
+			}
+		}
+	}
+
+	int discarded = 0;
+
+	// while we still have unexplained fragments
+	while (queue->size() > 0)
+	{
+		// pop the first fragment
+		Fragment* frag = *queue->begin();
+		queue->erase(queue->begin());
+
+		Variant* nv = path2Variant(frag);
+
+		// check if the new variant can explain the fragment
+		map<Fragment*, double> probs = probabilities(nv);
+		if (probs.count(frag) > 0)
+		{
+			initvars->insert(nv);
+
+			// delete all fragments that this variant can explain
+			map<Fragment*, double>::iterator si;
+			for (si = probs.begin(); si != probs.end(); si++) 
+			{
+				set<Fragment*>::iterator ri = queue->find(si->first);
+				if (ri != queue->end())
+				{
+					queue->erase(ri);
+				}
+			}
+		}
+		else
+		{
+			// this fragment cant be explained
+			discarded++;
+			data.remove(frag);
+		}
+	}
+
+	return discarded;
+}
+
 void DataFrame::allVariantsRec(vector<Exon*>* stack, unsigned int level, vector<Variant*>* varis)
 {
 	if (exons.size() == level)
@@ -146,4 +248,35 @@ vector<Variant*>* DataFrame::allVariants()
 	vector<Exon*>* estack = new vector<Exon*>();
 	allVariantsRec(estack, 0, varis);
 	return varis;
+}
+
+void DataFrame::debugprint()
+{		
+	// Exons
+	printf("Exons:\n");
+	vector<Exon*>::const_iterator ei;
+	for (ei = exons.begin(); ei != exons.end(); ei++)
+	{
+		Exon* e = *ei;
+		printf("%i\t%i\n", e->id, e->length);
+	}
+	printf("\n");
+
+	// Fragments
+	printf("Fragments:\n");
+	list<Fragment*>::const_iterator fi;
+	for (fi = data.begin(); fi != data.end(); fi++)
+	{
+		Fragment* f = *fi;
+		printf("%i\t%i\t%i\n", f->leftc, f->rightc, f->count);
+		for (int l = 0; l < f->leftc; l++)
+		{
+			printf("%i\n", f->left[l]);
+		}
+		for (int r = 0; r < f->rightc; r++)
+		{
+			printf("%i\n", f->right[r]);
+		}
+	}
+	printf("\n");
 }

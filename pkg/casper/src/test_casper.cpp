@@ -2,160 +2,12 @@
 #include <cstdlib>
 #include <stdio.h>
 //#include <tchar.h>
-#include <time.h>
 
 using namespace std;
 
 double fragsta_cumu(double x)
 {
 	return x;
-}
-void debugdf(DataFrame* df)
-{		
-	// Exons
-	printf("Exons:\n");
-	vector<Exon*>::const_iterator ei;
-	for (ei = df->exons.begin(); ei != df->exons.end(); ei++)
-	{
-		Exon* e = *ei;
-		printf("%i\t%i\n", e->id, e->length);
-	}
-	printf("\n");
-
-	// Fragments
-	printf("Fragments:\n");
-	list<Fragment*>::const_iterator fi;
-	for (fi = df->data.begin(); fi != df->data.end(); fi++)
-	{
-		Fragment* f = *fi;
-		printf("%i\t%i\t%i\n", f->leftc, f->rightc, f->count);
-		for (int l = 0; l < f->leftc; l++)
-		{
-			printf("%i\n", f->left[l]);
-		}
-		for (int r = 0; r < f->rightc; r++)
-		{
-			printf("%i\n", f->right[r]);
-		}
-	}
-	printf("\n");
-}
-void debugmodel(Model* model)
-{
-	// Transcripts
-	printf("Model:\n");
-	vector<Variant*>::const_iterator vi;
-	for (vi = model->items.begin(); vi != model->items.end(); vi++)
-	{
-		Variant* v = *vi;
-		printf("%i\t%i\n", v->id, v->exonCount);
-		for (int e = 0; e < v->exonCount; e++)
-		{
-			printf("%i\n", v->exons[e]->id);
-		}
-	}
-	printf("\n");
-}
-
-Variant* path2Variant(DataFrame *df, Fragment* f) 
-{
-	int eid; Exon *ex;
-	vector<Exon*>::iterator itexon;
-	map<int, Exon*> id2exon;
-	for (itexon= df->exons.begin(); itexon != df->exons.end(); itexon++) {
-		ex= (*itexon);
-		id2exon[ex->id] = ex;
-	}
-	vector<Exon*>* el = new vector<Exon*>();
-	for (itexon= df->exons.begin(); (*itexon)->id != f->left[0]; itexon++) {
-		ex= (*itexon);
-		el->push_back(ex);
-	}
-	for (int i=0; i< f->leftc; i++) {
-		eid = f->left[i];
-		ex = id2exon[eid];
-		el->push_back(ex);
-	}
-	if (eid != f->right[0]) {
-		eid = f->right[0];
-		ex = id2exon[eid];
-		el->push_back(ex);
-	}
-	for (int i=1; i< f->rightc; i++) {
-		eid = f->right[i];
-		ex = df->exons[eid];
-		el->push_back(ex);
-	}
-	while ((*itexon)->id != eid) { itexon++; }
-	itexon++;
-	while (itexon != df->exons.end()) {
-		ex= (*itexon);
-		el->push_back(ex);
-		itexon++;
-	}
-	Variant* v = new Variant(el);
-	return v;
-}
-int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, DataFrame* df)
-{
-	// copy all fragments
-	set<Fragment*>* queue = new set<Fragment*>(df->data.begin(), df->data.end());
-
-	// remove the fragments from the queue we can explain with our variants
-	set<Variant*, VariantCmp>::iterator vi;
-	for (vi = initvars->begin(); vi != initvars->end(); vi++) 
-	{
-		// remove the fragments that this variant can explain from our queue
-		map<Fragment*, double> probs = df->probabilities(*vi);
-		map<Fragment*, double>::iterator si;
-		for (si = probs.begin(); si != probs.end(); si++) 
-		{
-			set<Fragment*>::iterator ri = queue->find(si->first);
-			if (ri != queue->end())
-			{
-				queue->erase(ri);
-			}
-		}
-	}
-
-	// remove variants from model that cant be explained
-	int discarded = 0;
-
-	// while we still have unexplained fragments
-	while (queue->size() > 0)
-	{
-		// pop the first fragment
-		Fragment* frag = *queue->begin();
-		queue->erase(queue->begin());
-
-		Variant* nv = path2Variant(df, frag);
-
-		// check if the new variant can explain the fragment
-		map<Fragment*, double> probs = df->probabilities(nv);
-		if (probs.count(frag) > 0)
-		{
-			initvars->insert(nv);
-
-			// delete all fragments that this variant can explain
-			map<Fragment*, double>::iterator si;
-			for (si = probs.begin(); si != probs.end(); si++) 
-			{
-				set<Fragment*>::iterator ri = queue->find(si->first);
-				if (ri != queue->end())
-				{
-					queue->erase(ri);
-				}
-			}
-		}
-		else
-		{
-			// this fragment cant be explained
-			discarded++;
-			df->data.remove(frag);
-		}
-	}
-
-	return discarded;
 }
 
 Casper* example()
@@ -326,12 +178,6 @@ Casper* david1()
 	varis->insert(v1);
 	//varis->push_back(v3);
 
-	debugdf(f);
-	debugmodel(new Model(varis));
-
-	fixUnexplFrags(varis, f);
-	debugmodel(new Model(varis));
-
 	Model* model = new Model(varis);
 	Casper* casp = new Casper(model, f);
 
@@ -411,11 +257,8 @@ Casper* david2()
 	varis->insert(v1);
 	varis->insert(v2);
 	//varis->push_back(v3);
-
-	debugdf(f);
-	debugmodel(new Model(varis));
-
-	fixUnexplFrags(varis, f);
+	
+	f->fixUnexplFrags(varis);
 
 	Model* model = new Model(varis);
 	Casper* casp = new Casper(model, f);
@@ -423,14 +266,12 @@ Casper* david2()
 	return casp;
 }
 
-int main() {
-//int _tmain(int argc, _TCHAR* argv[])
-	srand((unsigned)time( NULL ));
-
+int main() 
+{
 	Casper* c = david2();
+		
+	// Mode
 	double* pi = c->calculateMode();
-	//double inte = c->calculateIntegral();
-
 	int n = c->model->count();
 
 	for (int i = 0; i < n; i++)

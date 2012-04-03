@@ -132,3 +132,20 @@ const char* Model::getCodeStr(vector<Variant*>* allvariants)
 
 	return str;
 }
+
+void Model::debugprint()
+{
+	// Transcripts
+	printf("Model:\n");
+	vector<Variant*>::const_iterator vi;
+	for (vi = items.begin(); vi != items.end(); vi++)
+	{
+		Variant* v = *vi;
+		printf("%i\t%i\n", v->id, v->exonCount);
+		for (int e = 0; e < v->exonCount; e++)
+		{
+			printf("%i\n", v->exons[e]->id);
+		}
+	}
+	printf("\n");
+}
