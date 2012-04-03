@@ -102,7 +102,7 @@ void SmartModelDist::buildrmtable()
 		copy->push_back(v);
 
 		double like = seppel->calcIntegral(m);
-		if (like != 2)
+		if (like != 1)
 		{
 			possible[n] = m;
 			integrals[n] = like;
