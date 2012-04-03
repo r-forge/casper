@@ -224,12 +224,14 @@ extern "C"
 		UNPROTECT(1);	
 
 		df->debugprint();
-		Model* m = new Model(initvars);
-		m->debugprint();
+		Model* tmpm = new Model(initvars);
+		tmpm->debugprint();
 
 		// END OF INPUT READING
 
 		int discarded = df->fixUnexplFrags(initvars);
+		Model* tmp2 = new Model(initvars);
+		tmp2->debugprint();
 		if (verbose > 0)
 		{
 			Rprintf("discarded %i fragments\n", discarded);

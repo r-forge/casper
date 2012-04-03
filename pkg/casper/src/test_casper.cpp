@@ -257,10 +257,15 @@ Casper* david2()
 	varis->insert(v1);
 	varis->insert(v2);
 	//varis->push_back(v3);
-	
+
+	f->debugprint();
+	Model* tmp = new Model(varis);
+	tmp->debugprint();
+
 	f->fixUnexplFrags(varis);
 
 	Model* model = new Model(varis);
+	model->debugprint();
 	Casper* casp = new Casper(model, f);
 
 	return casp;
