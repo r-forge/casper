@@ -1,4 +1,69 @@
-calcExp<-function(distrs, genomeDB, pc, readLength){
+
+#SEXP calcMode          (SEXP exonsR, SEXP exonwidthR, SEXP exongenesR, SEXP transcriptsR, SEXP transgenesR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR)
+
+# new elements: exongenesR, transgenesR
+# does not need: geneidR, nvarPriorR, nexonPriorR, minppR, selectBest, methodR, verboseR
+
+
+#SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP verboseR)
+
+
+calcExp <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mc.cores=1) {
+  if (missing(readLength)) stop("readLength must be specified")
+#  if (class(genomeDB)!='knownGenome') stop("genomeDB must be of class 'knownGenome'")
+  if (!(method %in% c('auto','rwmcmc','priormcmc','exact'))) stop("method must be auto, rwmcmc, priormcmc or exact")
+  
+  #Format input
+  startcdf <- as.double(ecdf(distrs$stDis)(seq(0,1,.001)))
+  lendis <- as.double(distrs$lenDis/sum(distrs$lenDis))
+  lenvals <- as.integer(names(distrs$lenDis))
+  readLength <- as.integer(readLength)
+  priorq <- as.double(priorq)
+  verbose <- as.integer(verbose)
+  if (missing(geneid)) geneid <- names(genomeDB@genes)[sapply(genomeDB@genes,length)>1]
+
+  exons <- lapply(genomeDB@genes,function(z) as.integer(names(z)))
+  exonwidth <- lapply(genomeDB@genes,width)
+
+  if (!all(geneid %in% names(exons))) stop('geneid not found in genomeDB@exons')
+  if (!all(geneid %in% names(pc))) stop('geneid not found in pc')
+  if (!all(geneid %in% names(genomeDB@transcripts))) stop('geneid not found in genomeDB@transcripts')
+
+  #Define basic function
+  f <- function(z) {
+    geneid <- as.integer(z)
+    exons <- exons[z]
+    exonwidth <- exonwidth[z]
+    transcripts <- genomeDB@transcripts[z]
+    pc <- pc[z]
+    ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,exongenes=exongenes,transcripts=transcripts,geneid=geneid,pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq)
+    ans
+  }
+
+  #Run
+  if (mc.cores>1) {
+    if ('multicore' %in% loadedNamespaces()) {
+      #split into smaller jobs
+      nsplit <- floor(length(geneid)/mc.cores)
+      geneid <- lapply(1:mc.cores, function(z) { geneid[((z-1)*nsplit+1):min((z*nsplit),length(geneid))] })
+      ans <- mclapply(geneid,f,mc.cores=mc.cores)
+      ans <- do.call(c,ans)
+     } else stop('multicore library has not been loaded!')
+  } else {
+    ans <- f(geneid)
+    names(ans) <- geneid
+  }
+  ans
+}
+
+
+calcKnownMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, priorq) {
+  ans <- .Call("calcKnownMultiple",exons,exonwidth,transcripts,geneid,pc,startcdf, lendis, lenvals, readLength, priorq)
+  return(ans)
+}
+
+
+calcExpOld<-function(distrs, genomeDB, pc, readLength){
   if (missing(readLength)) stop("readLength must be specified")
   if (class(genomeDB)!="knownGenome") stop("genomeDB must be of class 'knownGenome'")
   dexo<-as.data.frame(genomeDB@exonsNI)

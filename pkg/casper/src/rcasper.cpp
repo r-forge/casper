@@ -296,7 +296,28 @@ void debugmodel(Model* model)
 
 extern "C"
 {
-	SEXP calcMode(SEXP exonsR, SEXP exonwidthR, SEXP exongenesR, SEXP transcriptsR, SEXP transgenesR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR)
+
+  //Estimate isoform expression for multiple genes. Calls calcKnownSingle repeadtedly
+  //Input args same as for calcDenovoMultiple
+  SEXP calcKnownMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR) 
+	{
+		int i, ngenes=LENGTH(geneidR);
+		SEXP ansMultiple, ansSingle;
+
+		PROTECT(ansMultiple= allocVector(VECSXP, ngenes));
+
+		for (i=0; i<ngenes; i++) {
+		  ansSingle= calcKnownSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, VECTOR_ELT(geneidR,i), priorqR);
+		  SET_VECTOR_ELT(ansMultiple,i,ansSingle);
+		}
+		
+		UNPROTECT(1);
+		return ansMultiple;
+	}
+
+  //Estimate isoform expression (known variants case)
+  //Input args same as for calcDenovoSingle
+  SEXP calcKnownSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP geneidR, SEXP priorqR)
 	{
 		srand((unsigned)time( NULL ));
 
@@ -323,6 +344,7 @@ extern "C"
 
 		return Rc;
 	}
+
   SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP verboseR) 
 	{
 		//De novo isoform discovery and estimate expression for multiple genes. Calls calcDenovoSingle repeadtedly
