@@ -9,6 +9,10 @@
 
 int verbose = 1;
 
+double SIMPLEFRAGSTA(double x)
+{
+	return x;
+}
 double cumu_fragsta(double x) 
 {
 	if (x<=0) return 0;
@@ -27,13 +31,19 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP 
 	double *fraglen= REAL(fraglenR);
 
 	//Define fragment length/start distributions and create DataFrame
-	DiscreteDF* fraglen_dist = new DiscreteDF(fraglen, lenvals, nfraglen);
+	//DiscreteDF* fraglen_dist = new DiscreteDF(fraglen, lenvals, nfraglen);	
+	double* fraglens = new double[1];
+        int* lenvals= new int[1];
+        fraglens[0]= 1;
+        lenvals[0]= 200;
+	DiscreteDF* fraglen_dist = new DiscreteDF(fraglens, lenvals, 1);
 
 	lencdf= Rf_length(fragstaR);
 	startcdf= REAL(fragstaR);
 	//::fun_fragsta = fragstaR;
 
-	DataFrame* df = new DataFrame(fraglen_dist, cumu_fragsta);
+	//DataFrame* df = new DataFrame(fraglen_dist, cumu_fragsta);
+	DataFrame* df = new DataFrame(fraglen_dist, SIMPLEFRAGSTA);
 	df->frag_readlen= readLength;
 
 	//Add exons to DataFrame

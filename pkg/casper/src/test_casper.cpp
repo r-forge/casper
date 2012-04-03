@@ -191,7 +191,10 @@ Casper* david2()
         lenvals[0]= 200;
 	DiscreteDF* fraglen_dist = new DiscreteDF(fraglens, lenvals, 1);
 
+	Casper::priorq = 3;
+
 	DataFrame* f = new DataFrame(fraglen_dist, fragsta_cumu);
+	f->frag_readlen = 50;
 
 	Exon* e1 = new Exon(3185, 157);
 	Exon* e2 = new Exon(3186, 35706);
@@ -210,7 +213,7 @@ Casper* david2()
 	f1->left[0] = 3185;
 	f1->right[0] = 3186;
 	f->addData(f1);
-	Fragment* f2 = new Fragment(2, 1, 20);
+	Fragment* f2 = new Fragment(2, 1, 2);
 	f2->left[0] = 3185;
 	f2->left[1] = 3186;
 	f2->right[0] = 3187;
