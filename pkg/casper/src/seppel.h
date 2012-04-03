@@ -67,6 +67,7 @@ private:
 	map<Model*, double, ModelCmp> removeprobs;
 
 	void updatepks();
+	void buildrmtable();
 	Variant* makevar();
 	double prob(Variant* v);
 };

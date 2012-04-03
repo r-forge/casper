@@ -377,12 +377,3 @@ double Casper::det(double** a, int n)
 	free_dmatrix(aout, 0, n - 1, 0, n - 1);
 	return(det);
 }
-
-double Casper::randd()
-{
-	return (double)rand() / ((double)(RAND_MAX) + 1.0);
-}
-int Casper::randi(int n)
-{
-	return (int)((double)n * randd());
-}

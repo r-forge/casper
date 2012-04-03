@@ -36,5 +36,7 @@ public:
 	int gethash();
 
 	map<Variant*, int, VariantCmp> idmap;
+
+	static const char* getModelCode(Model* model, vector<Variant*>* allvariants);
 private:
 };

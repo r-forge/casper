@@ -22,6 +22,7 @@ SmartModelDist::SmartModelDist(Seppel* seppel, Model* center, double exp_exons)
 	}
 
 	updatepks();
+	buildrmtable();
 
 	pnull = 0;
 	for (vi = varis.begin(); vi != varis.end(); vi++)
@@ -56,6 +57,7 @@ void SmartModelDist::updatepks()
 	}
 	
 	vector<Variant*>::const_iterator vi;
+
 	for (vi = varis.begin(); vi != varis.end(); vi++)
 	{
 		Variant* v = *vi;
@@ -91,9 +93,47 @@ void SmartModelDist::updatepks()
 	}
 }
 
+void SmartModelDist::buildrmtable()
+{
+	Model** possible = new Model*[varis.size()];
+	double* integrals = new double[varis.size()];
+	int n = 0;
+
+	list<Variant*>* copy = new list<Variant*>(varis.begin(), varis.end());
+	for (int i = 0; i < varis.size(); i++)
+	{
+		Variant* v = copy->front();
+		copy->pop_front();
+		Model* m = new Model(copy);
+		copy->push_back(v);
+
+		double like = seppel->calcIntegral(m);
+		if (like != 2)
+		{
+			possible[n] = m;
+			integrals[n] = like;
+			n++;
+		}
+	}
+
+	if (n == 0)
+	{
+		return;
+	}
+
+	//double* probs = Seppel::normalizeIntegrals(integrals, n);
+	double* probs = new double[n];
+	for (int i = 0; i < n; i++)
+	{
+		probs[i] = (double)1 / (double)n;
+		Model* m = possible[i];
+		removeprobs[m] = probs[i];
+	}
+}
+
 Variant* SmartModelDist::makevar()
 {
-	int rv = Casper::randi(center->items.size());
+	int rv = runifdisc(0, center->items.size() - 1);
 	Variant* var = center->items[rv];
 	//bool dir = var->strand;
 	Gene* gene = var->gene;
@@ -103,7 +143,7 @@ Variant* SmartModelDist::makevar()
 	{
 		double pk = exon_prob[i];
 
-		double r = Casper::randd();
+		double r = runif();
 		if (r < pk)
 		{
 			nex->push_back(gene->exons[i]);
@@ -136,7 +176,7 @@ Model* SmartModelDist::sample()
 	vector<Variant*>* newm = new vector<Variant*>();
 	vector<Variant*>::const_iterator vi;
 
-	double x = Casper::randd();
+	double x = runif();
 	if (x < pcreate)
 	{
 		Variant* v;
@@ -155,55 +195,22 @@ Model* SmartModelDist::sample()
 	}
 	else
 	{
-		Model** possible = new Model*[varis.size()];
-		double* integrals = new double[varis.size()];
-		int n = 0;
-		
-		list<Variant*>* copy = new list<Variant*>(varis.begin(), varis.end());
-		for (int i = 0; i < varis.size(); i++)
-		{
-			Variant* v = copy->front();
-			copy->pop_front();
-			Model* m = new Model(copy);
-			copy->push_back(v);
-
-			double like = seppel->calcIntegral(m);
-			if (like != 1)
-			{
-				possible[n] = m;
-				integrals[n] = like;
-				n++;
-			}
-		}
-
-		if (n == 0)
-		{
-			return NULL;
-		}
-
-		double* probs = Seppel::normalizeIntegrals(integrals, n);
-		for (int i = 0; i < n; i++)
-		{
-			Model* m = possible[i];
-			removeprobs[m] = probs[i];
-		}
-
-		double r = Casper::randd();
-
-		int i = -1;
+		double r = runif();
 		double psum = 0;
-		do
+		map<Model*, double, ModelCmp>::const_iterator mi;
+		Model* last = NULL;
+		for (mi = removeprobs.begin(); mi != removeprobs.end(); mi++)
 		{
-			i++;
-			psum += probs[i];
+			psum = mi->second + psum;
+			if (r <= psum)
+			{
+				return mi->first;
+			}
+			last = mi->first;
 		}
-		while (r > psum);
+		return last;
 
-		i = min(i, n - 1);
-		
-		return possible[i];
-
-		/*int ri = Casper::randi(varis.size());
+		/*int ri = runifdisc(0, varis.size() - 1);
 		Variant* r = varis[ri];
 
 		for (vi = center->items.begin(); vi != center->items.end(); vi++)

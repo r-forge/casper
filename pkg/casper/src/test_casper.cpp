@@ -167,27 +167,6 @@ int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, DataFrame* df, Gene* gen
 	return discarded;
 }
 
-const char* getmodelcode(vector<Variant*>* allvariants, Model* model)
-{
-	int n = allvariants->size();
-	char* str = new char[n + 1];
-	str[n] = '\0';
-
-	for (int i = 0; i < (int)allvariants->size(); i++)
-	{
-		if (model->contains(allvariants->at(i)))
-		{
-			str[i] = '1';
-		}
-		else
-		{
-			str[i] = '0';
-		}
-	}
-
-	return str;
-}
-
 Casper* example()
 {	
 	double* fraglens = new double[1];
@@ -557,9 +536,9 @@ int main() {
 	for (mi = res1.begin(); mi != res1.end(); mi++)
 	{
 		Model* m = mi->first;
-		if (res1[m] > 0.0001)
+		if (res3[m] > 0.0001)
 		{
-			const char* code = getmodelcode(allvariants, m);
+			const char* code = Model::getModelCode(m, allvariants);
 			printf("%s\t%f\t%f\t%f\n", code, res1[m], res2[m], res3[m]);
 		}
 	}

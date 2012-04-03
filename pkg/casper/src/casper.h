@@ -27,11 +27,6 @@ class Casper
   // indicates whether the model can explain all fragments
   bool isValid();
 
-  // random double between 0 and 1
-  static double randd();
-  // random int between 0 incl and n excl
-  static int randi(int n);
-
   static double priorq;
 
  private:

@@ -32,27 +32,6 @@ double Seppel::calcIntegral(Model* model)
 	return like;
 }
 
-const char* getmodelcode2(vector<Variant*>* allvariants, Model* model)
-{
-	int n = allvariants->size();
-	char* str = new char[n + 1];
-	str[n] = '\0';
-
-	for (int i = 0; i < (int)allvariants->size(); i++)
-	{
-		if (model->contains(allvariants->at(i)))
-		{
-			str[i] = '1';
-		}
-		else
-		{
-			str[i] = '0';
-		}
-	}
-
-	return str;
-}
-
 void Seppel::exploreExact()
 {
 	vector<Model*>* models = frame->allModels(gene);
@@ -79,7 +58,7 @@ void Seppel::explorePrior(int runs)
 		}
 	}
 
-	int onum = Casper::randi(models->size());
+	int onum = runifdisc(0, models->size() - 1);
 	Model* omodl = models->at(onum);
 	double olike = calcIntegral(omodl);
 
@@ -87,20 +66,22 @@ void Seppel::explorePrior(int runs)
 	
 	for (int r = 0; r < runs; r++)
 	{
-		int nnum = Casper::randi(models->size());
+		int nnum = runifdisc(0, models->size() - 1);
 		Model* nmodl = models->at(nnum);
 
 		double nlike = calcIntegral(nmodl);
-		double l = nlike - olike;
-		double p = exp(l);
-		double x = Casper::randd();
-		if (x <= p)
+		if (nlike != 1)
 		{
-			olike = nlike;
-			omodl = nmodl;
-			accepted++;
+			double l = nlike - olike;
+			double p = exp(l);
+			double x = runif();
+			if (x <= p)
+			{
+				olike = nlike;
+				omodl = nmodl;
+				accepted++;
+			}
 		}
-
 		counts[omodl]++;
 	}
 }
@@ -134,7 +115,7 @@ void Seppel::exploreSmart(Model* startmodel, int runs)
 			double l = nlike - olike + oprob - nprob;
 			double lp = exp(l);
 			
-			double x = Casper::randd();
+			double x = runif();
 			if (x < lp)
 			{
 				omodl = nmodl;
