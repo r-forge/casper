@@ -105,7 +105,8 @@ void SmartModelDist::buildrmtable()
 		if (like != 1)
 		{
 			possible[n] = m;
-			integrals[n] = 0.01;
+			//integrals[n] = like;
+			integrals[n] = -200;
 			n++;
 		}
 	}
