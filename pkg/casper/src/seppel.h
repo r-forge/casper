@@ -3,7 +3,7 @@
 class Seppel
 {
 public:
-	Seppel(DataFrame* frame, Gene* gene);
+	Seppel(DataFrame* frame);
 
 	double calcIntegral(Model* model);
 
@@ -20,8 +20,6 @@ public:
 
 	static double* normalizeIntegrals(double* values, int n);
 
-	Gene* gene;
-
 private:
 	DataFrame* frame;
 
@@ -34,7 +32,7 @@ private:
 class SmartModelDist
 {
 public:
-	SmartModelDist(Seppel* seppel, Model* center, double exp_exons);
+	SmartModelDist(Seppel* seppel, DataFrame* frame, Model* center, double exp_exons);
 	
 	// sample a proposal
 	Model* sample();
@@ -47,10 +45,9 @@ private:
 	// probability to create, delete is 1-pcreate
     static const double create_prob;
 	
+	DataFrame* frame;
 	Seppel* seppel;
     Model* center;
-    vector<Variant*> varis;
-    Gene* gene;
 
     // expected number of exons for a gene of this length
     double exp_exons;

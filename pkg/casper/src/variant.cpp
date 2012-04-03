@@ -1,10 +1,9 @@
 #include "variant.h"
 
-Variant::Variant(Gene* gene, vector<Exon*>* exons)
+Variant::Variant(vector<Exon*>* exons)
 {
 	this->id = -1;
 	this->name= "";
-	this->gene = gene;
 	//this->strand = strand;
 
 	this->exonCount = exons->size();
@@ -34,7 +33,7 @@ Variant::Variant(Gene* gene, vector<Exon*>* exons)
 	  this->exons[i] = exon;
 	  this->positions[i + 1] = this->positions[i] + exon->length;
 		
-	  int j = gene->indexOf(exon);
+	  int j = exon->num;
 	  this->codes[j / 32] |= 1 << (j % 32);
 	  i++;
 	}
@@ -88,14 +87,6 @@ char* Variant::toString()
 
 int Variant::compare(const Variant* other)
 {
-	if (this->gene < other->gene)
-	{
-		return -1;
-	}
-	else if (this->gene > other->gene)
-	{
-		return +1;
-	}
 	if (this->exonCount < other->exonCount) 
 	{
 		return -1;
@@ -121,11 +112,11 @@ int Variant::compare(const Variant* other)
 }
 int Variant::gethash()
 {
-	int h = gene->id;
+	int h = 0;
 
 	for (int c = 0; c < codelen; c++)
 	{
-		h = h * 13 + codes[c];
+		h ^= codes[c];
 	}
 
 	return h;

@@ -12,26 +12,12 @@ double fragsta_cumu(double x)
 }
 void debugdf(DataFrame* df)
 {		
-	printf("Genes:\n");
-	map<int, Gene*>::const_iterator gi;
-	for (gi = df->genes.begin(); gi != df->genes.end(); gi++)
-	{
-		Gene* g = gi->second;
-		printf("%i\t%i\n", g->id, g->exons.size());
-		vector<Exon*>::const_iterator ei;
-		for (ei = g->exons.begin(); ei != g->exons.end(); ei++)
-		{
-			printf("%i\n", (*ei)->id);
-		}
-	}
-	printf("\n");
-
 	// Exons
 	printf("Exons:\n");
-	map<int, Exon*>::const_iterator ei;
+	vector<Exon*>::const_iterator ei;
 	for (ei = df->exons.begin(); ei != df->exons.end(); ei++)
 	{
-		Exon* e = ei->second;
+		Exon* e = *ei;
 		printf("%i\t%i\n", e->id, e->length);
 	}
 	printf("\n");
@@ -71,23 +57,28 @@ void debugmodel(Model* model)
 	printf("\n");
 }
 
-Variant* path2Variant(DataFrame *df, Fragment* f, Gene *gene) 
+Variant* path2Variant(DataFrame *df, Fragment* f) 
 {
 	int eid; Exon *ex;
+	vector<Exon*>::iterator itexon;
+	map<int, Exon*> id2exon;
+	for (itexon= df->exons.begin(); itexon != df->exons.end(); itexon++) {
+		ex= (*itexon);
+		id2exon[ex->id] = ex;
+	}
 	vector<Exon*>* el = new vector<Exon*>();
-	map<int, Exon*>::iterator itexon;
-	for (itexon= df->exons.begin(); (*itexon).first != f->left[0]; itexon++) {
-		ex= (*itexon).second;
+	for (itexon= df->exons.begin(); (*itexon)->id != f->left[0]; itexon++) {
+		ex= (*itexon);
 		el->push_back(ex);
 	}
 	for (int i=0; i< f->leftc; i++) {
 		eid = f->left[i];
-		ex = df->exons[eid];
+		ex = id2exon[eid];
 		el->push_back(ex);
 	}
 	if (eid != f->right[0]) {
 		eid = f->right[0];
-		ex = df->exons[eid];
+		ex = id2exon[eid];
 		el->push_back(ex);
 	}
 	for (int i=1; i< f->rightc; i++) {
@@ -95,17 +86,17 @@ Variant* path2Variant(DataFrame *df, Fragment* f, Gene *gene)
 		ex = df->exons[eid];
 		el->push_back(ex);
 	}
-	while ((*itexon).first != eid) { itexon++; }
+	while ((*itexon)->id != eid) { itexon++; }
 	itexon++;
 	while (itexon != df->exons.end()) {
-		ex= (*itexon).second;
+		ex= (*itexon);
 		el->push_back(ex);
 		itexon++;
 	}
-	Variant* v = new Variant(gene, el);
+	Variant* v = new Variant(el);
 	return v;
 }
-int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, DataFrame* df, Gene* gene)
+int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, DataFrame* df)
 {
 	// copy all fragments
 	set<Fragment*>* queue = new set<Fragment*>(df->data.begin(), df->data.end());
@@ -137,7 +128,7 @@ int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, DataFrame* df, Gene* gen
 		Fragment* frag = *queue->begin();
 		queue->erase(queue->begin());
 
-		Variant* nv = path2Variant(df, frag, gene);
+		Variant* nv = path2Variant(df, frag);
 
 		// check if the new variant can explain the fragment
 		map<Fragment*, double> probs = df->probabilities(nv);
@@ -183,12 +174,6 @@ Casper* example()
 	f->addExon(e1);
 	f->addExon(e2);
 	f->addExon(e3);
-
-	Gene* g1 = new Gene(1);
-	g1->addExon(e1);
-	g1->addExon(e2);
-	g1->addExon(e3);
-	f->addGene(g1);
 
 	Fragment* f0 = new Fragment(1, 1, 1824);
 	f0->left[0] = 1;
@@ -258,11 +243,11 @@ Casper* example()
 	v3v->push_back(e1);
 	v3v->push_back(e2);
 
-	Variant* v1 = new Variant(g1, v1v);
+	Variant* v1 = new Variant(v1v);
 	v1->id = 1;
-	Variant* v2 = new Variant(g1, v2v);
+	Variant* v2 = new Variant(v2v);
 	v2->id = 2;
-	Variant* v3 = new Variant(g1, v3v);
+	Variant* v3 = new Variant(v3v);
 	v3->id = 3;
 
 	vector<Variant*>* varis = new vector<Variant*>();
@@ -293,13 +278,6 @@ Casper* david1()
 	f->addExon(e2);
 	f->addExon(e3);
 	f->addExon(e4);
-
-	Gene* g1 = new Gene(1);
-	g1->addExon(e1);
-	g1->addExon(e2);
-	g1->addExon(e3);
-	g1->addExon(e4);
-	f->addGene(g1);
 
 	Fragment* f0 = new Fragment(1, 1, 500);
 	f0->left[0] = 2181;
@@ -341,7 +319,7 @@ Casper* david1()
 	v1v->push_back(e3);
 	v1v->push_back(e4);
 
-	Variant* v1 = new Variant(g1, v1v);
+	Variant* v1 = new Variant(v1v);
 	v1->id = 1;
 
 	set<Variant*, VariantCmp>* varis = new set<Variant*, VariantCmp>();
@@ -351,7 +329,8 @@ Casper* david1()
 	debugdf(f);
 	debugmodel(new Model(varis));
 
-	fixUnexplFrags(varis, f, g1);
+	fixUnexplFrags(varis, f);
+	debugmodel(new Model(varis));
 
 	Model* model = new Model(varis);
 	Casper* casp = new Casper(model, f);
@@ -376,13 +355,6 @@ Casper* david2()
 	f->addExon(e2);
 	f->addExon(e3);
 	f->addExon(e4);
-
-	Gene* g1 = new Gene(1);
-	g1->addExon(e1);
-	g1->addExon(e2);
-	g1->addExon(e3);
-	g1->addExon(e4);
-	f->addGene(g1);
 
 	Fragment* f0 = new Fragment(1, 1, 50);
 	f0->left[0] = 3185;
@@ -429,10 +401,10 @@ Casper* david2()
 	v2v->push_back(e3);
 	v2v->push_back(e4);
 
-	Variant* v1 = new Variant(g1, v1v);
+	Variant* v1 = new Variant(v1v);
 	v1->id = 1;
 
-	Variant* v2 = new Variant(g1, v2v);
+	Variant* v2 = new Variant(v2v);
 	v2->id = 2;
 
 	set<Variant*, VariantCmp>* varis = new set<Variant*, VariantCmp>();
@@ -443,7 +415,7 @@ Casper* david2()
 	debugdf(f);
 	debugmodel(new Model(varis));
 
-	fixUnexplFrags(varis, f, g1);
+	fixUnexplFrags(varis, f);
 
 	Model* model = new Model(varis);
 	Casper* casp = new Casper(model, f);
@@ -455,7 +427,7 @@ int main() {
 //int _tmain(int argc, _TCHAR* argv[])
 	srand((unsigned)time( NULL ));
 
-	Casper* c = david1();
+	Casper* c = david2();
 	double* pi = c->calculateMode();
 	//double inte = c->calculateIntegral();
 
@@ -466,25 +438,18 @@ int main() {
 		printf("%f\n", pi[i]);
 	}
 	printf("\n");
-
-	//vector<Model*>* m1 = c->frame->allModels(c->frame->genes[1]);
-	//vector<Model*>* m2 = c->frame->allModels(c->frame->genes[1]);
-	//Model* n1 = m1->at(0);
-	//Model* n2 = m2->at(0);
-
-	Gene* gene = c->frame->genes[1];
 	
-	vector<Variant*>* allvariants = c->frame->allVariants(gene);
-	/*vector<Model*>* allmodels = c->frame->allModels(gene);
+	vector<Variant*>* allvariants = c->frame->allVariants();
+	vector<Model*>* allmodels = c->frame->allModels();
 	
-	Model* center = allmodels->at(20);
-	printf("%s, %i\n", getmodelcode(allvariants, center), center->count());
+	/*Model* center = allmodels->at(20);
+	printf("%s, %i\n", center->getCodeStr(allvariants), center->count());
 	map<Model*, double, ModelCmp> counts;
-	SmartModelDist* dis = new SmartModelDist(center, gene, 0.8);
+	SmartModelDist* dis = new SmartModelDist(new Seppel(c->frame), c->frame, center, 0.8);
 	double nums = 0;
-	for (int i = 0; i < 1; i++)
+	for (int i = 0; i < 1000; i++)
 	{
-		Model* a = dis->Sample();
+		Model* a = dis->sample();
 		//printf("%i\n", a->count());
 		if (a != 0)
 		{
@@ -511,32 +476,32 @@ int main() {
 	map<Model*, double, ModelCmp>::const_iterator xi;
 	for (xi = counts.begin(); xi != counts.end(); xi++)
 	{
-		printf("%s@%i\t%f\t%f\n", getmodelcode(allvariants, xi->first), xi->first->count(), xi->second / nums, exp(dis->DensityLn(xi->first)));
+		printf("%s@%i\t%f\t%f\n", xi->first->getCodeStr(allvariants), xi->first->count(), xi->second / nums, exp(dis->densityLn(xi->first)));
 	}*/
 
-	Seppel* sep3 = new Seppel(c->frame, gene);
-	sep3->exploreSmart(c->model, 100000);
-	map<Model*, double, ModelCmp> res3 = sep3->resultPPMCMC();
-
-	printf("SMART\n");
-
-	Seppel* sep1 = new Seppel(c->frame, gene);
+	Seppel* sep1 = new Seppel(c->frame);
 	sep1->exploreExact();
 	map<Model*, double, ModelCmp> res1 = sep1->resultPPIntegral();
 
 	printf("EXACT\n");
 
-	Seppel* sep2 = new Seppel(c->frame, gene);
+	Seppel* sep2 = new Seppel(c->frame);
 	sep2->explorePrior(100000);
 	map<Model*, double, ModelCmp> res2 = sep2->resultPPMCMC();
 
 	printf("PRIOR\n");
+
+	Seppel* sep3 = new Seppel(c->frame);
+	sep3->exploreSmart(c->model, 100000);
+	map<Model*, double, ModelCmp> res3 = sep3->resultPPMCMC();
+
+	printf("SMART\n");
 	
 	map<Model*, double, ModelCmp>::const_iterator mi;
 	for (mi = res1.begin(); mi != res1.end(); mi++)
 	{
 		Model* m = mi->first;
-		if (res3[m] > 0.0001)
+		if (res1[m] > 0.0001)
 		{
 			const char* code = m->getCodeStr(allvariants);
 			printf("%s\t%f\t%f\t%f\n", code, res1[m], res2[m], res3[m]);

@@ -1,10 +1,9 @@
 #include "seppel.h"
 #include <iostream>
 
-Seppel::Seppel(DataFrame* frame, Gene* gene)
+Seppel::Seppel(DataFrame* frame)
 {
 	this->frame = frame;
-	this->gene = gene;
 }
 
 double Seppel::calcIntegral(Model* model)
@@ -34,7 +33,7 @@ double Seppel::calcIntegral(Model* model)
 
 void Seppel::exploreExact()
 {
-	vector<Model*>* models = frame->allModels(gene);
+	vector<Model*>* models = frame->allModels();
 
 	vector<Model*>::const_iterator mi;
 	for (mi = models->begin(); mi != models->end(); mi++)
@@ -45,7 +44,7 @@ void Seppel::exploreExact()
 }
 void Seppel::explorePrior(int runs)
 {
-	vector<Model*>* allmodels = frame->allModels(gene);
+	vector<Model*>* allmodels = frame->allModels();
 	vector<Model*>* models = new vector<Model*>();
 	vector<Model*>::const_iterator ami;
 	for (ami = allmodels->begin(); ami != allmodels->end(); ami++)
@@ -87,13 +86,12 @@ void Seppel::explorePrior(int runs)
 }
 void Seppel::exploreSmart(Model* startmodel, int runs)
 {
-	vector<Variant*>* allvars = frame->allVariants(gene);
     //FILE * pFile = fopen("C:\\prop_file.txt", "w");
     //FILE * vFile = fopen("C:\\visi_file.txt", "w");
 
 	Model* omodl = startmodel;
 	double olike = calcIntegral(omodl);
-	SmartModelDist* odist = new SmartModelDist(this, omodl, 0.8);
+	SmartModelDist* odist = new SmartModelDist(this, frame, omodl, 0.8);
 	
 	int accepted = 0;
 
@@ -107,7 +105,7 @@ void Seppel::exploreSmart(Model* startmodel, int runs)
 
 		if (nlike != 1)
 		{
-			SmartModelDist* ndist = new SmartModelDist(this, nmodl, 0.8);
+			SmartModelDist* ndist = new SmartModelDist(this, frame, nmodl, 0.8);
 
 			double nprob = odist->densityLn(nmodl);
 			double oprob = ndist->densityLn(omodl);

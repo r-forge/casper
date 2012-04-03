@@ -1,6 +1,8 @@
-#include "gene.h"
 #include "fragment.h"
+#include "exon.h"
+#include <map>
 #include <string>
+#include <vector>
 #include <sstream>
 
 using namespace std;
@@ -18,7 +20,6 @@ public:
 	int* positions;
 	// bp length of this variant
 	int length;
-	Gene* gene;
 	// forward or backward strand
 	//bool strand;
 
@@ -27,7 +28,7 @@ public:
 	int* codes;
 	int hashcode;
 
-	Variant(Gene* gene, vector<Exon*>* exons);
+	Variant(vector<Exon*>* exons);
 
 	// index of the exon in the exon list of this variant
 	int indexOf(int exonid);

@@ -18,11 +18,8 @@ void DataFrame::addData(Fragment* f)
 }
 void DataFrame::addExon(Exon* e)
 {
-	this->exons[e->id] = e;
-}
-void DataFrame::addGene(Gene* g)
-{
-	this->genes[g->id] = g;
+	e->num = this->exons.size();
+	this->exons.push_back(e);
 }
 
 map<Fragment*, double> DataFrame::probabilities(Variant* v)
@@ -98,22 +95,22 @@ double DataFrame::prob(int fs, int fe, int bs, int be, int* pos, double T)
 	return psum;
 }
 
-void DataFrame::allVariantsRec(vector<Exon*>* stack, unsigned int level, Gene* gene, vector<Variant*>* varis)
+void DataFrame::allVariantsRec(vector<Exon*>* stack, unsigned int level, vector<Variant*>* varis)
 {
-	if (gene->exons.size() == level)
+	if (exons.size() == level)
 	{
 		if (stack->size() > 0)
 		{
-			Variant* v = new Variant(gene, stack);
+			Variant* v = new Variant(stack);
 			varis->push_back(v);
 		}
 		return;
 	}
 	
-	stack->push_back(gene->exons.at(level));
-	allVariantsRec(stack, level + 1, gene, varis);
+	stack->push_back(exons.at(level));
+	allVariantsRec(stack, level + 1, varis);
 	stack->pop_back();
-	allVariantsRec(stack, level + 1, gene, varis);
+	allVariantsRec(stack, level + 1, varis);
 }
 void DataFrame::allModelsRec(vector<Variant*>* stack, unsigned int level, vector<Variant*>* vars, vector<Model*>* models)
 {
@@ -132,21 +129,21 @@ void DataFrame::allModelsRec(vector<Variant*>* stack, unsigned int level, vector
 	stack->pop_back();	
 	allModelsRec(stack, level + 1, vars, models);
 }
-vector<Model*>* DataFrame::allModels(Gene* gene)
+vector<Model*>* DataFrame::allModels()
 {
 	vector<Variant*>* varis = new vector<Variant*>();
 	vector<Exon*>* estack = new vector<Exon*>();
-	allVariantsRec(estack, 0, gene, varis);
+	allVariantsRec(estack, 0, varis);
 	
 	vector<Variant*>* vstack = new vector<Variant*>();
 	vector<Model*>* models = new vector<Model*>();
 	allModelsRec(vstack, 0, varis, models);
 	return models;
 }
-vector<Variant*>* DataFrame::allVariants(Gene* gene)
+vector<Variant*>* DataFrame::allVariants()
 {
 	vector<Variant*>* varis = new vector<Variant*>();
 	vector<Exon*>* estack = new vector<Exon*>();
-	allVariantsRec(estack, 0, gene, varis);
+	allVariantsRec(estack, 0, varis);
 	return varis;
 }

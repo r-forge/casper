@@ -7,9 +7,7 @@ class DataFrame
 {
 public:
 	// all exons mapped by their id
-	map<int, Exon*> exons;
-	// all genes mapped by their id
-	map<int, Gene*> genes;
+	vector<Exon*> exons;
 	// all fragments
 	list<Fragment*> data;
 
@@ -17,15 +15,14 @@ public:
 
 	void addData(Fragment* f);
 	void addExon(Exon* e);
-	void addGene(Gene* g);
 
 	// probabilities of all the fragments given a variant
 	map<Fragment*, double> probabilities(Variant* v);  //uses cache if available, otherwise fills cache and returns prob
 	double probability(Variant* v, Fragment* f);  //does not use cache
 
-	// returns a list of all possible models that could explain this gene (explicit calculation)
-	vector<Model*>* allModels(Gene* gene);
-	vector<Variant*>* allVariants(Gene* gene);
+	// returns a list of all possible models that could explain this data
+	vector<Model*>* allModels();
+	vector<Variant*>* allVariants();
 	int frag_readlen;
 private:
 
@@ -36,6 +33,6 @@ private:
         map<Variant*, map<Fragment*, double>, VariantCmp > cache;
 
 	double prob(int fs, int fe, int bs, int be, int* pos, double T);
-	void allVariantsRec(vector<Exon*>* stack, unsigned int level, Gene* gene, vector<Variant*>* vars);
+	void allVariantsRec(vector<Exon*>* stack, unsigned int level, vector<Variant*>* vars);
 	void allModelsRec(vector<Variant*>* stack, unsigned int level, vector<Variant*>* vars, vector<Model*>* models);
 };
