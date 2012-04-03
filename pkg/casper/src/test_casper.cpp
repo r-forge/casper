@@ -455,7 +455,7 @@ int main() {
 //int _tmain(int argc, _TCHAR* argv[])
 	srand((unsigned)time( NULL ));
 
-	Casper* c = david2();
+	Casper* c = david1();
 	double* pi = c->calculateMode();
 	//double inte = c->calculateIntegral();
 
