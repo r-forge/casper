@@ -427,18 +427,23 @@ extern "C"
 		Model* bestModel;
 		double bestModelProb = -1;
 
-		map<Model*, double, ModelCmp>::iterator mvi;
-		for (mvi = resProbs.begin(); mvi != resProbs.end(); mvi++) 
+		map<Model*, double, ModelCmp>::iterator mvi = resProbs.begin();
+		while (mvi != resProbs.end())
 		{
-			if (mvi->second < minpp) 
-			{
-				resModes.erase(mvi->first);
-				resProbs.erase(mvi);
-			}
 			if (mvi->second > bestModelProb)
 			{
 				bestModelProb = mvi->second;
 				bestModel = mvi->first;
+			}
+
+			if (mvi->second < minpp) 
+			{
+				resModes.erase(mvi->first);
+				resProbs.erase(mvi++);
+			}
+			else
+			{
+				++mvi;
 			}
 		}
 
