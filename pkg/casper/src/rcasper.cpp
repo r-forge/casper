@@ -32,11 +32,11 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP 
 
 	//Define fragment length/start distributions and create DataFrame
 	//DiscreteDF* fraglen_dist = new DiscreteDF(fraglen, lenvals, nfraglen);	
-	double* fraglens = new double[1];
-        int* lenvals= new int[1];
-        fraglens[0]= 1;
-        lenvals[0]= 200;
-	DiscreteDF* fraglen_dist = new DiscreteDF(fraglens, lenvals, 1);
+	double* fraglens2 = new double[1];
+        int* lenvals2= new int[1];
+        fraglens2[0]= 1;
+        lenvals2[0]= 200;
+	DiscreteDF* fraglen_dist = new DiscreteDF(fraglens2, lenvals2, 1);
 
 	lencdf= Rf_length(fragstaR);
 	startcdf= REAL(fragstaR);
