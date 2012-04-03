@@ -538,7 +538,7 @@ int main() {
 		Model* m = mi->first;
 		if (res3[m] > 0.0001)
 		{
-			const char* code = Model::getModelCode(m, allvariants);
+			const char* code = m->getCodeStr(allvariants);
 			printf("%s\t%f\t%f\t%f\n", code, res1[m], res2[m], res3[m]);
 		}
 	}

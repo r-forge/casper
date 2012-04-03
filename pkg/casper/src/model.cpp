@@ -112,7 +112,7 @@ int Model::gethash()
 	return h;
 }
 
-const char* Model::getModelCode(Model* model, vector<Variant*>* allvariants)
+const char* Model::getCodeStr(vector<Variant*>* allvariants)
 {
 	int n = allvariants->size();
 	char* str = new char[n + 1];
@@ -120,7 +120,7 @@ const char* Model::getModelCode(Model* model, vector<Variant*>* allvariants)
 
 	for (int i = 0; i < (int)allvariants->size(); i++)
 	{
-		if (model->contains(allvariants->at(i)))
+		if (this->contains(allvariants->at(i)))
 		{
 			str[i] = '1';
 		}

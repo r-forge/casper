@@ -37,6 +37,6 @@ public:
 
 	map<Variant*, int, VariantCmp> idmap;
 
-	static const char* getModelCode(Model* model, vector<Variant*>* allvariants);
+	const char* getCodeStr(vector<Variant*>* allvariants);
 private:
 };

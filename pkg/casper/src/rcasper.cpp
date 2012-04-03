@@ -5,7 +5,7 @@
 #include "stdafx.h"
 #include "casper.h"
 #include "rcasper.h"
-#include "seppelsmart.h"
+#include "seppel.h"
 
 int verbose = 1;
 
@@ -293,26 +293,6 @@ void debugmodel(Model* model)
 	}
 	REprintf("\n");
 }
-const char* getmodelcode(vector<Variant*>* allvariants, Model* model)
-{
-	int n = allvariants->size();
-	char* str = new char[n + 1];
-	str[n] = '\0';
-
-	for (int i = 0; i < (int)allvariants->size(); i++)
-	{
-		if (model->contains(allvariants->at(i)))
-		{
-			str[i] = '1';
-		}
-		else
-		{
-			str[i] = '0';
-		}
-	}
-
-	return str;
-}
 
 extern "C"
 {
@@ -402,8 +382,8 @@ extern "C"
 		UNPROTECT(1);		
 		UNPROTECT(1);
 
-		debugdf(df);
-		debugmodel(new Model(initvars));
+		//debugdf(df);
+		//debugmodel(new Model(initvars));
 
 		// END OF INPUT READING
 
@@ -419,29 +399,26 @@ extern "C"
 
 		map<Model*, double, ModelCmp> resProbs;
 		map<Model*, double*, ModelCmp> resModes;
+		
+		Seppel* seppl = new Seppel(df, gene);
 
 		if (method == 1 || method == 0 && df->exons.size() <= 4) 
 		{
-			SeppelExact* sepex = new SeppelExact(df, gene);
-			sepex->calculate();
-			resProbs = sepex->resProbs;
-			resModes = sepex->resModes;
+			seppl->exploreExact();
+			resProbs = seppl->resultPPIntegral();
 		} 
 		else if (method == 3)
 		{
-			SeppelPrior* sepsm = new SeppelPrior(df, gene);
-			sepsm->calculate();
-			resProbs = sepsm->resProbs;
-			resModes = sepsm->resModes;
+			seppl->explorePrior(100000);
+			resProbs = seppl->resultPPIntegral();
 		}
 		else
 		{
 			Model* startmodel = new Model(initvars);
-			SeppelSmart* sepsm = new SeppelSmart(df, gene, startmodel);
-			sepsm->calculate();
-			resProbs = sepsm->resProbs;
-			resModes = sepsm->resModes;
+			seppl->exploreSmart(startmodel, 100000);
+			resProbs = seppl->resultPPMCMC();
 		}
+		resModes = seppl->resultModes();
 
 		vector<Variant*>* allpossvariants = df->allVariants(gene);
 
@@ -486,13 +463,13 @@ extern "C"
 				resProbsR[i]= i;
 				resProbsR[i+nx]= resProbs[m];
 				nrowpi+= m->count();
-				SET_STRING_ELT(VECTOR_ELT(ans,5),i,mkChar(getmodelcode(allpossvariants,m)));  //model name
+				SET_STRING_ELT(VECTOR_ELT(ans,5),i,mkChar(m->getCodeStr(allpossvariants)));  //model name
 			}
 		} else {
 			resProbsR[0]= 0;
 			resProbsR[nx]= resProbs[bestModel];
 			nrowpi+= bestModel->count();
-		        SET_STRING_ELT(VECTOR_ELT(ans,5),0,mkChar(getmodelcode(allpossvariants,bestModel)));  //model name
+			SET_STRING_ELT(VECTOR_ELT(ans,5),0,mkChar(bestModel->getCodeStr(allpossvariants)));  //model name
 		}
 
 		//Report estimated expression
