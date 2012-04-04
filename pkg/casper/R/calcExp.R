@@ -14,7 +14,7 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
   exons <- lapply(genomeDB@genes,function(z) as.integer(names(z)))
   exonwidth <- lapply(genomeDB@genes,width)
 
-  if (!all(geneid %in% names(exons))) stop('geneid not found in genomeDB@exons')
+  if (!all(geneid %in% names(exons))) stop('geneid not found in genomeDB@genes')
   if (!all(geneid %in% names(pc))) stop('geneid not found in pc')
   if (!all(geneid %in% names(genomeDB@transcripts))) stop('geneid not found in genomeDB@transcripts')
 

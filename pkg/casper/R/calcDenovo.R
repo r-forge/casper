@@ -1,6 +1,9 @@
+#########################################################################
+## DEFINITION AND METHODS FOR CLASS denovoGeneExpr AND denovoGenomeExpr
+#########################################################################
+
 require(methods)
 
-#Class denovoGeneExpr
 setClass("denovoGeneExpr", representation(posprob = "data.frame", expression = "data.frame", variants = "RangedData"))
 
 valid_denovoGeneExpr <- function(object) {
@@ -47,6 +50,10 @@ setMethod("show", signature(object="denovoGenomeExpr"), function(object) {
 )
 
 
+#########################################################################
+## Function calcDenovo
+#########################################################################
+
 calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprior, minpp=0.01, selectBest=FALSE, method='auto', verbose=FALSE, mc.cores=1) {
   if (missing(readLength)) stop("readLength must be specified")
   if (class(genomeDB)!='denovoGenome') stop("genomeDB must be of class 'denovoGenome'")
@@ -73,7 +80,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   exons <- lapply(genomeDB@genes,function(z) as.integer(names(z)))
   exonwidth <- lapply(genomeDB@genes,width)
 
-  if (!all(geneid %in% names(exons))) stop('geneid not found in genomeDB@exons')
+  if (!all(geneid %in% names(exons))) stop('geneid not found in genomeDB@genes')
   if (!all(geneid %in% names(pc))) stop('geneid not found in pc')
   if (!all(geneid %in% names(genomeDB@transcripts))) stop('geneid not found in genomeDB@transcripts')
 
