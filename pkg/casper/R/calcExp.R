@@ -1,5 +1,5 @@
 
-calcExp <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mc.cores=1) {
+calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, priorq=3, mc.cores=1) {
   if (missing(readLength)) stop("readLength must be specified")
 #  if (class(genomeDB)!='knownGenome') stop("genomeDB must be of class 'knownGenome'")
   
@@ -41,6 +41,20 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mc.cores
   } else {
     ans <- f(geneid)
     names(ans) <- geneid
+  }
+
+  #Format as ExpressionSet
+  fdata <- data.frame(transcript=as.vector(unlist(lapply(genomeDB@transcripts[geneid],names))), gene=rep(names(ans),sapply(ans,length)))
+  exprsx <- matrix(unlist(ans),ncol=1)
+  rownames(exprsx) <- rownames(fdata) <- fdata$transcript
+  fdata <- new("AnnotatedDataFrame",fdata)
+  ans <- new("ExpressionSet",exprs=exprsx,featureData=fdata)
+
+  #Return absolute expression levels
+  if (!relativeExpr) {
+    nreads <- rep(sapply(pc[geneid],sum),sapply(genomeDB@transcripts[geneid],length))
+    exprs(ans) <- exprs(ans)*nreads
+    exprs(ans) <- t(t(exprs(ans))/colSums(exprs(ans)))
   }
   ans
 }
