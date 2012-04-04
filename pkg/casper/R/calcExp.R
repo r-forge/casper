@@ -1,17 +1,7 @@
 
-#SEXP calcMode          (SEXP exonsR, SEXP exonwidthR, SEXP exongenesR, SEXP transcriptsR, SEXP transgenesR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR)
-
-# new elements: exongenesR, transgenesR
-# does not need: geneidR, nvarPriorR, nexonPriorR, minppR, selectBest, methodR, verboseR
-
-
-#SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP verboseR)
-
-
 calcExp <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mc.cores=1) {
   if (missing(readLength)) stop("readLength must be specified")
 #  if (class(genomeDB)!='knownGenome') stop("genomeDB must be of class 'knownGenome'")
-  if (!(method %in% c('auto','rwmcmc','priormcmc','exact'))) stop("method must be auto, rwmcmc, priormcmc or exact")
   
   #Format input
   startcdf <- as.double(ecdf(distrs$stDis)(seq(0,1,.001)))
@@ -19,7 +9,6 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mc.cores
   lenvals <- as.integer(names(distrs$lenDis))
   readLength <- as.integer(readLength)
   priorq <- as.double(priorq)
-  verbose <- as.integer(verbose)
   if (missing(geneid)) geneid <- names(genomeDB@genes)[sapply(genomeDB@genes,length)>1]
 
   exons <- lapply(genomeDB@genes,function(z) as.integer(names(z)))
@@ -36,7 +25,7 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mc.cores
     exonwidth <- exonwidth[z]
     transcripts <- genomeDB@transcripts[z]
     pc <- pc[z]
-    ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,exongenes=exongenes,transcripts=transcripts,geneid=geneid,pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq)
+    ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,geneid=geneid,pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq)
     ans
   }
 

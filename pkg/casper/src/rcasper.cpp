@@ -133,7 +133,7 @@ extern "C"
 		PROTECT(ansMultiple= allocVector(VECSXP, ngenes));
 
 		for (i=0; i<ngenes; i++) {
-		  ansSingle= calcKnownSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, VECTOR_ELT(geneidR,i), priorqR);
+		  ansSingle= calcKnownSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, geneidR, priorqR);
 		  SET_VECTOR_ELT(ansMultiple,i,ansSingle);
 		}
 		

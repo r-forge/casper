@@ -121,10 +121,6 @@ formatDenovoOut <- function(ans, genesel) {
   new("denovoGeneExpr",posprob=ans$posprob,expression=ans$expression,variants=ans$variants)
 }
 
-#calcDenovoSingle <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, nvarPrior, nexonPrior, priorq, minpp, selectBest, verbose) {
-#  ans <- .Call("calcDenovoSingle",as.integer(exons),as.integer(exonwidth),transcripts,geneid,pc,startcdf,lendis,lenvals,readLength,nvarPrior,nexonPrior,priorq,minpp,selectBest,verbose)
-#  return(ans)
-#}
 
 calcDenovoMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, nvarPrior, nexonPrior, priorq, minpp, selectBest, method, verbose) {
   ans <- .Call("calcDenovoMultiple",exons,exonwidth,transcripts,geneid,pc,startcdf,lendis,lenvals,readLength,nvarPrior,nexonPrior,priorq,minpp,selectBest,method,verbose)
