@@ -56,6 +56,10 @@ void Seppel::explorePrior(int runs)
 			counts[ncasp->model] = 0;
 		}
 	}
+	if (models->size() == 0)
+	{
+		return;
+	}
 
 	int onum = runifdisc(0, models->size() - 1);
 	Model* omodl = models->at(onum);

@@ -276,10 +276,88 @@ Casper* david2()
 
 	return casp;
 }
+Casper* david3()
+{	
+	double* fraglens = new double[1];
+        int* lenvals= new int[1];
+        fraglens[0]= 1;
+        lenvals[0]= 200;
+	DiscreteDF* fraglen_dist = new DiscreteDF(fraglens, lenvals, 1);
 
+	DataFrame* f = new DataFrame(fraglen_dist, fragsta_cumu);
+
+	Exon* e1 = new Exon(2181, 73);
+	Exon* e2 = new Exon(2182, 144);
+	Exon* e3 = new Exon(2183, 4868);
+	Exon* e4 = new Exon(2184, 462);
+	f->addExon(e1);
+	f->addExon(e2);
+	f->addExon(e3);
+	f->addExon(e4);
+
+	Fragment* f0 = new Fragment(1, 1, 500);
+	f0->left[0] = 2181;
+	f0->right[0] = 2181;
+	f->addData(f0);
+	Fragment* f1 = new Fragment(1, 1, 100);
+	f1->left[0] = 2181;
+	f1->right[0] = 2182;
+	f->addData(f1);
+	Fragment* f2 = new Fragment(2, 1, 20);
+	f2->left[0] = 2181;
+	f2->left[1] = 2182;
+	f2->right[0] = 2183;
+	f->addData(f2);
+	Fragment* f3 = new Fragment(1, 1, 200);
+	f3->left[0] = 2182;
+	f3->right[0] = 2182;
+	f->addData(f3);
+	Fragment* f4 = new Fragment(1, 1, 20);
+	f4->left[0] = 2182;
+	f4->right[0] = 2183;
+	f->addData(f4);
+	Fragment* f5 = new Fragment(1, 1, 1000);
+	f5->left[0] = 2183;
+	f5->right[0] = 2183;
+	f->addData(f5);
+	Fragment* f6 = new Fragment(1, 1, 50);
+	f6->left[0] = 2181;
+	f6->right[0] = 2183;
+	f->addData(f6);
+	Fragment* f7 = new Fragment(1, 1, 100);
+	f7->left[0] = 2181;
+	f7->right[0] = 2184;
+	f->addData(f7);
+
+	vector<Exon*>* v1v = new vector<Exon*>();
+	v1v->push_back(e1);
+	v1v->push_back(e2);
+	v1v->push_back(e3);
+
+	vector<Exon*>* v2v = new vector<Exon*>();
+	v2v->push_back(e1);
+	v2v->push_back(e2);
+	v2v->push_back(e3);
+	v2v->push_back(e4);
+
+	Variant* v1 = new Variant(v1v);
+	v1->id = 1;
+	Variant* v2 = new Variant(v2v);
+	v2->id = 2;
+
+	set<Variant*, VariantCmp>* varis = new set<Variant*, VariantCmp>();
+	varis->insert(v1);
+	varis->insert(v2);
+	//varis->push_back(v3);
+
+	Model* model = new Model(varis);
+	Casper* casp = new Casper(model, f);
+
+	return casp;
+}
 int main() 
 {
-	Casper* c = david2();
+	Casper* c = david3();
 		
 	// Mode
 	double* pi = c->calculateMode();
