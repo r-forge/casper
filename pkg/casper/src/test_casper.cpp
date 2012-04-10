@@ -278,10 +278,13 @@ Casper* david2()
 }
 Casper* david3()
 {	
-	double* fraglens = new double[1];
-        int* lenvals= new int[1];
-        fraglens[0]= 1;
-        lenvals[0]= 200;
+	double* fraglens = new double[128];
+        int* lenvals= new int[128];
+		for (int i = 0; i < 128; i++)
+		{
+			fraglens[i] = 1.0 / 128.0;
+			lenvals[i] = 151 + i;
+		}
 	DiscreteDF* fraglen_dist = new DiscreteDF(fraglens, lenvals, 1);
 
 	DataFrame* f = new DataFrame(fraglen_dist, fragsta_cumu);
@@ -349,6 +352,8 @@ Casper* david3()
 	varis->insert(v1);
 	varis->insert(v2);
 	//varis->push_back(v3);
+
+	f->fixUnexplFrags(varis);
 
 	Model* model = new Model(varis);
 	Casper* casp = new Casper(model, f);
