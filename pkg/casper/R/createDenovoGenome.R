@@ -1,31 +1,10 @@
 require(methods)
 
-setClass("denovoGenome", representation(genes = "list", transcripts = "list", exon2gene= "data.frame"))
-
-valid_denovoGenome <- function(object) {
-  msg <- NULL
-  tab <- table(sapply(object@genes,class))
-  if (any(names(tab) != 'IRanges')) msg <- "All elements in genes must be of class IRanges"
-  if (any(!sapply(object@transcripts,is.list))) msg <- "All elements in transcripts must be of class list"
-  if (!(all(c('space','start','end','width','id','gene') %in% names(object@exon2gene)))) msg <- "Incorrect column names in 'exon2gene'"
-  if (is.null(msg)) { TRUE } else { msg }
-}
-
-setValidity("denovoGenome", valid_denovoGenome)
-
-setMethod("show", signature(object="denovoGenome"), function(object) {
-  cat("denovoGenome object with",length(object@genes),"gene islands,",length(object@transcripts),"transcripts and",nrow(object@exon2gene),"exons.\n")
-}
-)
-
-
-
 findNewExons <- function(reads, DB, minReads=1, readLen=NA, stranded=FALSE, pvalFilter=0.05){
   if(is.na(readLen)) stop("No readLen specified")
   if(stranded){
   } else {
-#    exons<-RangedData(exons@unlistData)
-    exons <- DB$exonsNI
+    exons <- DB@exonsNI
     cat("\tCalculating coverage\n")
     cov<-coverage(reads)
     islands<-slice(cov, lower=1)
@@ -35,113 +14,171 @@ findNewExons <- function(reads, DB, minReads=1, readLen=NA, stranded=FALSE, pval
     counts<-round(counts/readLen)
     cat("\tGenerating RangedData\n")
     newisl<-RangedData(IRangesList(start=start(newisl), end=end(newisl)), counts=unlist(counts))
-    newisl<-RangedData(newisl, counts=jj)
     cat("\tFinding p-values\n")
     n<-sum(newisl$counts)
     p<-1/nrow(newisl)
     pvals<-pbinom(newisl$counts - 1, n, p, lower.tail=FALSE )
     newisl[['pvalue']]<-pvals
-    
     newisl <- newisl[newisl[['pvalue']]<=pvalFilter,]
   }
   id<-max(exons$id)+1
   id<-id:(id+nrow(newisl)-1)
   newisl$id<-id
   cat("\tAdding to old exons\n")
-  newisl <- RangedData(IRanges(c(start(exons), end(newisl)), c(end(exons), end(newisl))), space=c(as.character(exons$space), as.character(newisl$space)), id=c(exons$id, newisl$id))
-  
+  newisl <- RangedData(IRanges(c(start(exons), start(newisl)), c(end(exons), end(newisl))), space=c(as.character(exons$space), as.character(newisl$space)), id=c(exons$id, newisl$id))
   return(newisl)
 }
 
 makeIslands <- function(allexs){
-    
-    load("allexs.RData")
-    
-    exons <- allexs 
-    txs <- as.integer(as.factor(names(exons)))
-    totEx <- length(exons)
-    uniex <- unique(exons);
-    nexR <- length(uniex);
-    islands <- rep(0, nexR);
-    
-    dyn.load("casper/pkg/casper/src/casperGamma.so")
-    ans<-.Call("makeGeneIslands", exons, islands, uniex, txs, totEx, nexR)
-    names(ans) <- uniex
-    ans
+  exons <- allexs
+  txs <- as.integer(as.factor(names(exons)))
+  totEx <- length(exons)
+  uniex <- unique(exons)
+  nexR <- length(uniex)
+  islands <- rep(0, nexR)
+  ans<-.Call("makeGeneIslands", exons, islands, uniex, txs, totEx, nexR)
+  names(ans) <- uniex
+  ans
 }
 
-assignExons2Gene <- function(exons, DB, reads, maxDist=5000, stranded=FALSE, mc.cores=1){
-    sel<-exons$id %in% DB$exonsNI$id
-    newex<-exons$id[!sel]
-    
+
+assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLinkDist=100000, stranded=FALSE, mc.cores=1){
+
+  sel<- exons$id %in% DB@exonsNI$id
+  newex<-exons$id[!sel]
 #assign by junctions
-    
-    cat("Finding overlaps between genes and new exons\n")
-    over<-findOverlaps(reads, exons)
-    shits <- subjectHits(over)
-    qhits<- queryHits(over)
-    
+
+  cat("Finding overlaps between genes and new exons\n")
+  reads$id <- as.integer(as.factor(reads$id))
+  over<-findOverlaps(reads, exons)
+  shits <- subjectHits(over)
+  qhits<- queryHits(over)
 #Select new exons
-    exs <- exons$id[shits]
-    sel <- exs %in% newex
-    exs <- exs[sel]
-    
-    cat("Finding junctions of new exons\n")
+
+  exs <- exons$id[shits]
+  sel <- exs %in% newex
+  exs <- exs[sel]
+  cat("\tFinding junctions of new exons\n")
 #Select read ids in these exons
-    rea <- reads$id[qhits]
-    rea <- rea[sel]
-    
+  rea <- reads$id[qhits]
+  rea <- rea[sel]
 #Select all reads with these ids and overlapping exons
-    sel1 <- (1:nrow(reads))[reads$id %in% rea]
-    sel2 <- qhits %in% sel1
-    rea1 <- reads$id[qhits[sel2]]
-    exs1 <- exons$id[shits[sel2]]
-    
-#Find junctions between exons (new to old and new)
-    junx<-tapply(exs1, rea1, unique)
-    exids <- rep(1:length(junx), unlist(lapply(junx, length)))
-    junx<-unname(unlist(junx))
-    names(junx) <- exids
-    
+
+  cat("\tSelecting reads in new exons\n")
+  sel1 <- (1:nrow(reads))[reads$id %in% rea]
+  sel2 <- qhits %in% sel1
+  rea1 <- reads$id[qhits[sel2]]
+  #rea1 <- as.integer(as.factor(rea1))
+  exs1 <- exons$id[shits[sel2]]
+  len <- length(unique(rea1))
+
+  cat("\tCalling joinExons function\n")
+  ans <- .Call("joinExons", exs1, rea1, len)
+  junx <- ans[[1]][ans[[2]]>=minLinks]
+  junx <- strsplit(junx, split=".", fixed=T)
+  names(junx) <- 1:length(junx)
+  nalljunx <- rep(1:length(junx), unlist(lapply(junx, length)))
+  alljunx <- unlist(junx)
+  names(alljunx) <- nalljunx
+
+  tmpex <- as.data.frame(exons)
+  rownames(tmpex) <- tmpex$id
+  tmpex <- tmpex[alljunx,]
+  pos <- (tmpex$end+tmpex$start)/2
+  dis <- tapply(pos, names(alljunx), function(x) (max(x)-min(x) < maxLinkDist ))
+  alljunx <- alljunx[names(dis)[dis]]
+  sing <- newex[!(newex %in% unique(alljunx))]
+  mname <- max(as.numeric(names(alljunx)))
+  names(sing) <- (mname+1):(mname+length(sing)) 
+  alljunx <- c(alljunx, sing)
+
+  cat("\tBuilding new islands\n")
 #Build gene islands
-    txids <- rep(names(DB$newTxs), unlist(lapply(DB$newTxs, length)))
-    oldexs <- unlist(DB$newTxs)
-    names(oldexs)<-txids
-    allexs <- c(oldexs, junx)
-    islands <- makeIslands(allexs) 
+  oldexs <- unlist(DB@transcripts, recursive=F)
+  txids <- sub("[0-9]+\\.", "", names(oldexs))
+  txids <- rep(txids, unlist(lapply(oldexs, length)))
+  oldexs <- unlist(oldexs)
+  names(oldexs) <- txids
+  allexs <- c(oldexs, alljunx)
+  islands <- makeIslands(allexs) 
+  exons$island <- islands[as.character(exons$id)] 
+  
+  cat("Formatting denovo genome\nSplitting genes\n")
+  exon2gene <- as.data.frame(exons)
+  exon2gene$gene <- islands[as.character(exon2gene$id)]
+  rownames(exon2gene) <- exon2gene$id
     
-    cat("Formatting denovo genome\nSplitting genes\n")
-    exon2gene <- as.data.frame(exons)
-    exon2gene$gene <- islands[exon2gene$id]
-    rownames(exon2gene) <- exon2gene$id
-    
-    genes <- split(exon2gene, exon2gene$gene)
-    if(mc.cores>1) {
-        require(multicore)
-        genes<-mclapply(genes, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y}, mc.cores=mc.cores)
-    } else {
-        genes<-lapply(genes, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y})
+  genes <- split(exon2gene, exon2gene$gene)
+
+  if(mc.cores>1) {
+    require(multicore)
+    genes<-mclapply(genes, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y}, mc.cores=mc.cores)
+  } else {
+    genes<-lapply(genes, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y})
+  }
+
+#Link islands by distance
+
+  cat("\tJoining islands by distance\n")
+  old <- exons[!(exons$id %in% newex),]
+  new <- exons[exons$id %in% newex,]
+
+  mapisl <- lapply(names(exons), function(i){
+    if(sum(space(new)==i)>0 & sum(space(old)==i)>0){
+      ne <- distanceToNearest(ranges(new)[[i]], ranges(old)[[i]])
+      ne <- ne[ne$distance < maxDist,]
+      ne$nisl <- new[i]$island[ne$query]
+      ne$oisl <- old[i]$island[ne$subject]
+      rownames(ne) <- new[i]$id[ne$query]
+    } else ne <- NA
+    ne
+  })
+  names(mapisl)<-names(exons)
+
+  newexons <- lapply(names(new), function(i){
+    tmp <- new[i]
+    if(length(mapisl[[i]])>1){
+      sel <- as.character(tmp$id) %in% rownames(mapisl[[i]])
+      map <- match(as.character(tmp$id)[sel], rownames(mapisl[[i]]))
+      tmp$island[sel] <- mapisl[[i]]$oisl[map]
     }
-    
-    cat("Splitting transcripts\n")
-    extxs <- unlist(lapply(DB$newTxs, "[", 1))
-    sel <- exon2gene[extxs,]$gene
-    names(sel) <- names(DB$newTxs)
-    transcripts <- DB$newTxs[names(sel)]
-    transcripts <- split(transcripts, sel)
-    genes <- lapply(names(genes), function(x) list(exons=genes[[x]], transcripts=transcripts[[x]])) 
-    
-    ans <- list(genes=genes, exon2gene=exon2gene)
-    ans
+    tmp
+  }
+  )
+  names(newexons) <- names(new)
+  
+  newexons <- RangedData(IRanges(start=unlist(lapply(newexons, start)), end=unlist(lapply(newexons, end))), space=unlist(lapply(newexons, function(x) as.character(space(x)))), id=unlist(lapply(newexons, "[[", "id")), island=unlist(lapply(newexons, "[[", "island")))
+
+  allexons <- rbind(old, newexons)
+  exon2island <- as.data.frame(allexons)
+  rownames(exon2island) <- exon2island$id
+  islands <- split(exon2island, exon2island$island)
+
+  if(mc.cores>1) {
+    require(multicore)
+    islands <- mclapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y}, mc.cores=mc.cores)
+  } else {
+    islands <- lapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y})
+  }
+
+  cat("Splitting transcripts\n")
+  extxs <- unlist(DB@transcripts, recursive=F)
+  names(extxs) <- sub("[0-9]+\\.", "", names(extxs))
+  sel <- unlist(lapply(extxs, "[", 1))
+  sel <- match(sel, exon2island$id)
+  tx2gene <- exon2gene$island[sel]
+  transcripts <- split(extxs, tx2gene)
+   
+  ans <- new("annotatedGenome", islands=islands, transcripts=transcripts, exon2island=exon2island, exonsNI=exons, txStrand=DB@txStrand, aliases=DB@aliases, denovo=TRUE)
+  ans
 }
 
       
-createDenovoGenome <- function(reads, DB, readLen, stranded, mc.cores=1){
+createDenovoGenome <- function(reads, DB, readLen, stranded,  minLinks, maxLinkDist, maxDist, mc.cores=1){
   cat("Finding new exons\n")
   newex <- findNewExons(reads, DB, readLen=readLen, pvalFilter=0.05)
   cat("Done...\nCreating denovo genome\n")
-  denovo <- assignExons2Gene(newex, DB, reads, maxDist=5000, stranded=stranded, mc.cores=mc.cores)
-  denovo <- new("denovoGenome",genes=denovo$genes,transcripts=denovo$transcripts,exon2gene=denovo$exon2gene)
+  denovo <- assignExons2Gene(newex, DB, reads, maxDist=5000, stranded=stranded, minLinks=2, maxLinkDist=100000, mc.cores=mc.cores)
   denovo
 }
 
