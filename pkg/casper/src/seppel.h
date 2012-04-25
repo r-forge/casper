@@ -7,18 +7,17 @@ public:
 
 	double calcIntegral(Model* model);
 
-	// calculate posterior probability of all possible models
-	void exploreExact();
-	//
-	void explorePrior(int runs);
-	// does metropolis hastings given a start model, uses SeppelSmartDist as proposal
-	void exploreSmart(Model* startmodel, int runs);
+	void exploreExact(); // exhaustive enumeration of all possible models
+	void exploreUnif(int runs); //Metropolis-Hastings MCMC with independent proposals (uniform)
+	void exploreSmart(Model* startmodel, int runs); // Metropolis-Hastings MCMC with random walk (uses SeppelSmartDist as proposal)
 
 	map<Model*, double*, ModelCmp> resultModes();
-	map<Model*, double, ModelCmp> resultPPIntegral();
+	map<Model*, double, ModelCmp> resultPPIntegral();  //compute post prob using marginal likelihoods. Sets integralSum & integralMax
 	map<Model*, double, ModelCmp> resultPPMCMC();
 
 	static double* normalizeIntegrals(double* values, int n);
+	double integralSum; //sum integrals/exp(integralMax)
+	double integralMax; //maximum log(integrals), i.e. log(marginal likelihood) + log(prior)
 
 private:
 	DataFrame* frame;

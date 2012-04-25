@@ -42,7 +42,7 @@ void Seppel::exploreExact()
 		calcIntegral(model);
 	}
 }
-void Seppel::explorePrior(int runs)
+void Seppel::exploreUnif(int runs)
 {
 	vector<Model*>* allmodels = frame->allModels();
 	vector<Model*>* models = new vector<Model*>();
@@ -147,7 +147,7 @@ map<Model*, double, ModelCmp> Seppel::resultPPIntegral()
 {
 	map<Model*, double, ModelCmp> probs;
 
-	double imax = -DBL_MAX;
+	integralMax = -DBL_MAX;
 	
 	map<Model*, double, ModelCmp>::const_iterator mi;
 	for (mi = integrals.begin(); mi != integrals.end(); mi++)
@@ -156,19 +156,19 @@ map<Model*, double, ModelCmp> Seppel::resultPPIntegral()
 		{
 			continue;
 		}
-		imax = max(mi->second, imax);
+		integralMax = max(mi->second, integralMax);
 	}
 
-	double asum = 0;
+	integralSum = 0;
 	for (mi = integrals.begin(); mi != integrals.end(); mi++)
 	{
 		if (mi->second == 1)
 		{
 			continue;
 		}
-		asum += exp(mi->second - imax);
+		integralSum += exp(mi->second - integralMax);
 	}
-	double lsum = imax + log(asum);
+	double lsum = integralMax + log(integralSum);
 
 	for (mi = integrals.begin(); mi != integrals.end(); mi++) 
 	{

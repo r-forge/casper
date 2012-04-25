@@ -111,7 +111,7 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
   # - obs: list. Element i is the empirical distribution of nb variants for genes with i exons
   # - pred: list with predicted distributions
 
-  require(VGAM)
+  #require(VGAM)
 
   sel <- as.numeric(rownames(tab))>maxExons
   extrapolate <- tab[sel,]
@@ -139,7 +139,7 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
 
   #smooth parameter estimates for genes with >=10 exons
   if (smooth==TRUE) {
-    require(mgcv)
+    #require(mgcv)
     m <- bbpar[2:nrow(tab),1]/rowSums(bbpar)[2:nrow(tab)]
     m <- data.frame(logitm= log(m/(1-m)), E= as.numeric(rownames(bbpar)[2:nrow(tab)]))
     fit <- gam(logitm ~ s(E, sp= -1), data=m)

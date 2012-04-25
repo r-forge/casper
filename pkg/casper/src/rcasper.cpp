@@ -169,7 +169,7 @@ extern "C"
 		return Rc;
 	}
 
-  SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP verboseR) 
+  SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP niterR, SEXP exactMarginalR, SEXP verboseR) 
 	{
 		//De novo isoform discovery and estimate expression for multiple genes. Calls calcDenovoSingle repeadtedly
 		int i, ngenes=LENGTH(geneidR);
@@ -178,71 +178,58 @@ extern "C"
 		PROTECT(ansMultiple= allocVector(VECSXP, ngenes));
 
 		for (i=0; i<ngenes; i++) {
-		  ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, VECTOR_ELT(geneidR,i), nvarPriorR, nexonPriorR, priorqR, minppR, selectBest, methodR, verboseR);
-			SET_VECTOR_ELT(ansMultiple,i,ansSingle);
+		  ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, nvarPriorR, nexonPriorR, priorqR, minppR, selectBest, methodR, niterR, exactMarginalR, verboseR);
+		  SET_VECTOR_ELT(ansMultiple,i,ansSingle);
 		}
 		
 		UNPROTECT(1);
 		return ansMultiple;
 	}
 
-  SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP geneidR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP verboseR)
+  SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP niterR, SEXP exactMarginalR, SEXP verboseR)
 	{
-		//De novo isoform discovery and estimate expression for a single gene
-		//Input
-		// - exons: vector with exon ids
-		// - exonwidth: vector exon widths
-		// - geneid: integer with gene id
-		// - transcripts: list of transcripts. Names indicate transcript id. Each element contains list of exon ids. Used to initialize model
-		// - pathCounts: vector with path counts. Names indicate series of visited exons e.g. e1.e2-e5
-		// - fragsta: function that returns start distrib cdf
-		// - fraglen: vector with fragment length distrib, i.e. P(length=lenvals[0]),P(length=lenvals[1]),... up to max length
-		// - lenvals: vector with possibles values for length
-		// - readLength: read length
-		// - nvarPrior: prior prob of nb expressed variants. i^th elem has NegBinom param for genes with i exons
-		// - nexonPrior: prior prob of nb exons in a variant. i^th elem has Beta-Binomial param for genes with i exons
-		// - priorq: prior on model-specific parameters pi ~ Dirichlet(priorq)
-		// - minpp: only models with post prob >= minpp are reported
-		// - selectBest: set to !=0 to return only results for model with highest posterior probability
-	        // - methodR: set to 1 for exact; 2 for random walk MCMC; 3 for prior proposal MCMC; 0 for auto (exact for genes with <=4 exons, RW-MCMC for >4 exons)
-		// - verbose: set verbose != 0 to print warnings & progress info
+	//De novo isoform discovery and estimate expression for a single gene
+	//Input
+	// - exons: vector with exon ids
+	// - exonwidth: vector exon widths
+	// - transcripts: list of transcripts. Names indicate transcript id. Each element contains list of exon ids. Used to initialize model
+	// - pathCounts: vector with path counts. Names indicate series of visited exons e.g. e1.e2-e5
+	// - fragsta: function that returns start distrib cdf
+	// - fraglen: vector with fragment length distrib, i.e. P(length=lenvals[0]),P(length=lenvals[1]),... up to max length
+	// - lenvals: vector with possibles values for length
+	// - readLength: read length
+	// - nvarPrior: prior prob of nb expressed variants. i^th elem has NegBinom param for genes with i exons
+	// - nexonPrior: prior prob of nb exons in a variant. i^th elem has Beta-Binomial param for genes with i exons
+	// - priorq: prior on model-specific parameters pi ~ Dirichlet(priorq)
+	// - minpp: only models with post prob >= minpp are reported
+	// - selectBest: set to !=0 to return only results for model with highest posterior probability
+	// - methodR: 1 is exhaustive enumeration; 2 random walk MCMC; 3 prior proposal MCMC; 0 auto (exhaustive for <=4 exons, RW-MCMC otherwise)
+	// - niter: number of mcmc iterations
+	// - exactMarginal: set to 0 to estimate post prob from proportion of MCMC visits; set to 1 to use marginal likelihoods of MCMC visited models
+	// - verbose: set verbose != 0 to print warnings & progress info
 
-		int geneid = INTEGER(geneidR)[0];
-		int selBest = INTEGER(selectBest)[0];
-		double minpp = REAL(minppR)[0];
-		double priorq = REAL(priorqR)[0];
-                int method= INTEGER(methodR)[0];
-		verbose = INTEGER(verboseR)[0];
+	  int  selBest = INTEGER(selectBest)[0], method= INTEGER(methodR)[0], verbose = INTEGER(verboseR)[0], niter= INTEGER(niterR)[0];
+	  int exactMarginal= INTEGER(exactMarginalR)[0];
+	  double minpp = REAL(minppR)[0], priorq = REAL(priorqR)[0];
 
-		SEXP exongenesR;
-		PROTECT(exongenesR = allocVector(INTSXP, LENGTH(exonsR)));
-		for (int i = 0; i < LENGTH(exonsR); i++) INTEGER(exongenesR)[i] = geneid;
+	  DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR);  //read input
+	  set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR); //initialize model
 
-		DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR);
-		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR);
+	  //df->debugprint();
+	  //Model* tmpm = new Model(initvars);
+	  //tmpm->debugprint();
 
-		UNPROTECT(1);	
+	  int discarded = df->fixUnexplFrags(initvars); //add variants to initial model
+	  if (verbose > 0) Rprintf("discarded %i fragments\n", discarded);
+	  //Model* tmp2 = new Model(initvars);
+	  //tmp2->debugprint();
 
-		df->debugprint();
-		Model* tmpm = new Model(initvars);
-		tmpm->debugprint();
+	  Casper::priorq = priorq;
 
-		// END OF INPUT READING
-
-		int discarded = df->fixUnexplFrags(initvars);
-		Model* tmp2 = new Model(initvars);
-		tmp2->debugprint();
-		if (verbose > 0)
-		{
-			Rprintf("discarded %i fragments\n", discarded);
-		}
-
-		Casper::priorq = priorq;
-
-		map<Model*, double, ModelCmp> resProbs;
-		map<Model*, double*, ModelCmp> resModes;
+	  map<Model*, double, ModelCmp> resProbs;
+	  map<Model*, double*, ModelCmp> resModes;
 		
-		Seppel* seppl = new Seppel(df);
+	  Seppel* seppl = new Seppel(df);
 
 		if (method == 1 || method == 0 && df->exons.size() <= 4) 
 		{
@@ -251,14 +238,22 @@ extern "C"
 		} 
 		else if (method == 3)
 		{
-			seppl->explorePrior(100000);
-			resProbs = seppl->resultPPMCMC();
+			seppl->exploreUnif(niter);
+			if (exactMarginal) {
+			  resProbs= seppl->resultPPIntegral();
+			} else {
+			  resProbs = seppl->resultPPMCMC();
+			}
 		}
 		else
 		{
 			Model* startmodel = new Model(initvars);
-			seppl->exploreSmart(startmodel, 100000);
-			resProbs = seppl->resultPPMCMC();
+			seppl->exploreSmart(startmodel, niter);
+			if (exactMarginal) {
+			  resProbs= seppl->resultPPIntegral();
+			} else {
+			  resProbs = seppl->resultPPMCMC();
+			}
 		}
 		resModes = seppl->resultModes();
 
@@ -292,7 +287,7 @@ extern "C"
 		// END OF FILTERING
 		
 		SEXP ans;
-		PROTECT(ans= allocVector(VECSXP, 6));
+		PROTECT(ans= allocVector(VECSXP, 8));
 
 		//Report posterior probabilities
 		int i;
@@ -379,6 +374,14 @@ extern "C"
 				rowid++;
 			}
 		}
+
+		//Report sum (integrated likelihood * prior)/exp(integralMax) across all models
+		SET_VECTOR_ELT(ans,6, allocVector(REALSXP,2));
+		REAL(VECTOR_ELT(ans,6))[0]= seppl->integralSum;
+		REAL(VECTOR_ELT(ans,6))[1]= seppl->integralMax;
+
+		SET_VECTOR_ELT(ans,7, allocVector(INTSXP,1));
+		INTEGER(VECTOR_ELT(ans,7))[0]= discarded;
 
 		UNPROTECT(1);
 		return(ans);

@@ -141,10 +141,10 @@ void Model::debugprint()
 	for (vi = items.begin(); vi != items.end(); vi++)
 	{
 		Variant* v = *vi;
-		printf("%i\t%i\n", v->id, v->exonCount);
+		printf("Var id; Nb. exons\n%i\t%i\n", v->id, v->exonCount);
 		for (int e = 0; e < v->exonCount; e++)
 		{
-			printf("%i\n", v->exons[e]->id);
+			printf("  %i\n", v->exons[e]->id);
 		}
 	}
 	printf("\n");

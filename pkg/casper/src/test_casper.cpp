@@ -375,7 +375,7 @@ int main()
 	printf("\n");
 	
 	vector<Variant*>* allvariants = c->frame->allVariants();
-	vector<Model*>* allmodels = c->frame->allModels();
+	//vector<Model*>* allmodels = c->frame->allModels();
 	
 	/*Model* center = allmodels->at(20);
 	printf("%s, %i\n", center->getCodeStr(allvariants), center->count());
@@ -421,7 +421,7 @@ int main()
 	printf("EXACT\n");
 
 	Seppel* sep2 = new Seppel(c->frame);
-	sep2->explorePrior(100000);
+	sep2->exploreUnif(100000);
 	map<Model*, double, ModelCmp> res2 = sep2->resultPPMCMC();
 
 	printf("PRIOR\n");
