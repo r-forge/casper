@@ -10,6 +10,8 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <vector>
+using namespace std;
 
 #if !defined(M_PI)
 #define M_PI (3.1415926535897932385)
@@ -153,8 +155,8 @@ double trigamma(double x);
 double polygamma(double x, long n, double low, double high, long terms, double nfact); //from S Poetry
 double lnbeta(double a, double b); //log of Beta function
 double betacf(double a, double b, double x); //continued fraction for incomplete Beta function
-double lnchoose(int n, int k);
-double choose(int n, int k);
+double lnchoose(double n, double k);
+double choose(double n, double k);
 
 double logit(double x);
 double ilogit(double x);
@@ -234,10 +236,16 @@ void sampled_wr(double *x, int popsize, int n); //same for vector of doubles
 void setseed(long, long);
 int rdisc(double *probs, int nvals);
 double gamdev(double );
+
+// Binomial, Multinomial
 int rbinomial(int , double );
 double dbinomial(int x, int n, double p, int logscale);
+double dnegbinomial(int x, double r, double p, int logscale); //r: number of failures; p: success prob
 void rmultinomial(int, int, double *, int *);
-double bbPrior(int k, int p, double alpha, double beta, int logscale);
+
+// Binomial related
+double bbPrior(int k, int p, double alpha, double beta, int logscale); //Beta-Binomial, does not include the binomial coefficient
+double dpoissonbin(int x, vector<double> *successProbs, vector<int> *nvars, int logscale, vector<double> *Tvector, vector<double> *poibinProbs); //Poisson-Binomial pmf. Result in poibinProbs[x]
 
 // Uniform
 double runif();

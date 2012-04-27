@@ -30,6 +30,7 @@ class Casper
   static double priorq;
 
  private:
+
   map<Fragment*, map<Variant*, double> > mempprobs;
   map<Variant*, map<Fragment*, double> > memvprobs;
 

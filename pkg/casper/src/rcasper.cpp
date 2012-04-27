@@ -169,7 +169,7 @@ extern "C"
 		return Rc;
 	}
 
-  SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP niterR, SEXP exactMarginalR, SEXP verboseR) 
+  SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP modelUnifPriorR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP niterR, SEXP exactMarginalR, SEXP verboseR) 
 	{
 		//De novo isoform discovery and estimate expression for multiple genes. Calls calcDenovoSingle repeadtedly
 		int i, ngenes=LENGTH(geneidR);
@@ -178,7 +178,8 @@ extern "C"
 		PROTECT(ansMultiple= allocVector(VECSXP, ngenes));
 
 		for (i=0; i<ngenes; i++) {
-		  ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, nvarPriorR, nexonPriorR, priorqR, minppR, selectBest, methodR, niterR, exactMarginalR, verboseR);
+		  int nexons= min(LENGTH(VECTOR_ELT(exonsR,i)), LENGTH(nvarPriorR));
+		  ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, modelUnifPriorR, VECTOR_ELT(nvarPriorR,nexons-1), VECTOR_ELT(nexonPriorR,nexons-1), priorqR, minppR, selectBest, methodR, niterR, exactMarginalR, verboseR);
 		  SET_VECTOR_ELT(ansMultiple,i,ansSingle);
 		}
 		
@@ -186,7 +187,7 @@ extern "C"
 		return ansMultiple;
 	}
 
-  SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP niterR, SEXP exactMarginalR, SEXP verboseR)
+  SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP modelUnifPriorR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP niterR, SEXP exactMarginalR, SEXP verboseR)
 	{
 	//De novo isoform discovery and estimate expression for a single gene
 	//Input
@@ -198,8 +199,9 @@ extern "C"
 	// - fraglen: vector with fragment length distrib, i.e. P(length=lenvals[0]),P(length=lenvals[1]),... up to max length
 	// - lenvals: vector with possibles values for length
 	// - readLength: read length
-	// - nvarPrior: prior prob of nb expressed variants. i^th elem has NegBinom param for genes with i exons
-	// - nexonPrior: prior prob of nb exons in a variant. i^th elem has Beta-Binomial param for genes with i exons
+        // - modelUnifPrior: when set to FALSE use a uniform prior on the model space (nvarPrior & nexonPrior are ignored)
+	// - nvarPrior: vector with NegBinom parameters for prior prob of nb expressed variants
+	// - nexonPrior: vector with Beta-Binomial param for prior prob of nb exons in a variant
 	// - priorq: prior on model-specific parameters pi ~ Dirichlet(priorq)
 	// - minpp: only models with post prob >= minpp are reported
 	// - selectBest: set to !=0 to return only results for model with highest posterior probability
@@ -212,7 +214,7 @@ extern "C"
 	  int exactMarginal= INTEGER(exactMarginalR)[0];
 	  double minpp = REAL(minppR)[0], priorq = REAL(priorqR)[0];
 
-	  DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR);  //read input
+	  DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR); //read input
 	  set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR); //initialize model
 
 	  //df->debugprint();
@@ -228,8 +230,13 @@ extern "C"
 
 	  map<Model*, double, ModelCmp> resProbs;
 	  map<Model*, double*, ModelCmp> resModes;
-		
-	  Seppel* seppl = new Seppel(df);
+
+	  Seppel* seppl;
+	  if (INTEGER(modelUnifPriorR)[0]) {
+	    seppl= new Seppel(df);
+	  } else {
+	    seppl = new Seppel(df, REAL(nvarPriorR), REAL(nexonPriorR));
+	  }
 
 		if (method == 1 || method == 0 && df->exons.size() <= 4) 
 		{

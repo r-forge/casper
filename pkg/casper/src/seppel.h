@@ -4,6 +4,7 @@ class Seppel
 {
 public:
 	Seppel(DataFrame* frame);
+	Seppel(DataFrame* frame, double* nvarPrior, double* nexonPrior);
 
 	double calcIntegral(Model* model);
 
@@ -19,8 +20,13 @@ public:
 	double integralSum; //sum integrals/exp(integralMax)
 	double integralMax; //maximum log(integrals), i.e. log(marginal likelihood) + log(prior)
 
+	double calculatePrior(Model* model); //compute log-prior probability
+
 private:
 	DataFrame* frame;
+
+	vector<double> priorpNbExons; //log prior prob for a single variant to have 1,2... exons
+	vector<double> priorpNbVars;  //log prior prob for 1,2... variants
 
 	map<Model*, double, ModelCmp> counts;
 	map<Model*, double, ModelCmp> integrals;

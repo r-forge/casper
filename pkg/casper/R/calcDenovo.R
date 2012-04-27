@@ -64,7 +64,16 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   if (!genomeDB@denovo) stop("genomeDB must be a de novo annotated genome. Use createDenovoGenome")
   if (class(pc)!="pathCounts") stop("pc must be of class 'pathCounts'")
   if (!pc@denovo) stop("pc must be computed using a genome annotated de novo")
-  if (!all(c('nvarPrior','nexonPrior') %in% names(mprior))) stop("Incorrect mprior. Please use modelPrior to generate it.")
+  if (!missing(mprior)) {
+    if (!all(c('nvarPrior','nexonPrior') %in% slotNames(mprior))) stop("Incorrect mprior. Please use modelPrior to generate it.")
+    modelUnifPrior <- as.integer(0)
+    nvarPrior <- as.list(data.frame(t(mprior@nvarPrior$nbpar)))
+    nexonPrior <- as.list(data.frame(t(mprior@nexonPrior$bbpar)))
+  } else {
+    nvarPrior <- list(nbpar=matrix(c(0,0),nrow=1),obs=NA,pred=NA)
+    nexonPrior <- list(bbpar=matrix(c(0,0),obs=NA,pred=NA))
+    modelUnifPrior <- as.integer(1)
+  }
   if (!(method %in% c('auto','rwmcmc','priormcmc','exact'))) stop("method must be auto, rwmcmc, priormcmc or exact")
   
   #Format input
@@ -73,9 +82,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   lenvals <- as.integer(names(distrs$lenDis))
   readLength <- as.integer(readLength)
   priorq <- as.double(priorq)
-  nvarPrior <- as.list(data.frame(t(mprior$nvarPrior$nbpar)))
   nvarPrior <- lapply(nvarPrior,as.double)
-  nexonPrior <- as.list(data.frame(t(mprior$nexonPrior$bbpar)))
   nexonPrior <- lapply(nexonPrior,as.double)
   minpp <- as.double(minpp)
   selectBest <- as.integer(selectBest)
@@ -100,7 +107,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
     exonwidth <- exonwidth[z]
     transcripts <- genomeDB@transcripts[z]
     pc <- pc@counts[z]
-    ans <- calcDenovoMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,geneid=as.list(geneid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,nvarPrior=nvarPrior,nexonPrior=nexonPrior,priorq=priorq,minpp=minpp,selectBest=selectBest,method=method,niter=niter,exactMarginal=exactMarginal,verbose=verbose)
+    ans <- calcDenovoMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,geneid=as.list(geneid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,modelUnifPrior=modelUnifPrior,nvarPrior=nvarPrior,nexonPrior=nexonPrior,priorq=priorq,minpp=minpp,selectBest=selectBest,method=method,niter=niter,exactMarginal=exactMarginal,verbose=verbose)
     mapply(function(z1,z2) formatDenovoOut(z1,z2), ans, genomeDB@islands[z], SIMPLIFY=FALSE)
   }
 
@@ -170,8 +177,8 @@ formatDenovoOut <- function(ans, genesel) {
 }
 
 
-calcDenovoMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, nvarPrior, nexonPrior, priorq, minpp, selectBest, method, niter, exactMarginal, verbose) {
-  ans <- .Call("calcDenovoMultiple",exons,exonwidth,transcripts,geneid,pc,startcdf,lendis,lenvals,readLength,nvarPrior,nexonPrior,priorq,minpp,selectBest,method,niter,exactMarginal,verbose)
+calcDenovoMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, modelUnifPrior, nvarPrior, nexonPrior, priorq, minpp, selectBest, method, niter, exactMarginal, verbose) {
+  ans <- .Call("calcDenovoMultiple",exons,exonwidth,transcripts,geneid,pc,startcdf,lendis,lenvals,readLength,modelUnifPrior,nvarPrior,nexonPrior,priorq,minpp,selectBest,method,niter,exactMarginal,verbose)
   return(ans)
 }
 

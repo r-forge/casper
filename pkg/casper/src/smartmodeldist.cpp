@@ -126,7 +126,6 @@ void SmartModelDist::buildrmtable()
 
 Variant* SmartModelDist::makevar()
 {
-	int rv = runifdisc(0, center->items.size() - 1);
 
 	vector<Exon*>* nex = new vector<Exon*>();
 	for (unsigned int i = 0; i < frame->exons.size(); i++)

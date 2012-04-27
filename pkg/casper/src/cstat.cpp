@@ -1413,12 +1413,11 @@ double betacf(double a, double b, double x) {
   return(h);
 }
 
-double lnchoose(int n, int k) {
-  double a= 1.0+n-k, b= 1.0+k;
-  return lnbeta(a,b) - log(1.0+n);
+double lnchoose(double n, double k) {
+  return -lnbeta(1.0+n-k,1.0+k) - log(1.0+n);
 }
 
-double choose(int n, int k) { return exp(lnchoose(n,k)); }
+double choose(double n, double k) { return exp(lnchoose(n,k)); }
 
 double logit(double x) { return(log(x/(1-x))); }
 
@@ -2340,7 +2339,14 @@ int rbinomial(int n, double p)
 
 double dbinomial(int x, int n, double p, int logscale) {
   double ans;
-  ans= lnchoose(n,x) + (x+.0)*log(p) + (n-x+.0)*log(1-p);
+  ans= lnchoose((double) n, (double) x) + (x+.0)*log(p) + (n-x+.0)*log(1-p);
+  if (logscale==1) return(ans); else return(exp(ans));
+}
+
+double dnegbinomial(int x, double r, double p, int logscale) {
+  double ans;
+ //r: number of failures; p: success prob
+  ans= lnchoose(x + r -1.0,(double) x) + (x+.0)*log(p) + r*log(1-p);
   if (logscale==1) return(ans); else return(exp(ans));
 }
 
@@ -2385,6 +2391,61 @@ double bbPrior(int k, int p, double alpha, double beta, int logscale) {
   return(ans);
 }
 
+//Poisson-Binomial probability mass function. 
+// Computes P(X=x), where X= X_1 + ... + X_n and X_i ~ Ber(p_i) indep
+// The routine allows for groups of X_i's to have the same success probability
+// Input:
+// - x: value at which to evaluate the pmf
+// - successProbs: vector containing the distinct success probabilities
+// - nvars: nvars[i] is the number of X_i's sharing successProbs[i] (so nvars->size() must be equal to successProbs->size()). Set all values to 1 if no X_i's share success prob
+// - logscale: set to 1 to return log-pmf
+// Input/Output:
+// - T: vector with partial computations needed to obtain the pmf. It is returned so that it can be used in successive calls to dpoissonbin and save computation time 
+// - poibinProbs: at output, vector with log P(X=0), ..., P(X=x). These are computed using a recursive formula and can be re-used in successive calls.
+//
+// Example
+//
+// vector<double> *successProbs, *Tvector, *poibinProbs;
+// successProbs->push_back(0.1); successProbs->push_back(0.2); successProbs->push_back(0.3);
+// vector<int> *nvars;
+// for (int i=1; i<= successProbs->size(); i++) nvars->push_back(1);
+//
+// dpoissonbin(1, successProbs, nvars, 1, Tvector, poibinProbs); //Tvector and poibinProbs are uninitialized
+// dpoissonbin(3, successProbs, nvars, 1, Tvector, poibinProbs); //previous Tvector and poibinProbs are re-used, new elements are added
+double dpoissonbin(int x, vector<double> *successProbs, vector<int> *nvars, int logscale, vector<double> *Tvector, vector<double> *poibinProbs) {
+  int npoibinProbs= poibinProbs->size(), nsuccessProbs= successProbs->size(); 
+  double ans;
+  if (npoibinProbs > x) {
+    ans= poibinProbs->at(x);
+  } else {
+    if (x==0) {
+      ans = 0;
+      for (int k=0; k < nsuccessProbs; k++) ans += nvars->at(k) * log(1 - successProbs->at(k));
+      poibinProbs->push_back(ans);
+    } else {
+      int i;
+      double tmp;
+      //Compute Tvector
+      for (i= Tvector->size(); i <= x; i++) {
+	tmp= 0;
+	for (int k=0; k < nsuccessProbs; k++) {
+	  tmp += exp( log((double) nvars->at(k)) + (i+.0) * (log(successProbs->at(k) - log(1- successProbs->at(k)))) );
+	}
+	Tvector->push_back(tmp);
+      }
+      //Compute probabilities recursively
+      for (i=1, ans=0; i <= x; i++) {
+	tmp= dpoissonbin(x-i, successProbs, nvars, 0, Tvector, poibinProbs) * Tvector->at(i-1);
+	if ((i % 2)==0) tmp = -tmp;
+	ans += tmp;
+      }
+      ans = log(ans) - log(x+.0);
+      poibinProbs->push_back(ans);
+    }
+  }
+  if (logscale==0) ans= exp(ans);
+  return(ans);
+}
 
 // Draw from univariate Normal(mu,s^2)
 double rnormC(double mu, double s) {

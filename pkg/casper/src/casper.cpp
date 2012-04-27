@@ -89,6 +89,7 @@ double Casper::calculateIntegral(double *mode, int n)
     return integral;
 }
 
+
 bool Casper::isValid()
 {
 	list<Fragment*>::const_iterator fi;
