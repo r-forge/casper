@@ -4,31 +4,26 @@
 Seppel::Seppel(DataFrame* frame)
 {
   this->frame = frame;
-
-  //Uniform prior on number of exons in a variant
-  for (unsigned int i=1; i<= frame->exons.size(); i++) {
-    priorpNbExons.push_back( 0.0 );
-  }
-
-  //Uniform prior on number of variants in the model (truncated to <=1000)
-  int imax= (int) min(pow(2, frame->exons.size()) -1, 1000.0);
-  for (int i=1; i<= imax; i++) {
-    priorpNbVars.push_back( 0.0 );
-  }
-
+  this->modelUnifPrior= 1;
 }
 
 Seppel::Seppel(DataFrame* frame, double* nvarPrior, double* nexonPrior) 
 {
+  int E= frame->exons.size();
+  double tmp= 0;
+
   this->frame = frame;
+  this->modelUnifPrior= 0;
 
   //Prior on number of exons in a variant
-  for (unsigned int i=1; i<= frame->exons.size(); i++) {
-    priorpNbExons.push_back( bbPrior(i, frame->exons.size(), nexonPrior[0], nexonPrior[1], 1) );
+  for (int i=1; i<= E; i++) {
+    tmp= lnbeta(nexonPrior[0] +i, nexonPrior[1] +E -i) - lnbeta(nexonPrior[0],nexonPrior[1]) - lnchoose((double) E, (double) i);
+    priorpNbExons.push_back( exp(tmp) );
+    nvarsPoibin.push_back((int) choose(E,i+1));
   }
 
   //Prior on number of variants in the model (truncated to <=1000)
-  int imax= (int) min(pow(2, frame->exons.size()), 1000.0);
+  int imax= (int) min(pow(2, E), 1000.0);
   double prob= 1-nvarPrior[0]; //success probability (from R we pass failure prob)
   for (int i=1; i<= imax; i++) {
     priorpNbVars.push_back( dnegbinomial(i, nvarPrior[1], prob, 1) );
@@ -265,10 +260,30 @@ double* Seppel::normalizeIntegrals(double* values, int n)
 
 double Seppel::calculatePrior(Model* model) {
   double ans;
-  ans= priorpNbVars[min(model->count()-1,999)];  //nb variants in the model
-  for (int i=0; i<= model->count(); i++) {
-    Variant* v= model->get(i); //returns variant i
-    ans+= priorpNbExons[v->exonCount]; //nb exons in the variant
+
+  if (modelUnifPrior==1) {
+    ans= 0;
+  } else {
+    int E= frame->exons.size();
+
+    //Prior on nb variants in the model
+    ans= priorpNbVars[min(model->count()-1,999)];
+
+    //Frequency of variants with 1,2,... exons
+    vector<int> Sk (E,0);
+    for (int i=0; i<= model->count(); i++) {  
+      Variant* v= model->get(i); //returns variant i
+      Sk[v->exonCount -1]++;
+    }
+    vector<int> Fk (E);
+    for (int i=0; i< E; i++) Fk[i]= nvarsPoibin[i] - Sk[i];
+
+    //Prior on nb exons per variant
+    for (int i=0; i< E; i++) {
+      ans += Sk[i] * log(priorpNbExons[i]) + Fk[i] * log(1-priorpNbExons[i]);
+    }
+    ans -= dpoissonbin(model->count(), &priorpNbExons, &nvarsPoibin, 1, Tvector, poibinProbs);
   }
+
   return ans;
 }

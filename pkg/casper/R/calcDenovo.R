@@ -71,7 +71,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
     nexonPrior <- as.list(data.frame(t(mprior@nexonPrior$bbpar)))
   } else {
     nvarPrior <- list(nbpar=matrix(c(0,0),nrow=1),obs=NA,pred=NA)
-    nexonPrior <- list(bbpar=matrix(c(0,0),obs=NA,pred=NA))
+    nexonPrior <- list(bbpar=matrix(c(0,0),nrow=1),obs=NA,pred=NA)
     modelUnifPrior <- as.integer(1)
   }
   if (!(method %in% c('auto','rwmcmc','priormcmc','exact'))) stop("method must be auto, rwmcmc, priormcmc or exact")
