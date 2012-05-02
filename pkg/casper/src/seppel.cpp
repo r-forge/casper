@@ -275,8 +275,6 @@ double Seppel::calculatePrior(Model* model) {
 
     if (nbVars > (int) priorpNbVars.size()) {  //nb variants > min(2^E -1, 1000) has 0 prob
 
-      double ans= -std::numeric_limits<double>::infinity(); //debug
-      ans= exp(ans); //debug
       return -std::numeric_limits<double>::infinity();
 
     } else {
