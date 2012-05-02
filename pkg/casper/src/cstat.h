@@ -236,6 +236,7 @@ void sampled_wr(double *x, int popsize, int n); //same for vector of doubles
 void setseed(long, long);
 int rdisc(double *probs, int nvals);
 double gamdev(double );
+double dpoisson(int x, double mu, int logscale);
 
 // Binomial, Multinomial
 int rbinomial(int , double );

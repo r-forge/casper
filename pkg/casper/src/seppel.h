@@ -29,8 +29,8 @@ private:
 	vector<double> priorpNbExons; //prior prob for a single variant to have 1,2... exons
 	vector<double> priorpNbVars;  //log prior prob for 1,2... variants
 	vector<int> nvarsPoibin; //partial results needed to compute poibinProbs
-	vector<double> *Tvector;  //partial results needed to compute poibinProbs
-	vector<double> *poibinProbs; //Poisson-Binomial probs, needed by calculatePrior
+	vector<double> Tvector;  //partial results needed to compute poibinProbs
+	vector<double> poibinProbs; //Poisson-Binomial probs, needed by calculatePrior
 
 	map<Model*, double, ModelCmp> counts;
 	map<Model*, double, ModelCmp> integrals;

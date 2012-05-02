@@ -10,24 +10,30 @@ Seppel::Seppel(DataFrame* frame)
 Seppel::Seppel(DataFrame* frame, double* nvarPrior, double* nexonPrior) 
 {
   int E= frame->exons.size();
-  double tmp= 0;
+  double tmp;
 
   this->frame = frame;
   this->modelUnifPrior= 0;
 
   //Prior on number of exons in a variant
+  tmp = 0;
   for (int i=1; i<= E; i++) {
-    tmp= lnbeta(nexonPrior[0] +i, nexonPrior[1] +E -i) - lnbeta(nexonPrior[0],nexonPrior[1]) - lnchoose((double) E, (double) i);
-    priorpNbExons.push_back( exp(tmp) );
-    nvarsPoibin.push_back((int) choose(E,i+1));
+    tmp = lnbeta(nexonPrior[0] +i-1, nexonPrior[1] +E-1 -(i-1)) - lnbeta(nexonPrior[0],nexonPrior[1]);
+    priorpNbExons.push_back( exp(tmp) * (i+.0)/(E+.0) );
+    nvarsPoibin.push_back((int) (choose(E,i)+.1));
   }
 
   //Prior on number of variants in the model (truncated to <=1000)
-  int imax= (int) min(pow(2, E), 1000.0);
-  double prob= 1-nvarPrior[0]; //success probability (from R we pass failure prob)
+  int imax= (int) min(pow(2, E) -1, 1000.0);
+  double psum=0, prob= 1-nvarPrior[0]; //success probability (from R we pass failure prob)
+  tmp = 0;
   for (int i=1; i<= imax; i++) {
-    priorpNbVars.push_back( dnegbinomial(i, nvarPrior[1], prob, 1) );
+    tmp = dnegbinomial(i, nvarPrior[1], prob, 0);
+    priorpNbVars.push_back( log(tmp) );
+    psum += tmp;
   }
+  psum = log(psum);
+  for (int i=0; i< imax; i++) priorpNbVars[i] -= psum;
 }
 
 double Seppel::calcIntegral(Model* model)
@@ -259,31 +265,52 @@ double* Seppel::normalizeIntegrals(double* values, int n)
 
 
 double Seppel::calculatePrior(Model* model) {
-  double ans;
 
   if (modelUnifPrior==1) {
-    ans= 0;
+
+    return 0.0;
+
   } else {
-    int E= frame->exons.size();
+    int E= frame->exons.size(), nbVars= model->count();
 
-    //Prior on nb variants in the model
-    ans= priorpNbVars[min(model->count()-1,999)];
+    if (nbVars > (int) priorpNbVars.size()) {  //nb variants > min(2^E -1, 1000) has 0 prob
 
-    //Frequency of variants with 1,2,... exons
-    vector<int> Sk (E,0);
-    for (int i=0; i<= model->count(); i++) {  
-      Variant* v= model->get(i); //returns variant i
-      Sk[v->exonCount -1]++;
+      double ans= -std::numeric_limits<double>::infinity(); //debug
+      ans= exp(ans); //debug
+      return -std::numeric_limits<double>::infinity();
+
+    } else {
+
+      double ans;
+
+      //Prior on nb variants in the model
+      ans= priorpNbVars[nbVars-1];
+
+      //Prior on nb exons per variant
+      if (nbVars < pow(2,E) -1) {  //when all variants were selected, prob of selected variants is 1 so this computation is skipped
+        vector<int> Sk (E,0);
+        for (int i=0; i< nbVars; i++) {  
+          Variant* v= model->get(i); 
+          Sk[v->exonCount -1]++;
+        }
+        vector<int> Fk (E);
+        for (int i=0; i< E; i++) Fk[i]= nvarsPoibin[i] - Sk[i];
+
+        for (int i=0; i< E; i++) {
+          ans += Sk[i] * log(priorpNbExons[i]) + Fk[i] * log(1-priorpNbExons[i]);
+        }
+
+        if (E <= 20) {
+	  ans -= dpoissonbin(model->count(), &priorpNbExons, &nvarsPoibin, 1, &Tvector, &poibinProbs); //Poisson-Binomial
+        } else {
+	  ans -= dpoisson(model->count(), 1.0, 1); //Poisson approx (law of small numbers)
+        }
+      }
+
+      return ans;
+
     }
-    vector<int> Fk (E);
-    for (int i=0; i< E; i++) Fk[i]= nvarsPoibin[i] - Sk[i];
 
-    //Prior on nb exons per variant
-    for (int i=0; i< E; i++) {
-      ans += Sk[i] * log(priorpNbExons[i]) + Fk[i] * log(1-priorpNbExons[i]);
-    }
-    ans -= dpoissonbin(model->count(), &priorpNbExons, &nvarsPoibin, 1, Tvector, poibinProbs);
   }
-
-  return ans;
 }
+

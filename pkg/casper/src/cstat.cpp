@@ -2219,6 +2219,14 @@ double gamdev(double alpha)
   return value; 
 } 
 
+
+double dpoisson(int x, double mu, int logscale) {
+  double ans;
+  ans = (x + .0) * log(mu) - mu - lgamma(x + 1.0);
+  if (logscale==0) ans = exp(ans);
+  return ans;
+}
+
 /* *************************************************' 
    normal cdf and inv cdf 
  ************************************************* */ 
@@ -2393,7 +2401,9 @@ double bbPrior(int k, int p, double alpha, double beta, int logscale) {
 
 //Poisson-Binomial probability mass function. 
 // Computes P(X=x), where X= X_1 + ... + X_n and X_i ~ Ber(p_i) indep
-// The routine allows for groups of X_i's to have the same success probability
+// The routine allows for groups of X_i's to have the same success probability.
+// NOTE: For moderately large n and large x there can be round-off errors. In this case the minimum between the probability for x-1 and P(X=x) when X ~ Poisson is returned (Poisson approx is valid when n is large and all p_i's are small, by the law of small numbers)
+//
 // Input:
 // - x: value at which to evaluate the pmf
 // - successProbs: vector containing the distinct success probabilities
@@ -2405,13 +2415,13 @@ double bbPrior(int k, int p, double alpha, double beta, int logscale) {
 //
 // Example
 //
-// vector<double> *successProbs, *Tvector, *poibinProbs;
-// successProbs->push_back(0.1); successProbs->push_back(0.2); successProbs->push_back(0.3);
-// vector<int> *nvars;
-// for (int i=1; i<= successProbs->size(); i++) nvars->push_back(1);
+// vector<double> successProbs, Tvector, poibinProbs;
+// successProbs.push_back(0.1); successProbs.push_back(0.2); successProbs.push_back(0.3);
+// vector<int> nvars;
+// for (int i=1; i<= successProbs.size(); i++) nvars.push_back(1);
 //
-// dpoissonbin(1, successProbs, nvars, 1, Tvector, poibinProbs); //Tvector and poibinProbs are uninitialized
-// dpoissonbin(3, successProbs, nvars, 1, Tvector, poibinProbs); //previous Tvector and poibinProbs are re-used, new elements are added
+// ans = dpoissonbin(1, &successProbs, &nvars, 1, &Tvector, &poibinProbs); //Tvector and poibinProbs are updated up to x=1
+// ans = dpoissonbin(3, &successProbs, &nvars, 1, &Tvector, &poibinProbs); //values up to x=1 are re-used, elements up to x=3 are added
 double dpoissonbin(int x, vector<double> *successProbs, vector<int> *nvars, int logscale, vector<double> *Tvector, vector<double> *poibinProbs) {
   int npoibinProbs= poibinProbs->size(), nsuccessProbs= successProbs->size(); 
   double ans;
@@ -2426,10 +2436,10 @@ double dpoissonbin(int x, vector<double> *successProbs, vector<int> *nvars, int 
       int i;
       double tmp;
       //Compute Tvector
-      for (i= Tvector->size(); i <= x; i++) {
+      for (i= Tvector->size() +1; i <= x; i++) {
 	tmp= 0;
 	for (int k=0; k < nsuccessProbs; k++) {
-	  tmp += exp( log((double) nvars->at(k)) + (i+.0) * (log(successProbs->at(k) - log(1- successProbs->at(k)))) );
+	  tmp += exp( log((double) nvars->at(k)) + (i+.0) * (log(successProbs->at(k)) - log(1- successProbs->at(k))) );
 	}
 	Tvector->push_back(tmp);
       }
@@ -2439,8 +2449,16 @@ double dpoissonbin(int x, vector<double> *successProbs, vector<int> *nvars, int 
 	if ((i % 2)==0) tmp = -tmp;
 	ans += tmp;
       }
-      ans = log(ans) - log(x+.0);
-      poibinProbs->push_back(ans);
+      if (ans>0) {
+	ans = log(ans) - log(x+.0);
+	poibinProbs->push_back(ans);
+      } else { 
+	double mu=0;
+	for (i=0; i<nsuccessProbs; i++) mu += successProbs->at(i);
+	ans = min( dpoisson(x, mu, 1), poibinProbs->at(x-1)); //avoid overflow: previous value / Poisson approx (law of small numbers)
+	poibinProbs->push_back(ans);
+      }
+
     }
   }
   if (logscale==0) ans= exp(ans);
