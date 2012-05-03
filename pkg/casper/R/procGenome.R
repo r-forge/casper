@@ -1,12 +1,12 @@
 require(methods)
 
-setClass("annotatedGenome", representation(islands = "list", transcripts = "list", exon2island = "data.frame", exonsNI="RangedData", txStrand="character", aliases="data.frame", genomeVersion="character", dateCreated="Date", denovo="logical"))
+setClass("annotatedGenome", representation(islands = "list", transcripts = "list", exon2island = "data.frame", exonsNI="RangedData", islandStrand="character", aliases="data.frame", genomeVersion="character", dateCreated="Date", denovo="logical"))
 valid_annotatedGenome <- function(object) {
   msg <- NULL
   #validity checks go here
   tab <- table(sapply(object@islands, class))
   if (any(names(tab) != 'IRanges')) msg <- "All elements in 'islands' must be of class IRanges"
-  if (any(!sapply(object@transcripts,is.list))) msg <- "All elements in transcripts must be of class list"
+  #if (any(!sapply(object@transcripts,is.list))) msg <- "All elements in transcripts must be of class list"
   if (!(all(c('space','start','end','width','id','island') %in% names(object@exon2island)))) msg <- "Incorrect column names in 'exon2island'"
   if(!('id' %in% colnames(object@exonsNI))) msg <- "'exonsNI' must have an 'id' column"
   if(!(all(c('tx_id','tx_name','gene_id','exid','tx') %in% names(object@aliases)))) msg <- "Incorrect column names in 'aliases'"
@@ -21,8 +21,20 @@ setMethod("show", signature(object="annotatedGenome"), function(object) {
 }
           )
 
-generateNOexons<-function(exByTx, ExonsU, mc.cores){    
-    exByTx<-unlist(exByTx)
+makeIslands <- function(allexs){
+    exons <- allexs
+      txs <- as.integer(as.factor(names(exons)))
+      totEx <- length(exons)
+      uniex <- unique(exons)
+      nexR <- length(uniex)
+      islands <- rep(0, nexR)
+      ans<-.Call("makeGeneIslands", exons, islands, uniex, txs, totEx, nexR)
+      names(ans) <- uniex
+      ans
+  }
+
+generateNOexons<-function(exByTx, startId=1, mc.cores){    
+  exByTx<-unlist(exByTx)
     if(mc.cores>1) require(multicore)
     if(mc.cores>1) {
       if ('multicore' %in% loadedNamespaces()) {
@@ -59,10 +71,10 @@ generateNOexons<-function(exByTx, ExonsU, mc.cores){
     exonsNI<-IRangesList(exonsNI)
     exonsNI<-RangedData(exonsNI)
     exonsNI <- subsetByOverlaps(exonsNI, exByTx) 
-    exonsNI$id<-1:nrow(exonsNI)
-    overEx<-findOverlaps(exonsNI, ExonsU)
-    exid<-exonsNI$id[exonsNI$id[queryHits(overEx)]]
-    exkey<-split(exid, exByTx@elementMetadata$exon_id[subjectHits(overEx)])
+    exonsNI$id<-startId:(nrow(exonsNI)+startId-1)
+    overEx<-findOverlaps(exonsNI, exByTx)
+    exid<-exonsNI$id[queryHits(overEx)]
+    exkey<-split(exid, values(exByTx)$exon_id[subjectHits(overEx)])
     if(mc.cores>1) require(multicore)
     if(mc.cores>1) {
       if ('multicore' %in% loadedNamespaces()) {
@@ -77,7 +89,7 @@ generateNOexons<-function(exByTx, ExonsU, mc.cores){
   }
 
 mapEx<-function(exs, exkey){
-  nxs<-unname(unlist(exkey[as.character(exs)]))
+  nxs<-unname(unlist(exkey[as.character(sprintf("%d", exs))]))
   nxs
 }
 
@@ -86,18 +98,21 @@ procGenome<-function(genome, mc.cores=mc.cores){
 
   require(GenomicFeatures)
   genDB<-makeTranscriptDbFromUCSC(genome=genome, tablename="refGene")
+
   cat("Processing Exons and Transcrips\n")
   txs<-transcripts(genDB,columns=c("tx_id","tx_name","gene_id","exon_id","cds_id"))
   txs<-txs[match(unique(unlist(txs@elementMetadata$tx_name)), unlist(txs@elementMetadata$tx_name)),]
   exid <- sapply(txs@elementMetadata$exon_id, function(x) paste(unlist(x), collapse="."))
-  aliases <- txs[exid %in% names(table(exid))[table(exid)>1],]
+  names(exid) <- values(txs)$tx_name
+  
+  #aliases <- txs[exid %in% names(table(exid))[table(exid)>1],]
   txs <- txs[match(unique(exid), exid),]
-  aliases <- values(aliases)[1:3]
+  aliases <- values(txs)[1:3]
   aliases[,3] <- unlist(aliases[,3])
   aliases <- as.data.frame(aliases, stringsAsFactors=F)
-  aliases <- cbind(aliases, exid=exid[exid %in% names(table(exid))[table(exid)>1]])
+  aliases <- cbind(aliases, exid=exid[as.character(aliases$tx_name)])
   alitx <- split(as.character(aliases[,2]), aliases[,4])
-  names(alitx) <- unlist(lapply(alitx, function(x) x[x %in% txs@elementMetadata$tx_name]))
+  names(alitx) <- unlist(lapply(alitx, function(x) ifelse(length(x)>1, x[x %in% txs@elementMetadata$tx_name], x)))
   nalitx <- rep(names(alitx), unlist(lapply(alitx, length)))
   alitx <- unlist(alitx)
   names(alitx) <- nalitx
@@ -111,20 +126,34 @@ procGenome<-function(genome, mc.cores=mc.cores){
   ExonsDF<-as.data.frame(Exons)
   ExonsRD<-RangedData(ranges=IRanges(start=ExonsDF$start, end=ExonsDF$end), space=ExonsDF$seqnames, element=ExonsDF$element, exon_id=ExonsDF$exon_id, strand=ExonsDF$strand)
   #Find Non-overlapping exons
+
   cat("Finding non-overlapping exons\n")
-  ExonsU<-unlist(Exons)
-  fixExons<-generateNOexons(Exons, ExonsU, mc.cores)
-  exkey=fixExons$exkey
-  exonsNI<-fixExons$exons
+
+  txStrand <- as.character(txs@strand)
+  names(txStrand) <- values(txs)$tx_name
+  sel <- names(txStrand)[txStrand=="+"]; plusExons <- Exons[sel]
+  sel <- names(txStrand)[txStrand=="-"]; minusExons <- Exons[sel]
+
+  fixExonsP <- generateNOexons(plusExons, startId=1, mc.cores)
+  fixExonsM <- generateNOexons(minusExons, startId=max(fixExonsP$exons$id)+1, mc.cores)
+  
+  exkey <- fixExonsP$exkey
+  exkey <- c(exkey, fixExonsM$exkey)
+  exonsNI <- as.data.frame(fixExonsP$exons)
+  exonsNI <- rbind(exonsNI, as.data.frame(fixExonsM$exons))
+  exonsNI <- RangedData(exonsNI)
+  
   #Find transcript structure for new exons
 
   cat("Remapping transcript structure to new exons\n")
-  t<-Exons@unlistData@elementMetadata$exon_id
-  tt<-split(t, rep(1:length(Exons), width(Exons@partitioning)))
-  s<-as.character(Exons@unlistData@strand)
-  ss<-split(s, rep(1:length(Exons), width(Exons@partitioning)))
-  ss<-unlist(ss, unique)
-  exon_ids<-lapply(1:length(tt), function(x) if(ss[[x]]=="+") tt[[x]] else rev(tt[[x]]))
+  s<-ifelse(as.character(Exons@unlistData@strand)=="+", 1, -1)
+  exids <- values(Exons@unlistData)$exon_id
+  idx <- values(Exons@unlistData)$exon_rank
+  idx <- cumsum(idx==1)
+  exids <- s*exids
+  exon_ids <- tapply(exids, idx, function(x) if(any(x<0)) {rev(-x)} else x)
+  names(exon_ids) <- names(Exons)
+  
   
   if(mc.cores>1) require(multicore)
   if(mc.cores>1) {
@@ -134,41 +163,48 @@ procGenome<-function(genome, mc.cores=mc.cores){
   } else  {
     newTxs<-lapply(exon_ids, function(x) mapEx(x, exkey))
   }
-
   names(newTxs)<-names(Exons)
+
   geneids<-txs@elementMetadata$gene_id
   geneids<-unlist(geneids)
   names(geneids)<- unlist(txs@elementMetadata$tx_id)
+  # Make islands
 
-  # Change genome format
-  
   ex2tx <- unlist(newTxs)
   names(ex2tx) <- rep(names(newTxs), unlist(lapply(newTxs, length)))
   islands <- makeIslands(ex2tx)
+  
   exon2island <- as.data.frame(exonsNI)
   exon2island$island <- islands[as.character(exon2island$id)]
   rownames(exon2island) <- exon2island$id
-  
   islands <- split(exon2island, exon2island$island)
-  if(mc.cores>1) {
+  txStrand <- as.character(strand(txs))
+  names(txStrand) <- values(txs)$tx_name
+  extxs <- unlist(lapply(newTxs, "[", 1))  
+
+    if(mc.cores>1) {
     require(multicore)    
-    islands <- mclapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y}, mc.cores=mc.cores)
+    islands <- mclapply(islands, function(x){
+      y <- IRanges(x$start, x$end);
+      names(y) <- x$id;
+      if(txStrand[names(ex2tx)[ex2tx %in% x$id[1]]]=="-") y <- rev(y)
+      y
+    }, mc.cores=mc.cores)
   } else {
     islands <- lapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y})
   }
 
   cat("Splitting transcripts\n")
 
-  extxs <- unlist(lapply(newTxs, "[", 1))
   sel <- match(extxs, exon2island$id)
   tx2island <- exon2island$island[sel]
   names(tx2island) <- names(newTxs)
   transcripts <- newTxs[names(tx2island)]
   transcripts <- split(transcripts, tx2island)
-
-  txStrand <- as.character(strand(txs))
-  names(txStrand) <- values(txs)$tx_name
+  sel <- unlist(lapply(transcripts, function(x) names(x)[1]))
+  islandStrand <- txStrand[sel]
+  names(islandStrand) <- names(islands)
   
-  ans <- new("annotatedGenome", islands=islands, transcripts=transcripts, exon2island=exon2island, aliases=aliases, exonsNI=exonsNI, txStrand=txStrand, dateCreated=Sys.Date(), genomeVersion=genome, denovo=FALSE)
+  ans <- new("annotatedGenome", islands=islands, transcripts=transcripts, exon2island=exon2island, aliases=aliases, exonsNI=exonsNI, islandStrand=islandStrand, dateCreated=Sys.Date(), genomeVersion=genome, denovo=FALSE)
   ans
  } 

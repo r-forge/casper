@@ -72,18 +72,32 @@ setMethod("plotPriorAS",signature(object='modelPriorAS'), function(object,type='
 )
 
 modelPrior <- function(genomeDB, maxExons=40, smooth=TRUE, verbose=TRUE) {
-  if (class(genomeDB) != "knownGenome") stop("genomeDB must be of class 'knownGenome'")
-
+  if (class(genomeDB) != "annotatedGenome") stop("genomeDB must be of class 'annotatedGenome'")
+  if(genomeDB@denovo) stop("genomeDB must be a known (not denovo) genome")
+  
   if (verbose) cat("Counting number of annotated transcripts per gene... ")
-  #CAMILLE: TO DO
   # - Compute table txsPerGene, which counts the nb of annotated transcripts per gene with 1,2... exons.
   #   rows correspond to nb of exons in the gene, columns to nb of annotated transcripts
+
+  aliases <- genomeDB@aliases
+  txs <- unlist(genomeDB@transcripts, recursive=F)
+  names(txs) <- sub("[0-9]+\\.", "", names(txs))
+  aliases$len <- txs[as.character(aliases$tx)]
+  txpergene <- table(aliases$gene_id)
+  nexpergene <- tapply(aliases$len, aliases$gene_id, function(x) length(unique(unlist(x))))
+  txsPerGene <- table(txpergene, nexpergene[names(txpergene)])
+
   if (verbose) cat("Done.\n")
 
   if (verbose) cat("Counting number of exons contained in each variant... ")  
-  #CAMILLE: TO DO
   # - Compute table exonsPerGene, which counts the nb of exons contained in a variant for genes with 1,2,... exons.
   #   rows correspond to nb of exons in the gene, columns to nb of exons
+
+  expertx <- unlist(lapply(aliases$len, length))
+  expergeneTx <- nexpergene[aliases$gene_id]
+  names(expergeneTx) <- aliases$tx_name
+  exonsPerGene <- table(expergeneTx[names(expertx)], expertx)
+
   if (verbose) cat("Done.\n")
 
   if (verbose) cat("Estimating parameters... ")
@@ -123,8 +137,10 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
   rownames(bbpar) <- names(obs) <- names(pred) <- c(rownames(tab),rownames(extrapolate))
   bbpar[1,] <- c(0,0)
   n <- rownames(tab)
+
   for (i in nrow(tab):2) {
     y <- tab[n[i],tab[n[i],]>0]
+    names(y) <- rownames(tab)[tab[n[i],]>0]
     if (n[i]=='2') {
       bbpar[n[i],1] <- sum((as.numeric(names(y))-1) * y / sum(y)) * sum(bbpar[n[i+1],])
       bbpar[n[i],2] <- sum(bbpar[n[i+1],]) - bbpar[n[i],1]

@@ -42,14 +42,9 @@ SEXP pathCounts(SEXP reid, SEXP rid, SEXP exst, SEXP exid){
     p_exst=INTEGER(exst);
     p_exid=INTEGER(exid);
     
-    printf("## Building Fragments hash\n");
-    //printf("Yes\n");
-    //pointer to *frags
-    //verbose=1;
     path_t **pfrags=&frags;
     totF = buildFrags(fragsHashPtr, reid, p_rid, p_exst, p_exid, nreads, pfrags);
         
-    printf("## Done Building Fragments hash with %d fragments\n## Counting paths\n", totF);
     for(i=0; i<fragsHash.size; i++) {
         if(fragsHash.bucket[i]!=NULL)  {
             bucket=fragsHash.bucket[i];
@@ -63,7 +58,6 @@ SEXP pathCounts(SEXP reid, SEXP rid, SEXP exst, SEXP exid){
             }
         }
     }
-    printf("## Done counting paths\n##  Printing output\n");
     
     SEXP key, pathc, tot;
     PROTECT(key = allocVector(STRSXP, nreads));
