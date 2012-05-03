@@ -46,8 +46,8 @@ pathCounts<-function(reads, DB) {
 
   splCounts <- split(pCounts, isl)
 
-  ans <- vector(length(islands), mode='list')
-  names(ans) <- names(islands)
+  ans <- vector(length(DB@islands), mode='list')
+  names(ans) <- names(DB@islands)
   ans[names(splCounts)] <- splCounts
 
   ans <- new("pathCounts", counts=ans, denovo=DB@denovo)  
