@@ -5,7 +5,7 @@ importFrom(VGAM,vglm,betabinomial.ab,Coef)
 importFrom(mgcv,gam,predict.gam,s)
 
 #export regular functions
-export(procBam, procGenome, pathCounts, getDistrs, calcExp, calcDenovo, buildGene, rangesPlot, genPlot, rmShortInserts, relIsoformExp, variants)
+export(procBam, procGenome, pathCounts, getDistrs, calcExp, calcDenovo, buildGene, rangesPlot, genPlot, rmShortInserts, relIsoformExp, variants, modelPrior)
 
 exportClasses(annotatedGenome, pathCounts)
 #export general methods

@@ -141,14 +141,18 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
   for (i in nrow(tab):2) {
     y <- tab[n[i],tab[n[i],]>0]
     names(y) <- rownames(tab)[tab[n[i],]>0]
-    if (n[i]=='2') {
-      bbpar[n[i],1] <- sum((as.numeric(names(y))-1) * y / sum(y)) * sum(bbpar[n[i+1],])
-      bbpar[n[i],2] <- sum(bbpar[n[i+1],]) - bbpar[n[i],1]
+    ydf <- rep(as.numeric(names(y))-1,y) #start at 0
+    ydf <- data.frame(succ=ydf,fail=as.numeric(n[i])-ydf-1)
+    warn <- getOption("warn")
+    options(warn= -1)
+    fit <- try(vglm(cbind(succ, fail) ~ 1, betabinomial.ab, data=ydf, trace=FALSE), silent=TRUE)
+    #fit <- vglm(cbind(succ,fail) ~ 1, family=betabinomial, data=y, trace=FALSE)
+    options(warn=warn)
+    
+    if (class(fit)=='try-error' | as.numeric(n[i])<=3) {
+      bbpar[n[i],1] <- max(0.1, sum((as.numeric(names(y))-1) * y / sum(y)) * sum(bbpar[n[i+1],]) / (as.numeric(n[i])-1))
+      bbpar[n[i],2] <- max(0.1, sum(bbpar[n[i+1],]) - bbpar[n[i],1])
     } else {
-      ydf <- rep(as.numeric(names(y))-1,y) #start at 0
-      ydf <- data.frame(succ=ydf,fail=as.numeric(n[i])-ydf-1)
-      fit <- vglm(cbind(succ, fail) ~ 1, betabinomial.ab, data=ydf, trace=FALSE)
-      #fit <- vglm(cbind(succ,fail) ~ 1, family=betabinomial, data=y, trace=FALSE)
       bbpar[n[i],] <- Coef(fit)
     }
   }
@@ -173,13 +177,13 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
   bbpar[(nrow(tab)+1):nrow(bbpar),] <- rep(bbpar[nrow(tab),],each=nrow(bbpar)-nrow(tab))
   
   #predicted frequencies
-  pred[[1]] <- obs[[1]] <- tab['1',]
-  names(pred[[1]]) <- names(obs[[1]]) <- '1'
+  if ('1' %in% rownames(tab)) { names(pred)[1] <- names(obs)[1] <- '1'; obs[['1']] <- tab['1','1']; names(obs[['1']]) <- '1' }
   nkeep <- nrow(tab)+1
   tab <- rbind(tab,extrapolate)
-  for (n in names(pred)[-1]) {
+  for (n in setdiff(names(pred),'1')) {
     i <- as.numeric(n)
-    y <- tab[n,tab[n,]>0]
+    sel <- tab[n,]>0
+    y <- tab[n,sel]; names(y) <- colnames(tab)[sel]
     pred[[n]] <- sum(y)*dbetabin(0:(i-1),n=i-1,alpha=bbpar[n,1],beta=bbpar[n,2])
     names(pred[[n]]) <- 1:i
     obs[[n]] <- y[names(pred[[n]])]
