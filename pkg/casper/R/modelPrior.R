@@ -85,7 +85,7 @@ modelPrior <- function(genomeDB, maxExons=40, smooth=TRUE, verbose=TRUE) {
   aliases$len <- txs[as.character(aliases$tx)]
   txpergene <- table(aliases$gene_id)
   nexpergene <- tapply(aliases$len, aliases$gene_id, function(x) length(unique(unlist(x))))
-  txsPerGene <- table(txpergene, nexpergene[names(txpergene)])
+  txsPerGene <- table(nexpergene[names(txpergene)], txpergene)
 
   if (verbose) cat("Done.\n")
 
