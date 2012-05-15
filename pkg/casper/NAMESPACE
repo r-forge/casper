@@ -3,9 +3,10 @@ useDynLib(casper)
 import(IRanges, graphics)
 importFrom(VGAM,vglm,betabinomial.ab,Coef)
 importFrom(mgcv,gam,predict.gam,s)
+importFrom(GenomicFeatures, makeTranscriptDbFromUCSC)
 
 #export regular functions
-export(procBam, procGenome, pathCounts, getDistrs, calcExp, calcDenovo, buildGene, rangesPlot, genPlot, rmShortInserts, relIsoformExp, variants, modelPrior, plotPriorAS)
+export(procBam, procGenome, createDenovoGenome, pathCounts, getDistrs, calcExp, calcDenovo, buildGene, rangesPlot, genPlot, rmShortInserts, relIsoformExp, variants, modelPrior, plotPriorAS)
 
 exportClasses(annotatedGenome, pathCounts)
 #export general methods

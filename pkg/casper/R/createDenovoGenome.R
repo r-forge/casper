@@ -65,16 +65,17 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
   exs1 <- exons$id[shits[sel2]]
   len <- length(unique(rea1))
 
-  #browser()
-  
-  #cat("\tCalling joinExons function\n")
+  cat("Running joinExons function\n")
   ans <- .Call("joinExons", exs1, rea1, len)
+  cat("Done fucking fuck\n")
+  
   junx <- ans[[1]][ans[[2]]>=minLinks]
   junx <- strsplit(junx, split=".", fixed=T)
   names(junx) <- 1:length(junx)
   nalljunx <- rep(1:length(junx), unlist(lapply(junx, length)))
   alljunx <- unlist(junx)
   names(alljunx) <- nalljunx
+
   tmpex <- as.data.frame(exons)
   rownames(tmpex) <- tmpex$id
   tmpex <- tmpex[alljunx,]
@@ -85,7 +86,8 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
   mname <- max(as.numeric(names(alljunx)))
   names(sing) <- (mname+1):(mname+length(sing)) 
   alljunx <- c(alljunx, sing)
-  
+
+  cat("Building islands\n")
 #Build gene islands
   oldexs <- unlist(DB@transcripts, recursive=F)
   txids <- sub("[0-9]+\\.", "", names(oldexs))
@@ -109,7 +111,7 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
 
 #Link islands by distance
 
-#  cat("\tJoining islands by distance\n")
+  cat("\tJoining islands by distance\n")
   old <- exons[!(exons$id %in% newex),]
   new <- exons[exons$id %in% newex,]
   
@@ -165,6 +167,7 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
   tmp <- split(extxs, tx2gene)
   transcripts[names(tmp)] <- tmp
 
+  cat("fixing genome structure\n")
   exStrand <- rep(DB@islandStrand, unlist(lapply(DB@islands, length)))
   names(exStrand) <- unlist(lapply(DB@islands, names))
   sel <- unlist(lapply(islands, function(x) names(x)[1]))
@@ -175,7 +178,15 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
   islandStrand <- vector(length=length(islands))
   names(islandStrand) <- names(islands)
   islandStrand[names(sel2)] <- sel2
+  sel <- islandStrand=="-"
   islandStrand[islandStrand=="FALSE"] <- NA
+
+#  if(any(islandStrand[!is.na(islandStrand)]=="-")) {
+#    sel <- islandStrand=="-"
+#    sel[is.na(sel)] <- TRUE
+#    islands[sel] <- lapply(islands[sel], rev)
+#    transcripts[sel] <- lapply(transcripts[sel], rev)
+#  }
   
   ans <- new("annotatedGenome", islands=islands, transcripts=transcripts, exon2island=exon2island, exonsNI=exons, islandStrand=islandStrand, aliases=DB@aliases, genomeVersion=DB@genomeVersion, dateCreated=Sys.Date(), denovo=TRUE)
   ans
@@ -195,41 +206,49 @@ genomeBystrand <- function(DB, strand){
 }
 
 mergeStrDenovo <- function(plus, minus){  
-  nullplus <- unlist(lapply(plus@transcripts, is.null))
-  oplus <- unlist(lapply(plus@islands[!nullplus], names))
-  nullminus <- unlist(lapply(minus@transcripts, is.null))
-  ominus <- unlist(lapply(minus@islands[!nullminus], names))
-  oboth <- unique(c(oplus, ominus))
-  sel <- unlist(lapply(plus@islands, function(x) names(x)[1]))
-  sel <- sel %in% oboth
-  allislands <- c(plus@islands[!nullplus], minus@islands[!nullminus], plus@islands[!sel])
-  allstrand <- c(plus@islandStrand[!nullplus], minus@islandStrand[!nullminus], plus@islandStrand[!sel])
-  alltrans <- c(plus@transcripts[!nullplus], minus@transcripts[!nullminus], plus@transcripts[!sel])
-  allexonsNI <- rbind(as.data.frame(plus@exonsNI), as.data.frame(minus@exonsNI))
-  allexonsNI <- RangedData(allexonsNI)  
 
-  allex2id <- as.data.frame(allexonsNI)
-  ids <- lapply(allislands, names)
-  len <- lapply(ids, length)
-  ids <- unlist(ids)
-  len <- lapply(1:length(len), function(x) rep(names(allislands)[x], len[[x]]))             
-  len <- unlist(len)
-  names(len) <- ids
-  allex2id$island <- len[allex2id$id]
-  ans <- new("annotatedGenome", aliases=plus@aliases, denovo=TRUE, exonsNI=allexonsNI, islandStrand=allstrand, transcripts=alltrans, exon2island=allex2id, dateCreated=Sys.Date(), genomeVersion=DB@genomeVersion, islands=allislands)
+  nullplus <- unlist(lapply(plus@transcripts, is.null))
+  newplus <- unlist(lapply(plus@islands[nullplus], function(x) paste(names(x), collapse=".")))
+  names(newplus) <- names(plus@islands)[nullplus]
+  nullminus <- unlist(lapply(minus@transcripts, is.null))
+  newminus <- unlist(lapply(minus@islands[nullminus], function(x) paste(sort(names(x)), collapse=".")))
+  names(newminus) <- names(minus@islands)[nullminus]
+  common <- names(newminus)[newminus %in% newplus]
+  
+  allislands <- c(plus@islands, minus@islands[!(names(minus@islands) %in% common)])
+  names(allislands) <- 1:length(allislands)
+  allstrand <- c(plus@islandStrand, minus@islandStrand[!(names(minus@islands) %in% common)])
+  names(allstrand) <- 1:length(allstrand)
+  alltrans <- c(plus@transcripts, minus@transcripts[!(names(minus@islands) %in% common)])
+  names(alltrans) <- 1:length(alltrans)
+  allexonsNI <- rbind(as.data.frame(plus@exonsNI), as.data.frame(minus@exonsNI))
+  allexonsNI <- allexonsNI[match(unique(allexonsNI$id), allexonsNI$id),]
+  
+  ex2is <- allexonsNI
+  islen <- lapply(allislands, length)
+  islnam <- rep(names(allislands), islen)
+  names(islnam) <- unlist(lapply(allislands, names))
+  ex2is$island <- islnam[as.character(ex2is$id)]
+  
+  allexonsNI <- RangedData(allexonsNI)
+  ans <- new("annotatedGenome", aliases=plus@aliases, denovo=TRUE, exonsNI=allexonsNI, islandStrand=allstrand, transcripts=alltrans, exon2island=ex2is, dateCreated=Sys.Date(), genomeVersion=plus@genomeVersion, islands=allislands)
   ans
   }
 
 createDenovoGenome <- function(reads, DB, readLen, stranded,  minLinks, maxLinkDist, maxDist, mc.cores=1){
   cat("Finding new exons\n")
+
   newex <- findNewExons(reads, DB, readLen=readLen, pvalFilter=0.05)
   reads$id <- cumsum(reads$id == c(reads$id[-1], reads$id[1]))
   cat("Done...\nCreating denovo genome for positive strand\n")
+
   DBplus <- genomeBystrand(DB, "+")
   denovoplus <- assignExons2Gene(newex, DBplus, reads, maxDist=maxDist, stranded=stranded, minLinks=minLinks, maxLinkDist=maxLinkDist, mc.cores=mc.cores)
+
   cat("Done...\nCreating denovo genome for negative strand\n")
   DBminus <- genomeBystrand(DB, "-")
   denovominus <- assignExons2Gene(newex, DBminus, reads, maxDist=maxDist, stranded=stranded, minLinks=minLinks, maxLinkDist=maxLinkDist, mc.cores=mc.cores)
+
   cat("Done...\nMerging denovo genome\n")
   denovo <- mergeStrDenovo(denovoplus, denovominus)
   denovo

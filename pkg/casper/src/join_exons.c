@@ -18,25 +18,25 @@ SEXP joinExons(SEXP sexons, SEXP sreads, SEXP stot){
   int hashSize, i, *exons, *reads, len, l, **links, tot;
   hash_t *myhashP, myhash;
 
-  myhashP = &myhash;
-  hashSize = tot;
-        
   PROTECT(sexons = coerceVector(sexons, INTSXP));
   PROTECT(sreads = coerceVector(sreads, INTSXP));
   PROTECT(stot = coerceVector(stot, INTSXP));
   len=length(sexons);
 
-  hash_init(myhashP, hashSize);
-    
   exons = INTEGER(sexons);
   reads = INTEGER(sreads);
   tot = INTEGER(stot)[0];
+
+  myhashP = &myhash;
+  hashSize = tot;
+  hash_init(myhashP, hashSize);
+
 
   links=malloc((tot+1) * sizeof(int *));
   for(i=0; i<tot; i++) links[i] = malloc(50 * sizeof(int));
 
   int counter=0;
-  
+
   char id[100];
   for(i=0; i<len; i++){
     sprintf(id, "%d", reads[i]);

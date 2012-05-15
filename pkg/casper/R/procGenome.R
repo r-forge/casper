@@ -96,7 +96,6 @@ mapEx<-function(exs, exkey){
 
 procGenome<-function(genome, mc.cores=mc.cores){
 
-  require(GenomicFeatures)
   genDB<-makeTranscriptDbFromUCSC(genome=genome, tablename="refGene")
 
   cat("Processing Exons and Transcrips\n")

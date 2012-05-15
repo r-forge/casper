@@ -14,13 +14,16 @@ void makeIslands(int **p_exons, int **p_islands, int nex, int tot, int **ex2tx, 
   int i=0, islandCount=1, allDone=0;
   char id[30];
   for(i=0; i<nex; i++){
+    //printf("%d out/n", i);
     if(p_islands[1][i]==0){
+      //printf("%d\n", i);
       p_islands[1][i]=islandCount;
+      allDone++;
       allDone = connectWithinTx(p_exons, p_islands, i, allDone, tx2ex, ex2tx, ex2txP, tx2exP, ex2posP);
-      //       printf("done with i=%d\n", i);
+      //printf("done with i=%d %d %d %d\n", i, allDone, nex, islandCount);
       //      allDone = connectTxs(p_exons, i, allDone, tot, tx2ex, ex2tx, ex2txP, tx2exP, ex2posP);
       if(allDone==tot) break;
-      //      printf("%d %d %d %d %d %d\n", i, allDone, p_exons[0][i], p_exons[1][i], p_exons[2][i], islandCount);
+      //printf("%d %d %d %d %d %d\n", i, allDone, p_exons[0][i], p_exons[1][i], p_exons[2][i], islandCount);
       islandCount++;
     }
   }
@@ -31,6 +34,7 @@ int connectWithinTx(int **p_exons, int **p_islands, int i, int allDone, int **tx
   char id[30];
 
   //get exon id
+  //printf("inside %d %d\n", i, allDone);
   sprintf(id, "%d", p_islands[0][i]);
   // Find transcripts for this exon
   exi = hash_lookup(ex2txP, id);
@@ -46,7 +50,7 @@ int connectWithinTx(int **p_exons, int **p_islands, int i, int allDone, int **tx
       //Find position of exon in islands array
       sprintf(id, "%d", tx2ex[tx][m]);
       l = hash_lookup(ex2posP, id);
-      //printf("inside %d %d %d %s %d\n", l, m, tx2ex[tx][m], id, p_islands[1][l]);
+      //      printf("inside %d %d %d %s %d\n", l, m, tx2ex[tx][m], id, p_islands[1][l]);
       if(p_islands[1][l] == 0){
 	p_islands[1][l] = p_islands[1][i];
 	//printf("%d %d %d %s %d\n", i, m, tx, id, p_islands[1][l]);
@@ -142,7 +146,7 @@ SEXP makeGeneIslands(SEXP exons, SEXP isl, SEXP exisl, SEXP txs, SEXP totEx, SEX
     //    printf("%d %d %d %s\n", nex, i, hash_lookup(ex2posP, id), id);
   }
 
-  printf("Hash ready\n");
+  //printf("Hash ready\n");
 
   int **ex2tx, **tx2ex;
   ex2tx = malloc((totExo*2) * sizeof(int *));
@@ -154,7 +158,7 @@ SEXP makeGeneIslands(SEXP exons, SEXP isl, SEXP exisl, SEXP txs, SEXP totEx, SEX
     tx2ex[i][0]=0;
   }
 
-  printf("Arrays ready\n");
+  //printf("Arrays ready\n");
 
    for(i=0; i<totExo; i++){
      sprintf(id, "%d", p_exons[0][i]);
@@ -168,7 +172,7 @@ SEXP makeGeneIslands(SEXP exons, SEXP isl, SEXP exisl, SEXP txs, SEXP totEx, SEX
  }
 
 
-   printf("Making islands\n");
+   //printf("Making islands\n");
    makeIslands(p_exons, p_islands, nex, totExo, ex2tx, tx2ex, ex2txP, tx2exP, ex2posP);
   
   UNPROTECT(5);
