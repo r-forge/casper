@@ -12,18 +12,12 @@ int connectWithinTx(int **p_exons, int **p_islands, int i, int allDone, int **tx
 
 void makeIslands(int **p_exons, int **p_islands, int nex, int tot, int **ex2tx, int **tx2ex, hash_t *ex2txP, hash_t *tx2exP, hash_t *ex2posP){
   int i=0, islandCount=1, allDone=0;
-  char id[30];
   for(i=0; i<nex; i++){
-    //printf("%d out/n", i);
     if(p_islands[1][i]==0){
-      //printf("%d\n", i);
       p_islands[1][i]=islandCount;
       allDone++;
       allDone = connectWithinTx(p_exons, p_islands, i, allDone, tx2ex, ex2tx, ex2txP, tx2exP, ex2posP);
-      //printf("done with i=%d %d %d %d\n", i, allDone, nex, islandCount);
-      //      allDone = connectTxs(p_exons, i, allDone, tot, tx2ex, ex2tx, ex2txP, tx2exP, ex2posP);
       if(allDone==tot) break;
-      //printf("%d %d %d %d %d %d\n", i, allDone, p_exons[0][i], p_exons[1][i], p_exons[2][i], islandCount);
       islandCount++;
     }
   }
@@ -102,7 +96,7 @@ SEXP makeGeneIslands(SEXP exons, SEXP isl, SEXP exisl, SEXP txs, SEXP totEx, SEX
   //ex2tx is a list of exons with the transcripts they belong to
   //exons is a named vector with exons where names will be the islands
 
-  int **p_exons, totIslands, totExo, l, i, **p_islands, nex;
+  int **p_exons, totExo, l, i, **p_islands, nex;
 
   p_exons = malloc(3 * sizeof(int *));
   p_islands = malloc(3 * sizeof(int *));

@@ -129,7 +129,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
 
 
   #Initialize transcripts for new islands with known orientation
-  sel <- names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null) & !is.na(genomeDB@txStrand)]
+  sel <- names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null) & !is.na(genomeDB@islandStrand)]
   if (length(sel)>0) genomeDB@transcripts[sel] <- lapply(genomeDB@exons[sel],function(z) list(as.numeric(names(z))))
 
   geneidUnknown <- geneid[geneid %in% names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null)]]

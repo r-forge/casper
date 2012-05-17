@@ -17,7 +17,7 @@ setMethod("show", signature(object="pathCounts"), function(object) {
 
 
 
-pathCounts<-function(reads, DB) {
+pathCounts<-function(reads, DB, mc.cores) {
 
   cat("Finding overlaps between reads and exons\n")
   over<-findOverlaps(reads, DB@exonsNI)
@@ -32,20 +32,45 @@ pathCounts<-function(reads, DB) {
   pCounts<-lapply(pCounts[1:2], function(x) x[1:pCounts[[3]]])
   names(pCounts[[2]])<-pCounts[[1]]
   pCounts<-pCounts[[2]]
-  
+
   sel <- strsplit(names(pCounts), split='-|\\.')
-  sel <- lapply(sel, "[", 2)
-  sel <- unlist(sel)
+  sel1 <- lapply(sel, "[", 2)
+  sel1 <- unlist(sel1)
   
   nislEx <- lapply(DB@islands, length)
   nislEx <- rep(names(DB@islands), unlist(nislEx))
   islEx <- unlist(lapply(DB@islands, names))
   names(islEx) <- nislEx
-  isl <- match(sel, islEx)
+  isl <- match(sel1, islEx)
   isl <- names(islEx)[isl]
-
   splCounts <- split(pCounts, isl)
 
+  if(DB@denovo){
+    sel <- sapply(sel, "[", -1)
+    tmp <- split(sel, isl)
+    if(mc.cores>1) {
+      require(multicore)
+      tmp1 <- mclapply(names(tmp), function(x){
+        n <- sapply(tmp[[x]], length)
+        nn <- unlist(tmp[[x]])
+        names(nn) <- rep(1:length(tmp[[x]]), n)
+        nnn <- nn %in% names(DB@islands[[x]])
+        nnnn <- tapply(nnn, names(nn), all)
+        splCounts[[x]][nnnn]
+      }, mc.cores=mc.cores)
+    } else {
+      tmp1 <- lapply(names(tmp), function(x){
+        n <- sapply(tmp[[x]], length)
+        nn <- unlist(tmp[[x]])
+        names(nn) <- rep(1:length(tmp[[x]]), n)
+        nnn <- nn %in% names(DB@islands[[x]])
+        nnnn <- tapply(nnn, names(nn), all)
+        splCounts[[x]][nnnn]
+      })
+    }
+    names(tmp1) <- names(tmp)
+    splCounts <- tmp1
+  }
   ans <- vector(length(DB@islands), mode='list')
   names(ans) <- names(DB@islands)
   ans[names(splCounts)] <- splCounts
