@@ -94,7 +94,7 @@ mapEx<-function(exs, exkey){
 }
 
 
-procGenome<-function(genome, mc.cores=mc.cores){
+procGenome<-function(genome, mc.cores=1){
 
   genDB<-makeTranscriptDbFromUCSC(genome=genome, tablename="refGene")
 
