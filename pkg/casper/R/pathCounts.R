@@ -17,7 +17,7 @@ setMethod("show", signature(object="pathCounts"), function(object) {
 
 
 
-pathCounts<-function(reads, DB, mc.cores) {
+pathCounts<-function(reads, DB, mc.cores=1) {
 
   cat("Finding overlaps between reads and exons\n")
   over<-findOverlaps(reads, DB@exonsNI)
@@ -32,7 +32,8 @@ pathCounts<-function(reads, DB, mc.cores) {
   pCounts<-lapply(pCounts[1:2], function(x) x[1:pCounts[[3]]])
   names(pCounts[[2]])<-pCounts[[1]]
   pCounts<-pCounts[[2]]
-
+  pCounts <- pCounts[grepl("-", names(pCounts))]
+  
   sel <- strsplit(names(pCounts), split='-|\\.')
   sel1 <- lapply(sel, "[", 2)
   sel1 <- unlist(sel1)
@@ -44,7 +45,8 @@ pathCounts<-function(reads, DB, mc.cores) {
   isl <- match(sel1, islEx)
   isl <- names(islEx)[isl]
   splCounts <- split(pCounts, isl)
-
+  splCounts <- lapply(splCounts, function(x) x[grepl("-", names(x))])
+  
   if(DB@denovo){
     sel <- sapply(sel, "[", -1)
     tmp <- split(sel, isl)
@@ -53,24 +55,25 @@ pathCounts<-function(reads, DB, mc.cores) {
       tmp1 <- mclapply(names(tmp), function(x){
         n <- sapply(tmp[[x]], length)
         nn <- unlist(tmp[[x]])
-        names(nn) <- rep(1:length(tmp[[x]]), n)
+        names(nn) <- rep(names(splCounts[[x]]), n)
         nnn <- nn %in% names(DB@islands[[x]])
         nnnn <- tapply(nnn, names(nn), all)
-        splCounts[[x]][nnnn]
+        splCounts[[x]][names(splCounts[[x]]) %in% names(nnnn)[nnnn]]
       }, mc.cores=mc.cores)
     } else {
       tmp1 <- lapply(names(tmp), function(x){
         n <- sapply(tmp[[x]], length)
         nn <- unlist(tmp[[x]])
-        names(nn) <- rep(1:length(tmp[[x]]), n)
+        names(nn) <- rep(names(splCounts[[x]]), n)
         nnn <- nn %in% names(DB@islands[[x]])
         nnnn <- tapply(nnn, names(nn), all)
-        splCounts[[x]][nnnn]
+        splCounts[[x]][names(splCounts[[x]]) %in% names(nnnn)[nnnn]]
       })
     }
     names(tmp1) <- names(tmp)
     splCounts <- tmp1
   }
+  
   ans <- vector(length(DB@islands), mode='list')
   names(ans) <- names(DB@islands)
   ans[names(splCounts)] <- splCounts

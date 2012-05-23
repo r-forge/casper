@@ -65,10 +65,8 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
   exs1 <- exons$id[shits[sel2]]
   len <- length(unique(rea1))
 
-  cat("Running joinExons function\n")
   ans <- .Call("joinExons", exs1, rea1, len)
-  cat("Done fucking fuck\n")
-  
+ 
   junx <- ans[[1]][ans[[2]]>=minLinks]
   junx <- strsplit(junx, split=".", fixed=T)
   names(junx) <- 1:length(junx)

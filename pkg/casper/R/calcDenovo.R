@@ -51,7 +51,7 @@ setMethod("show", signature(object="denovoGenomeExpr"), function(object) {
 
 setMethod("[", signature(x="denovoGenomeExpr"), function(x, i, ...) { new("denovoGenomeExpr", islands=x@islands[i]) })
 setMethod("[[", signature(x="denovoGenomeExpr"), function(x, i, j, ...) { x@islands[[i]] } )
-
+setMethod("as.list", signature(x="denovoGenomeExpr"), function(x) {x@islands})
                             
 
 #########################################################################
@@ -111,20 +111,45 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
     mapply(function(z1,z2) formatDenovoOut(z1,z2), ans, genomeDB@islands[z], SIMPLIFY=FALSE)
   }
 
+  formatZeroExpr <- function(ids){
+    isl <- genomeDB@islands[ids]
+    txs <- genomeDB@transcripts[ids]
+    spa <- lapply(txs, function(x) rep(names(x), unlist(lapply(x, length))))
+    exo <- lapply(names(txs), function(x) genomeDB@islands[[x]][as.character(unlist(txs[[x]])),])
+    names(exo) <- names(txs)
+    ran <- lapply(names(txs), function(x) RangedData(unname(exo[[x]]), space=unlist(spa[[x]])))
+    names(ran) <- ids
+    expr <- lapply(ids, function(x) data.frame(model=rep(0, length(ran[[x]])), expr=rep(0, length(ran[[x]])), varName=names(ran[[x]])))
+    names(expr) <- ids
+    posprob <- lapply(ids, function(x) data.frame(model=0, posprob=NA, modelid=0))
+    names(posprob) <- ids
+    res <- lapply(ids, function(x) new("denovoGeneExpr", variants=ran[[x]], expression=expr[[x]], posprob=posprob[[x]]))
+    names(res) <- ids
+    res
+  }
+    
   runCalc <- function(geneid) {
+    sel <- !sapply(pc@counts[geneid], is.null)
+    all <- geneid
+    geneid <- geneid[sel]
     if (mc.cores>1) {
       if ('multicore' %in% loadedNamespaces()) {
         #split into smaller jobs
-        nsplit <- floor(length(geneid)/mc.cores)
-        geneid <- lapply(1:mc.cores, function(z) { geneid[((z-1)*nsplit+1):min((z*nsplit),length(geneid))] })
-        ans <- mclapply(geneid,f,mc.cores=mc.cores)
+        nsplit <- floor(min(length(geneid), mc.cores)/mc.cores)
+        geneid <- lapply(1:min(length(geneid), mc.cores), function(z) { geneid[((z-1)*nsplit+1):min((z*nsplit),length(geneid))] })
+        ans <- mclapply(geneid,f,mc.cores=min(length(geneid), mc.cores))
         ans <- do.call(c,ans)
       } else stop('multicore library has not been loaded!')
     } else {
       ans <- f(geneid)
       names(ans) <- geneid
     }
-    ans
+    res <- vector(mode="list", length=length(all))
+    names(res) <- all
+    z <- formatZeroExpr(all[!sel])
+    res[names(z)] <- z
+    res[names(ans)] <- ans
+    res
   }
 
 
@@ -154,7 +179,6 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
     sel <- ifelse(difndel<0 || (difndel==0 && (difsum+difmax)>=0), TRUE, FALSE)
     ans[geneidUnknown[sel]] <- ansforw[sel]; ans[geneidUnknown[!sel]] <- ansrev[!sel]
   }
-  
   new("denovoGenomeExpr", islands=ans)
 }
 
@@ -176,10 +200,33 @@ formatDenovoOut <- function(ans, genesel) {
   new("denovoGeneExpr",posprob=ans$posprob,expression=ans$expression,variants=ans$variants,integralSum=ans$integralSum,npathDeleted=ans$npathDeleted)
 }
 
-
 calcDenovoMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, modelUnifPrior, nvarPrior, nexonPrior, priorq, minpp, selectBest, method, niter, exactMarginal, verbose) {
   ans <- .Call("calcDenovoMultiple",exons,exonwidth,transcripts,geneid,pc,startcdf,lendis,lenvals,readLength,modelUnifPrior,nvarPrior,nexonPrior,priorq,minpp,selectBest,method,niter,exactMarginal,verbose)
   return(ans)
+}
+
+relativeExpr <- function(expr, method='bestModel'){
+  if (!(method %in% c("bestModel", "modelAvg"))) stop("method must be one of 'bestModel' or 'modelAvg'")
+  if (class(expr)!='denovoGenomeExpr') stop("expr must be of class 'denovoGenomeExpr'")
+  if (method=='bestModel'){
+    ans <- lapply(as.list(expr), function(x){
+      best <- x@posprob$model[which.max(x@posprob$posprob)]
+      exp <- x@expression[x@expression$model==best,]
+      res <- exp$expr
+      names(res) <- exp$varName
+      res
+    })
+    ans <- do.call(c, unname(ans))
+  } else {
+    ans <- lapply(as.list(expr), function(x){
+      pospr <- x@posprob$posprob/sum(x@posprob$posprob)
+      names(pospr) <- x@posprob$model
+      pospr <- pospr[as.character(x@expression$model)]
+      unlist(tapply(pospr*x@expression$expr, x@expression$varName, sum))
+    })
+    ans <- do.call("c", unname(ans))
+  }
+  ans
 }
 
 
