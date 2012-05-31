@@ -6,9 +6,15 @@
   Remove reads with short insert sizes from imported BAM files. 
 }
 \description{
-  In paired-end experiments short inserts indicate that the two ends are very close to each other,
-  which can indicate RNA degradation.
-  The insert size is stored in objects imported with \code{scanBam} in the element named \code{isize}.
+  In paired-end experiments short inserts (i.e. the 2 ends being very close to each other),
+  may indicate RNA degradation or that a short RNA (e.g. miRNA) is being
+  sequenced.
+  Typically the goal is not to study alternative splicing for such
+  short/degraded RNA; in this case it is recommendable to remove such short
+  inserts to avoid biasing the insert size distribution.
+  Requiring a minimum insert size can also result in significantly
+  faster computations when quantifying alternative splicing via \code{calc}
+  or \code{calcDenovo}.
 }
 \usage{
 rmShortInserts(bam, isizeMin=100)
@@ -23,6 +29,9 @@ Named list, in the same format as that returned by \code{scanBam}.
 }
 \author{
 David Rossell
+}
+\note{
+  The insert size is stored in objects imported with \code{scanBam} in the element named \code{isize}.
 }
 \examples{
 ##---- Should be DIRECTLY executable !! ----
