@@ -233,7 +233,8 @@ mergeStrDenovo <- function(plus, minus){
   ans
   }
 
-createDenovoGenome <- function(reads, DB, readLen, stranded,  minLinks, maxLinkDist, maxDist, mc.cores=1){
+createDenovoGenome <- function(reads, DB, readLen, stranded=FALSE,  minLinks=2, maxLinkDist=1e+05, maxDist=1000, mc.cores=1){
+  if (missing(readLen)) stop('readLen must be specified')
   cat("Finding new exons\n")
 
   newex <- findNewExons(reads, DB, readLen=readLen, pvalFilter=0.05)
