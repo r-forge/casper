@@ -77,7 +77,12 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   if (!(method %in% c('auto','rwmcmc','priormcmc','exact'))) stop("method must be auto, rwmcmc, priormcmc or exact")
   
   #Format input
-  startcdf <- as.double(ecdf(distrs$stDis)(seq(0,1,.001)))
+  sseq <- seq(0,1,.001)
+  startcdf <- distrs$stDis(sseq)
+  startcdf[0] <- 0; startcdf[length(startcdf)] <- 1
+  f <- approxfun(sseq[!is.na(startcdf)],startcdf[!is.na(startcdf)])
+  startcdf <- as.double(c(0,f(sseq)[-1]))
+
   lendis <- as.double(distrs$lenDis/sum(distrs$lenDis))
   lenvals <- as.integer(names(distrs$lenDis))
   readLength <- as.integer(readLength)
@@ -93,12 +98,12 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   exactMarginal <- as.integer(exactMarginal)
   if (missing(geneid)) geneid <- names(genomeDB@islands)[sapply(genomeDB@islands,length)>1]
 
-  exons <- lapply(genomeDB@islands,function(z) as.integer(names(z)))
-  exonwidth <- lapply(genomeDB@islands,width)
-
-  if (!all(geneid %in% names(exons))) stop('geneid not found in genomeDB@islands')
+  if (!all(geneid %in% names(genomeDB@islands))) stop('geneid not found in genomeDB@islands')
   if (!all(geneid %in% names(pc@counts))) stop('geneid not found in pc')
   if (!all(geneid %in% names(genomeDB@transcripts))) stop('geneid not found in genomeDB@transcripts')
+  
+  exons <- lapply(genomeDB@islands[geneid],function(z) as.integer(names(z)))
+  exonwidth <- lapply(genomeDB@islands[geneid],width)
 
   #Define basic function
   f <- function(z) {
