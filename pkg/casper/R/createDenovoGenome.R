@@ -64,7 +64,6 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
   rea1 <- reads$id[qhits[sel2]]
   exs1 <- exons$id[shits[sel2]]
   len <- length(unique(rea1))
-
   ans <- .Call("joinExons", exs1, rea1, len)
  
   junx <- ans[[1]][ans[[2]]>=minLinks]
@@ -98,73 +97,81 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
   exon2gene <- as.data.frame(exons)
   exon2gene$gene <- islands[as.character(exon2gene$id)]
   rownames(exon2gene) <- exon2gene$id
-  genes <- split(exon2gene, exon2gene$gene)
+  islands <- split(exon2gene, exon2gene$gene)
 
   if(mc.cores>1) {
     require(multicore)
-    genes<-mclapply(genes, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y}, mc.cores=mc.cores)
+    islands<-mclapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y}, mc.cores=mc.cores)
   } else {
-    genes<-lapply(genes, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y})
+    islands<-lapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y})
   }
 
 #Link islands by distance
 
-  cat("\tJoining islands by distance\n")
-  old <- exons[!(exons$id %in% newex),]
-  new <- exons[exons$id %in% newex,]
-  
-  mapisl <- lapply(names(exons), function(i){
-    if(sum(space(new)==i)>0 & sum(space(old)==i)>0){
-      isl <- by(as.data.frame(ranges(new)[[i]]), new[i]$island, function(x) c(min(x$start), max(x$end)))
-      nisl <- names(isl)
-      isl <- do.call(rbind, isl)
-      isl <- IRanges(isl[,1], isl[,2])
-      ne <- distanceToNearest(isl, ranges(old)[[i]])
-      ne$isl <- nisl[ne$query]
-      sel <- ne$distance < maxDist
-      ne$oisl <- old[i]$island[ne$subject]
-      ne <- ne[ne$isl != ne$oisl,]
-      rownames(ne) <- new[i]$id[ne$query]
-    } else ne <- NA
-    ne
-  })
-  names(mapisl)<-names(exons)
+  if(maxDist>0){
 
-  newexons <- lapply(names(new), function(i){
-    tmp <- new[i]
-    if(length(mapisl[[i]])>1){
-      sel <- as.character(tmp$id) %in% rownames(mapisl[[i]])
-      map <- match(as.character(tmp$id)[sel], rownames(mapisl[[i]]))
-      tmp$island[sel] <- mapisl[[i]]$oisl[map]      
-    }
+    cat("\tJoining islands by distance\n")
+    old <- exons[!(exons$id %in% newex),]
+    new <- exons[exons$id %in% newex,]
+    
+    mapisl <- lapply(names(exons), function(i){
+      if(sum(space(new)==i)>0 & sum(space(old)==i)>0){
+
+        isl <- by(as.data.frame(ranges(new)[[i]]), new[i]$island, function(x) c(min(x$start), max(x$end)))
+        nisl <- names(isl)
+        isl <- do.call(rbind, isl)
+        isl <- IRanges(isl[,1], isl[,2])
+        ne <- distanceToNearest(isl, ranges(old)[[i]])
+        ne$isl <- nisl[ne$query]
+        sel <- ne$distance < maxDist
+        ne <- ne[sel,]
+        ne$oisl <- old[i]$island[ne$subject]
+        ne <- ne[ne$isl != ne$oisl,]
+        rownames(ne) <- new[i]$id[ne$query]
+      } else ne <- NA
+      ne
+    })
+    names(mapisl)<-names(exons)
+    
+    newexons <- lapply(names(new), function(i){
+      tmp <- new[i]
+      if(length(mapisl[[i]])>1){
+        sel <- as.character(tmp$id) %in% rownames(mapisl[[i]])
+        map <- match(as.character(tmp$id)[sel], rownames(mapisl[[i]]))
+        tmp$island[sel] <- mapisl[[i]]$oisl[map]      
+      }
     tmp
-  }
-                     )
-  names(newexons) <- names(new)
+    }
+                       )
+    names(newexons) <- names(new)
   
-  newexons <- RangedData(IRanges(start=unlist(lapply(newexons, start)), end=unlist(lapply(newexons, end))), space=unlist(lapply(newexons, function(x) as.character(space(x)))), id=unlist(lapply(newexons, "[[", "id")), island=unlist(lapply(newexons, "[[", "island")))
-  allexons <- rbind(old, newexons)
-  exon2island <- as.data.frame(allexons)
-  rownames(exon2island) <- exon2island$id
-  islands <- split(exon2island, exon2island$island)
-
-  if(mc.cores>1) {
-    require(multicore)
-    islands <- mclapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y}, mc.cores=mc.cores)
-  } else {
-    islands <- lapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y})
+    newexons <- RangedData(IRanges(start=unlist(lapply(newexons, start)), end=unlist(lapply(newexons, end))), space=unlist(lapply(newexons, function(x) as.character(space(x)))), id=unlist(lapply(newexons, "[[", "id")), island=unlist(lapply(newexons, "[[", "island")))
+    allexons <- rbind(old, newexons)
+    exon2island <- as.data.frame(allexons)
+    rownames(exon2island) <- exon2island$id
+    islands <- split(exon2island, exon2island$island)
+    
+    if(mc.cores>1) {
+      require(multicore)
+      islands <- mclapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y}, mc.cores=mc.cores)
+    } else {
+      islands <- lapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y})
+     }
+    exons <- newexons
   }
 
-  extxs <- unlist(DB@transcripts, recursive=F)
-  names(extxs) <- sub("[0-9]+\\.", "", names(extxs))
-  sel <- unlist(lapply(extxs, "[", 1))
-  sel <- match(sel, exon2island$id)
-  tx2gene <- exon2gene$island[sel]
-  transcripts <- vector(length=length(islands), mode="list")
-  names(transcripts) <- names(islands)
-  tmp <- split(extxs, tx2gene)
-  transcripts[names(tmp)] <- tmp
-
+  
+  
+    extxs <- unlist(DB@transcripts, recursive=F)
+    names(extxs) <- sub("[0-9]+\\.", "", names(extxs))
+    sel <- unlist(lapply(extxs, "[", 1))
+    sel <- match(sel, exon2island$id)
+    tx2gene <- exon2gene$island[sel]
+    transcripts <- vector(length=length(islands), mode="list")
+    names(transcripts) <- names(islands)
+    tmp <- split(extxs, tx2gene)
+    transcripts[names(tmp)] <- tmp
+    
   cat("fixing genome structure\n")
   exStrand <- rep(DB@islandStrand, unlist(lapply(DB@islands, length)))
   names(exStrand) <- unlist(lapply(DB@islands, names))
@@ -204,7 +211,6 @@ genomeBystrand <- function(DB, strand){
 }
 
 mergeStrDenovo <- function(plus, minus){  
-
   nullplus <- unlist(lapply(plus@transcripts, is.null))
   newplus <- unlist(lapply(plus@islands[nullplus], function(x) paste(names(x), collapse=".")))
   names(newplus) <- names(plus@islands)[nullplus]
@@ -212,7 +218,6 @@ mergeStrDenovo <- function(plus, minus){
   newminus <- unlist(lapply(minus@islands[nullminus], function(x) paste(sort(names(x)), collapse=".")))
   names(newminus) <- names(minus@islands)[nullminus]
   common <- names(newminus)[newminus %in% newplus]
-  
   allislands <- c(plus@islands, minus@islands[!(names(minus@islands) %in% common)])
   names(allislands) <- 1:length(allislands)
   allstrand <- c(plus@islandStrand, minus@islandStrand[!(names(minus@islands) %in% common)])
@@ -221,13 +226,11 @@ mergeStrDenovo <- function(plus, minus){
   names(alltrans) <- 1:length(alltrans)
   allexonsNI <- rbind(as.data.frame(plus@exonsNI), as.data.frame(minus@exonsNI))
   allexonsNI <- allexonsNI[match(unique(allexonsNI$id), allexonsNI$id),]
-  
   ex2is <- allexonsNI
   islen <- lapply(allislands, length)
   islnam <- rep(names(allislands), islen)
   names(islnam) <- unlist(lapply(allislands, names))
   ex2is$island <- islnam[as.character(ex2is$id)]
-  
   allexonsNI <- RangedData(allexonsNI)
   ans <- new("annotatedGenome", aliases=plus@aliases, denovo=TRUE, exonsNI=allexonsNI, islandStrand=allstrand, transcripts=alltrans, exon2island=ex2is, dateCreated=Sys.Date(), genomeVersion=plus@genomeVersion, islands=allislands)
   ans
