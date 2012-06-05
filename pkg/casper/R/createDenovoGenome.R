@@ -160,17 +160,17 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
     exons <- newexons
   }
 
+  exon2island <- as.data.frame(exons)
   
-  
-    extxs <- unlist(DB@transcripts, recursive=F)
-    names(extxs) <- sub("[0-9]+\\.", "", names(extxs))
-    sel <- unlist(lapply(extxs, "[", 1))
-    sel <- match(sel, exon2island$id)
-    tx2gene <- exon2gene$island[sel]
-    transcripts <- vector(length=length(islands), mode="list")
-    names(transcripts) <- names(islands)
-    tmp <- split(extxs, tx2gene)
-    transcripts[names(tmp)] <- tmp
+  extxs <- unlist(DB@transcripts, recursive=F)
+  names(extxs) <- sub("[0-9]+\\.", "", names(extxs))
+  sel <- unlist(lapply(extxs, "[", 1))
+  sel <- match(sel, exon2island$id)
+  tx2gene <- exon2gene$island[sel]
+  transcripts <- vector(length=length(islands), mode="list")
+  names(transcripts) <- names(islands)
+  tmp <- split(extxs, tx2gene)
+  transcripts[names(tmp)] <- tmp
     
   cat("fixing genome structure\n")
   exStrand <- rep(DB@islandStrand, unlist(lapply(DB@islands, length)))
