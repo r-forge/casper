@@ -13,6 +13,10 @@ startDist <- function(st,fragLength,txLength) {
   s <- 1-fit$time
   pcum <- fit$surv
   f <- approxfun(s,pcum)
+  sseq <- seq(0,1,.001)
+  startcdf <- f(sseq)
+  startcdf[1] <- 0; startcdf[length(startcdf)] <- 1
+  f <- approxfun(sseq[!is.na(startcdf)], startcdf[!is.na(startcdf)])
   return(f)
 }
 

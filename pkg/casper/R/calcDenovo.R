@@ -78,10 +78,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   
   #Format input
   sseq <- seq(0,1,.001)
-  startcdf <- distrs$stDis(sseq)
-  startcdf[0] <- 0; startcdf[length(startcdf)] <- 1
-  f <- approxfun(sseq[!is.na(startcdf)],startcdf[!is.na(startcdf)])
-  startcdf <- as.double(c(0,f(sseq)[-1]))
+  startcdf <- as.double(distrs$stDis(sseq))
 
   lendis <- as.double(distrs$lenDis/sum(distrs$lenDis))
   lenvals <- as.integer(names(distrs$lenDis))
