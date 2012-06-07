@@ -135,11 +135,6 @@ void Seppel::exploreSmart(Model* startmodel, int runs)
 		Model* nmodl = odist->sample();
 		double nlike = calcIntegral(nmodl);
 
-		//int debug= isnan(nlike); //debug (here and rest of paragraph)
-		//if (debug==1) {
-		//  nlike = calcIntegral(nmodl);
-		//}
-
 		//fprintf(vFile, "%s\n", getmodelcode2(allvars, omodl));
 		//fprintf(pFile, "%s\n", getmodelcode2(allvars, nmodl));
 

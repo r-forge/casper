@@ -115,7 +115,7 @@ Variant* DataFrame::path2Variant(Fragment* f)
 	}
 	for (int i=1; i< f->rightc; i++) {
 		eid = f->right[i];
-		ex = exons[eid];
+		ex = id2exon[eid];
 		el->push_back(ex);
 	}
 	while ((*itexon)->id != eid) { itexon++; }
