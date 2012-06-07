@@ -80,8 +80,11 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   sseq <- seq(0,1,.001)
   startcdf <- as.double(distrs$stDis(sseq))
 
-  lendis <- as.double(distrs$lenDis/sum(distrs$lenDis))
   lenvals <- as.integer(names(distrs$lenDis))
+  lenvals <- as.integer(seq(min(lenvals),max(lenvals),1))
+  lendis <- rep(0,length(lenvals)); names(lendis) <- as.character(lenvals)
+  lendis[names(distrs$lenDis)] <- as.double(distrs$lenDis/sum(distrs$lenDis))
+    
   readLength <- as.integer(readLength)
   priorq <- as.double(priorq)
   nvarPrior <- lapply(nvarPrior,as.double)
@@ -187,9 +190,11 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
 
 
 formatDenovoOut <- function(ans, genesel) {
-  ans[[1]] <- data.frame(ans[[1]],ans[[6]])
+  ans[[1]] <- data.frame(ans[[1]])
+  colnames(ans[[1]]) <- c('model','posprob')
+  #ans[[1]] <- data.frame(ans[[1]],ans[[6]])
+  #colnames(ans[[1]]) <- c('model','posprob','modelid')
   ans[[6]] <- NULL
-  colnames(ans[[1]]) <- c('model','posprob','modelid')
   ans[[2]] <- data.frame(ans[[2]],ans[[3]])
   ans[[3]] <- NULL
   colnames(ans[[2]]) <- c('model','expr','varName')

@@ -84,10 +84,8 @@ double DataFrame::prob(int fs, int fe, int bs, int be, int* pos, double T)
 	  double factor = 0;
 	  if (l <= T && punc > 0) {
 	    factor = fraglen_dist->probability(i);
-	    //			factor = fraglen_dist->probability((int)l);
 	    if (T < fraglen_maxx) {
 	      factor /= fraglen_dist->cumulativeProbability((int)(T-fraglen_minx));
-	      //				factor /= fraglen_dist->cumulativeProbability((int)T);
 	    }
 	  }
 

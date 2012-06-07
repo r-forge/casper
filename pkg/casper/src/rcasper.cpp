@@ -265,7 +265,7 @@ extern "C"
 		}
 		resModes = seppl->resultModes();
 
-		vector<Variant*>* allpossvariants = df->allVariants();
+		//vector<Variant*>* allpossvariants = df->allVariants();
 
 		// END OF CALCULATIONS
 		
@@ -313,13 +313,13 @@ extern "C"
 				resProbsR[i]= i;
 				resProbsR[i+nx]= resProbs[m];
 				nrowpi+= m->count();
-				SET_STRING_ELT(VECTOR_ELT(ans,5),i,mkChar(m->getCodeStr(allpossvariants)));  //model name
+				//SET_STRING_ELT(VECTOR_ELT(ans,5),i,mkChar(m->getCodeStr(allpossvariants)));  //model name
 			}
 		} else {
 			resProbsR[0]= 0;
 			resProbsR[nx]= resProbs[bestModel];
 			nrowpi+= bestModel->count();
-			SET_STRING_ELT(VECTOR_ELT(ans,5),0,mkChar(bestModel->getCodeStr(allpossvariants)));  //model name
+			//SET_STRING_ELT(VECTOR_ELT(ans,5),0,mkChar(bestModel->getCodeStr(allpossvariants)));  //model name
 		}
 
 		//Report estimated expression
