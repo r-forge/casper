@@ -145,21 +145,74 @@ void addPath(int *unex, int *unrid, hash_t *hash, int totEx){
     char *pastr, *tmp;
     tmp=malloc(50 * sizeof(char));
     pastr=malloc((totEx+1)*50 * sizeof(char));
-    
+    verbose=0;
+    //Check for overlapping ends
+    int nleft=0, nright=0, stop=0, *lread, *rread, *nrread;
+    lread=malloc(totEx * sizeof(int));
+    rread=malloc(totEx * sizeof(int));
+    nrread=malloc(totEx * sizeof(int));
+    for(l=0; l<totEx; l++){
+      if(verbose) printf("%d %d\n", unrid[l], unex[l]);
+      if(unrid[l]==1) {
+	lread[nleft]=unex[l];
+	nleft++;
+      } else {
+	rread[nright]=unex[l];
+	nright++;
+      }
+    }
+
+    int m, cnt=0, chk=0, n, skip=0;
+    if((nright>1) && (nleft>1)) {
+      for(m=0; m<nright; m++) {
+	chk=0;
+	for(l=0; l<nleft-1; l++) {
+	  if(rread[m]==lread[l]) chk++;
+	} 
+	if(chk==0) {
+	  nrread[cnt]=rread[m];
+	  cnt++;
+	  //  printf("%d %d", nrread[cnt-1], cnt);
+	}
+      }
+      if(cnt==0) {
+	skip=1;
+	if(verbose) {
+	  for(n=0; n<totEx; n++) printf("%d %d %d\n", n, unex[n], unrid[n]);
+	  printf("Error, no right reads left!!!\n") ;
+	}
+      } 
+    }
+   
+
     strcpy(pastr, ".");
     sprintf(tmp, "%d", unex[0]);
     strcat(pastr, tmp);
-    
-    if(totEx>1){
-        for(l=1; l<totEx; l++){   
-            if(unrid[l-1]==unrid[l]) strcat(pastr, ".");
-            else strcat(pastr, "-");
-            sprintf(tmp, "%d", unex[l]);
-            strcat(pastr, tmp);
-        }		
+
+    if(skip==0){
+      if(totEx>1){
+	for(l=1; l<nleft; l++){
+	  strcat(pastr, ".");
+	  sprintf(tmp, "%d", lread[l]);
+	  strcat(pastr, tmp);
+	}
+	strcat(pastr, "-");
+	if(cnt>0){
+	  for(l=0; l<cnt; l++){
+	    sprintf(tmp, "%d", nrread[l]);
+	    strcat(pastr, tmp);
+	    strcat(pastr, ".");
+	  } 
+      } else{
+	  for(l=0; l<nright; l++){
+	    sprintf(tmp, "%d", rread[l]);
+	    strcat(pastr, tmp);
+	    strcat(pastr, ".");
+	  } 
+	}
+      }
     }
-    strcat(pastr, ".");
-    
+
     if(verbose) printf("%s\n", pastr); 
     
     l=hash_lookup(hash, pastr);
