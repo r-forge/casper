@@ -5,6 +5,7 @@ using namespace std;
 
 const int Casper::is_runs = 100;
 const int Casper::em_maxruns = 100;
+const double Casper::em_tol = 0.001;
 const double Casper::mh_gammah = 2;
 double Casper::priorq = 3;
 
@@ -29,13 +30,16 @@ Casper::Casper(Model* model, DataFrame* frame)
 		}
 	}
 }
+
 double* Casper::calculateMode() {
   int n = model->count();
-
   double* pi = new double[n];
-  for (int i = 0; i < n; i++) {
-    pi[i] = 1.0 / (double)n;
-  }
+  for (int i = 0; i < n; i++) pi[i] = 1.0 / (double)n;
+  this->calculateMode(pi);
+  return pi;
+}
+
+void Casper::calculateMode(double* pi) {
 
   double normali = (double)memvprobs.size() * (priorq - 1.0);
   map<Fragment*, map<Variant*, double> >::const_iterator ofi;
@@ -43,11 +47,13 @@ double* Casper::calculateMode() {
     normali += ofi->first->count;
   }
 
-  for (int r = 0; r < em_maxruns; r++) {
+  double err= 1.0, newpi;
+  int r;
+  for (r = 0; (r < em_maxruns) & (err>em_tol); r++) {
     map<Fragment*, double> mem = fragdist(pi);
 		
     map<Variant*, map<Fragment*, double> >::const_iterator vi;
-    for (vi = memvprobs.begin(); vi != memvprobs.end(); vi++) {
+    for (vi = memvprobs.begin(), err=0; vi != memvprobs.end(); vi++) {
       int i = model->indexOf(vi->first);
 
       double nsum = 0;
@@ -56,12 +62,15 @@ double* Casper::calculateMode() {
 	nsum += (double)fi->first->count * fi->second / mem[fi->first];
       }
 
-      pi[i] = (priorq - 1.0 + nsum * pi[i]) / normali;
+      newpi = (priorq - 1.0 + nsum * pi[i]) / normali;
+      err= max_xy(err, fabs(newpi - pi[i]));
+      pi[i]= newpi;
     }
   }
+  //printf("%d\n",r); //debug
 
-  return pi;
 }
+
 double Casper::calculateIntegral() {
   int n = model->count();
   double* mode = calculateMode();

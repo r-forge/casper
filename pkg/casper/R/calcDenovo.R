@@ -58,7 +58,7 @@ setMethod("as.list", signature(x="denovoGenomeExpr"), function(x) {x@islands})
 ## Function calcDenovo
 #########################################################################
 
-calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprior, minpp=0.01, selectBest=FALSE, method='auto', niter=10^4, exactMarginal=TRUE, verbose=FALSE, mc.cores=1) {
+calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprior, minpp=0.001, selectBest=FALSE, method='auto', niter, exactMarginal=TRUE, verbose=FALSE, mc.cores=1) {
   if (missing(readLength)) stop("readLength must be specified")
   if (class(genomeDB)!='annotatedGenome') stop("genomeDB must be of class 'annotatedGenome'")
   if (!genomeDB@denovo) stop("genomeDB must be a de novo annotated genome. Use createDenovoGenome")
@@ -94,7 +94,6 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   if (method=='auto') method <- 0 else if (method=='exact') method <- 1 else if (method=='rwmcmc') method <- 2 else method <- 3
   method <- as.integer(method)
   verbose <- as.integer(verbose)
-  niter <- as.integer(niter)
   exactMarginal <- as.integer(exactMarginal)
   if (missing(geneid)) geneid <- names(genomeDB@islands)[sapply(genomeDB@islands,length)>1]
 
@@ -104,15 +103,18 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   
   exons <- lapply(genomeDB@islands[geneid],function(z) as.integer(names(z)))
   exonwidth <- lapply(genomeDB@islands[geneid],width)
-
+  if (missing(niter)) {
+     niter <- as.list(as.integer(ifelse(sapply(exons,length)>20,10^3,10^4)))
+  } else {
+     niter <- as.list(as.integer(rep(niter[1],length(geneid))))
+  }
+  names(niter) <- geneid
+  
   #Define basic function
   f <- function(z) {
     geneid <- as.integer(z)
-    exons <- exons[z]
-    exonwidth <- exonwidth[z]
     transcripts <- genomeDB@transcripts[z]
-    pc <- pc@counts[z]
-    ans <- calcDenovoMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,geneid=as.list(geneid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,modelUnifPrior=modelUnifPrior,nvarPrior=nvarPrior,nexonPrior=nexonPrior,priorq=priorq,minpp=minpp,selectBest=selectBest,method=method,niter=niter,exactMarginal=exactMarginal,verbose=verbose)
+    ans <- calcDenovoMultiple(exons=exons[z],exonwidth=exonwidth[z],transcripts=transcripts,geneid=as.list(geneid),pc=pc@counts[z],startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,modelUnifPrior=modelUnifPrior,nvarPrior=nvarPrior,nexonPrior=nexonPrior,priorq=priorq,minpp=minpp,selectBest=selectBest,method=method,niter=niter[z],exactMarginal=exactMarginal,verbose=verbose)
     mapply(function(z1,z2) formatDenovoOut(z1,z2), ans, genomeDB@islands[z], SIMPLIFY=FALSE)
   }
 
@@ -212,7 +214,24 @@ calcDenovoMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startc
   return(ans)
 }
 
-relativeExpr <- function(expr, method='bestModel'){
+
+
+variantMargExpr <- function(x,minpp) {
+  #Marginal expression for each variant (obtained via model averaging) and marginal post prob of being expressed
+  # - minpp: variants with marginal post prob < minpp are not reported
+  if (missing(minpp)) minpp <- 0.1
+  pospr <- x@posprob$posprob/sum(x@posprob$posprob)
+  names(pospr) <- x@posprob$model
+  pospr <- pospr[as.character(x@expression$model)]
+  ans <- by(data.frame(pospr*x@expression$expr,pospr),INDICES=list(var=x@expression$varName),FUN=colSums,simplify=FALSE)
+  n <- names(ans)
+  ans <- matrix(unlist(ans),ncol=2,byrow=TRUE)
+  colnames(ans) <- c('expr','probExpressed')
+  rownames(ans) <- n
+  return(ans[ans[,'probExpressed']>minpp,])
+}
+
+relativeExpr <- function(expr, method='modelAvg', minpp=0.1){
   if (!(method %in% c("bestModel", "modelAvg"))) stop("method must be one of 'bestModel' or 'modelAvg'")
   if (class(expr)!='denovoGenomeExpr') stop("expr must be of class 'denovoGenomeExpr'")
   if (method=='bestModel'){
@@ -225,12 +244,7 @@ relativeExpr <- function(expr, method='bestModel'){
     })
     ans <- do.call(c, unname(ans))
   } else {
-    ans <- lapply(as.list(expr), function(x){
-      pospr <- x@posprob$posprob/sum(x@posprob$posprob)
-      names(pospr) <- x@posprob$model
-      pospr <- pospr[as.character(x@expression$model)]
-      unlist(tapply(pospr*x@expression$expr, x@expression$varName, sum))
-    })
+    ans <- lapply(as.list(expr), variantMargExpr, minpp=minpp)
     ans <- do.call("c", unname(ans))
   }
   ans

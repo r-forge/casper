@@ -180,7 +180,7 @@ extern "C"
 		for (i=0; i<ngenes; i++) {
 		  int nexons = min(LENGTH(VECTOR_ELT(exonsR,i)), LENGTH(nvarPriorR));
 
-		  ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, modelUnifPriorR, VECTOR_ELT(nvarPriorR,nexons-1), VECTOR_ELT(nexonPriorR,nexons-1), priorqR, minppR, selectBest, methodR, niterR, exactMarginalR, verboseR);
+		  ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, modelUnifPriorR, VECTOR_ELT(nvarPriorR,nexons-1), VECTOR_ELT(nexonPriorR,nexons-1), priorqR, minppR, selectBest, methodR, VECTOR_ELT(niterR,i), exactMarginalR, verboseR);
 		  SET_VECTOR_ELT(ansMultiple,i,ansSingle);
 		}
 		
@@ -218,14 +218,14 @@ extern "C"
 	  DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR); //read input
 	  set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR); //initialize model
 
-	  //df->debugprint();
-	  //Model* tmpm = new Model(initvars);
-	  //tmpm->debugprint();
+	  //df->debugprint();  //debug
+	  //Model* tmpm = new Model(initvars);  //debug
+	  //tmpm->debugprint(); //debug
 
 	  int discarded = df->fixUnexplFrags(initvars); //add variants to initial model
-	  if (verbose > 0) Rprintf("discarded %i fragments\n", discarded);
-	  //Model* tmp2 = new Model(initvars);
-	  //tmp2->debugprint();
+	  //if (verbose > 0) Rprintf("discarded %i fragments\n", discarded);
+	  //Model* tmp2 = new Model(initvars);  //debug
+	  //tmp2->debugprint();  //debug
 
 	  Casper::priorq = priorq;
 

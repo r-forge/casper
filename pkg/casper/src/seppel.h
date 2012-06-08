@@ -6,7 +6,9 @@ public:
 	Seppel(DataFrame* frame);
 	Seppel(DataFrame* frame, double* nvarPrior, double* nexonPrior);
 
-	double calcIntegral(Model* model);
+	double calcIntegral(Model* model);  //compute integral (requires computing mode)
+	double calcIntegral(Model* model, Model* similarModel); //same but initializes mode using mode from a similar model (saves time)
+	double* initMode(Model* model, Model* similarModel);
 
 	void exploreExact(); // exhaustive enumeration of all possible models
 	void exploreUnif(int runs); //Metropolis-Hastings MCMC with independent proposals (uniform)

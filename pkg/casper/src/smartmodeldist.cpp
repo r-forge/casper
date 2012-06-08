@@ -101,7 +101,8 @@ void SmartModelDist::buildrmtable()
 		Model* m = new Model(copy);
 		copy->push_back(v);
 
-		double like = seppel->calcIntegral(m);
+		double like = seppel->calcIntegral(m,center); 
+		//double like = seppel->calcIntegral(m); //debug
 		if (like != 1)
 		{
 			possible[n] = m;

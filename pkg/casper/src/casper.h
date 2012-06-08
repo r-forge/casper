@@ -4,6 +4,7 @@
 #include "dataframe.h"
 #include "cstat.h"
 #include <vector>
+#include <math.h>
 
 using namespace std;
 
@@ -17,8 +18,9 @@ class Casper
   // data
   DataFrame* frame;
 
-  // gives the mode given the current model and data
-  double* calculateMode();
+  // EM to find posterior mode under the current model
+  double* calculateMode();  //initialize to equal expression for all variants
+  void calculateMode(double* pi);  //use pi as initial value, and return it updated with solution
 
   // gives the integral given the current model and data
   double calculateIntegral();  //uses mode=calculateMode() and n= model->count()
@@ -36,6 +38,7 @@ class Casper
 
   static const int is_runs;
   static const int em_maxruns;
+  static const double em_tol;
   static const double mh_gammah;
   
   double priorLn(double* pi);

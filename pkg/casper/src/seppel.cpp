@@ -36,30 +36,80 @@ Seppel::Seppel(DataFrame* frame, double* nvarPrior, double* nexonPrior)
   for (int i=0; i< imax; i++) priorpNbVars[i] -= psum;
 }
 
-double Seppel::calcIntegral(Model* model)
+double* Seppel::initMode(Model* model, Model* similarModel) {
+
+    int n= model->count(), nSimilar= similarModel->count(), ncommon=0;
+    double sumcommon=0;
+    double* pi = new double[n];
+    double* piSimilar= modes[similarModel];
+
+    for (int i=0; i<n; i++) pi[i]= 0;
+
+    for (int i=0; i<nSimilar; i++) {
+      Variant* v= similarModel->get(i);
+      if (model->contains(v)) {
+	double elem= piSimilar[i];
+	//double elem= piSimilar[similarModel->indexOf(v)];
+	pi[model->indexOf(v)]= elem;
+	sumcommon += elem;
+	ncommon++;
+      }
+    }
+    double pcommon= ((double) ncommon)/((double) n);
+    double norm= pcommon/sumcommon;
+    if (ncommon==n) {
+      for (int i=0; i<n; i++) pi[i] *= norm;
+    } else {
+      double newpi= (1.0-pcommon)/((double) (n-ncommon));
+      for (int i=0; i<n; i++) {
+        if (pi[i]> 0) pi[i] *= norm; else pi[i]= newpi;
+      }
+    }
+    return pi;
+}
+
+double Seppel::calcIntegral(Model* model, Model* similarModel) 
 {
-	if (model == NULL)
-	{
-		return 1;
-	}
-	if (integrals.count(model) > 0) 
-	{
-		return integrals[model];
-	}
 
-	double like = 1;
+  if (modes.count(similarModel)==0) return this->calcIntegral(model);
+  if (model == NULL) return 1;
+  if (integrals.count(model) > 0) return integrals[model];
 
-	Casper* casp = new Casper(model, frame);
-	if (casp->isValid())
-	{
-		double* mode = casp->calculateMode();
-		modes[model] = mode;
-		like = casp->calculateIntegral(mode, model->count());
-		like += calculatePrior(model);
-	}
-	integrals[model] = like;
+  double like = 1;
+  Casper* casp = new Casper(model, frame);
 
-	return like;
+  if (casp->isValid()) {
+
+    double* mode = this->initMode(model,similarModel);
+    casp->calculateMode(mode);
+    modes[model] = mode;
+    like = casp->calculateIntegral(mode, model->count());
+    like += calculatePrior(model);
+
+  }
+  integrals[model] = like;
+
+  return like;
+}
+
+
+double Seppel::calcIntegral(Model* model) 
+{
+  if (model == NULL) return 1;
+  if (integrals.count(model) > 0) return integrals[model];
+
+  double like = 1;
+  Casper* casp = new Casper(model, frame);
+
+  if (casp->isValid()) {
+    double* mode = casp->calculateMode();
+    modes[model] = mode;
+    like = casp->calculateIntegral(mode, model->count());
+    like += calculatePrior(model);
+  }
+  integrals[model] = like;
+
+  return like;
 }
 
 void Seppel::exploreExact()
@@ -133,7 +183,8 @@ void Seppel::exploreSmart(Model* startmodel, int runs)
 	for (int r = 0; r < runs; r++)
 	{
 		Model* nmodl = odist->sample();
-		double nlike = calcIntegral(nmodl);
+		double nlike = calcIntegral(nmodl,omodl);
+		//double nlike = calcIntegral(nmodl);
 
 		//fprintf(vFile, "%s\n", getmodelcode2(allvars, omodl));
 		//fprintf(pFile, "%s\n", getmodelcode2(allvars, nmodl));
@@ -164,6 +215,7 @@ void Seppel::exploreSmart(Model* startmodel, int runs)
 			count = counts[omodl];
 		}
 		counts[omodl] = count + 1;	
+		//printf("%d\n",r); //debug
 	}
 
 	//fclose(pFile);

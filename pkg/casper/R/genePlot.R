@@ -15,6 +15,25 @@ genPlot<-function(goi, genomeDB, reads, exp){
     
 }
 
+
+setGeneric("plotExpr", function(gene, minpp, names.arg, xlab='(kb)', ylab='', xlim, cex=1, yaxt='n', ...) standardGeneric("plotExpr"))
+
+setMethod("plotExpr",signature(gene="denovoGeneExpr"),
+  function(gene, minpp, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', ...) {
+    n <- names(variants(gene))
+    n[nchar(n)>30] <- paste("Variant ",1:sum(nchar(n)>30),sep="")
+    names(n) <- names(variants(gene))
+    v <- variantMargExpr(gene,minpp=minpp)
+    names.arg <- n[rownames(v)]
+    names.arg <- paste(names.arg,' (Rel. expr.=',round(v[,'expr'],3),'; P(expressed)=',round(v[,'probExpressed'],3),')',sep='')
+    gene <- variants(gene)[rownames(v)]
+    start(gene) <- round(start(gene)/1000)
+    end(gene) <- round(end(gene)/1000)
+    genePlot(gene, names.arg=names.arg, xlab=xlab, ylab=ylab, xlim, cex=1, yaxt='n', ...)
+  }
+)
+
+
 setMethod("genePlot",signature(gene='IRanges'),
   function(gene, genome, refflat, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', ...) {
     if (missing(xlim)) xlim <- range(c(start(gene),end(gene)))
@@ -30,6 +49,7 @@ setMethod("genePlot",signature(gene='IRanges'),
     segments(x0=x1,x1=x1,y0=y0-.33/(1+nsplice),y1=y0+.33/(1+nsplice))
   }
 )
+
 
 setMethod("genePlot",signature(gene='RangedData'),
   function(gene, genome, refflat, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', ...) {
