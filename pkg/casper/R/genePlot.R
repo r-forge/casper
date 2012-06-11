@@ -26,10 +26,15 @@ setMethod("plotExpr",signature(gene="denovoGeneExpr"),
     v <- variantMargExpr(gene,minpp=minpp)
     names.arg <- n[rownames(v)]
     names.arg <- paste(names.arg,' (Rel. expr.=',round(v[,'expr'],3),'; P(expressed)=',round(v[,'probExpressed'],3),')',sep='')
+    names(names.arg) <- n[rownames(v)]
     gene <- variants(gene)[rownames(v)]
+    o <- names(n)[names(n) %in% names(gene)]
+    gene <- gene[o]
+    names.arg <- names.arg[n[o]]
     start(gene) <- round(start(gene)/1000)
     end(gene) <- round(end(gene)/1000)
-    genePlot(gene, names.arg=names.arg, xlab=xlab, ylab=ylab, xlim, cex=1, yaxt='n', ...)
+    if (missing(xlim)) xlim <- c(min(start(gene)),max(end(gene)))
+    genePlot(gene, names.arg=names.arg, xlab=xlab, ylab=ylab, xlim=xlim, cex=1, yaxt='n', ...)
   }
 )
 
@@ -60,6 +65,7 @@ setMethod("genePlot",signature(gene='RangedData'),
 setMethod("genePlot",signature(gene='IRangesList'),
   function(gene, genome, refflat, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', ...) {
     if (missing(xlim)) xlim <- range(c(start(gene),end(gene)))
+    if (missing(names.arg)) names.arg <- names(gene)
     plot(NA,NA,xlim=xlim,ylim=c(0,1),xlab=xlab,ylab=ylab,yaxt=yaxt,...)
     nsplice <- length(gene)
     cols<-rep(rainbow(min(nsplice, 10)), ceiling(nsplice/10))
@@ -73,8 +79,7 @@ setMethod("genePlot",signature(gene='IRangesList'),
       segments(x0=x0,x1=x0,y0=y0[i]-.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=cols[i])
       segments(x0=x1,x1=x1,y0=y0[i]-.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=cols[i])
     }
-    if (missing(names.arg)) names.arg <- names(gene)
-    if (!is.null(names.arg)) text(rep(xlim[1],length(y0)),y0+.5*(y0[2]-y0[1]),names(gene),cex=cex,adj=0)
+    if (!is.null(names.arg)) text(rep(xlim[1],length(y0)),y0+.5*(y0[2]-y0[1]),names.arg,cex=cex,adj=0)
   }
 )
 
@@ -95,7 +100,6 @@ setMethod("genePlot",signature(gene='CompressedIRangesList'),
       segments(x0=x0,x1=x0,y0=y0[i]-.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=cols[i])
       segments(x0=x1,x1=x1,y0=y0[i]-.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=cols[i])
     }
-    if (missing(names.arg)) names.arg <- names(gene)
     if (!is.null(names.arg)) text(rep(xlim[1],length(y0)),y0+.5*(y0[2]-y0[1]),names.arg,cex=cex,adj=0)
   }
 )

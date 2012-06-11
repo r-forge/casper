@@ -232,6 +232,7 @@ mergeStrDenovo <- function(plus, minus){
   names(islnam) <- unlist(lapply(allislands, names))
   ex2is$island <- islnam[as.character(ex2is$id)]
   allexonsNI <- RangedData(allexonsNI)
+  allislands <- lapply(allislands,function(z) z[order(start(z))])
   ans <- new("annotatedGenome", aliases=plus@aliases, denovo=TRUE, exonsNI=allexonsNI, islandStrand=allstrand, transcripts=alltrans, exon2island=ex2is, dateCreated=Sys.Date(), genomeVersion=plus@genomeVersion, islands=allislands)
   ans
   }
@@ -253,6 +254,7 @@ createDenovoGenome <- function(reads, DB, readLen, stranded=FALSE,  minLinks=2, 
 
   cat("Done...\nMerging denovo genome\n")
   denovo <- mergeStrDenovo(denovoplus, denovominus)
+
   denovo
 }
 

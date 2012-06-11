@@ -6,7 +6,7 @@ importFrom(mgcv,gam,predict.gam,s)
 importFrom(GenomicFeatures, transcripts, exonsBy, makeTranscriptDbFromUCSC)
 
 #export regular functions
-export(procBam, procGenome, createDenovoGenome, pathCounts, getDistrs, calcExp, calcDenovo, relativeExpr, buildGene, rangesPlot, genPlot, plotExpr, rmShortInserts, relIsoformExp, variants, modelPrior, plotPriorAS)
+export(procBam, procGenome, createDenovoGenome, pathCounts, getDistrs, calcExp, calcDenovo, relativeExpr, buildGene, rangesPlot, genPlot, plotExpr, rmShortInserts, relIsoformExp, variants, "variants<-", modelPrior, plotPriorAS)
 
 exportClasses(annotatedGenome, pathCounts)
 #export general methods

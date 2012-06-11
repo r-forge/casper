@@ -68,25 +68,27 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP 
 		Fragment* f = new Fragment(leftc, rightc, count);
 
 		//Set sequence of visited exons
-		left = left+1;
-		right[strlen(right)-1] = '\0';
-		char* item;
-		item = strtok(left, ".");  //split string
-		for (int j = 0; item != NULL; j++) {
-			int eid = atoi(item);
-			f->left[j] = eid;
-			item = strtok(NULL, ".");
-		}
-		item = strtok(right, ".");
-		for (int j = 0; item != NULL; j++) {
-			int eid = atoi(item);
-			f->right[j] = eid;
-			item = strtok(NULL, ".");
-		}
+		if ((leftc>0) && (rightc>0)) {
+		  left = left+1;
+		  right[strlen(right)-1] = '\0';
+		  char* item;
+		  item = strtok(left, ".");  //split string
+		  for (int j = 0; item != NULL; j++) {
+			  int eid = atoi(item);
+			  f->left[j] = eid;
+			  item = strtok(NULL, ".");
+		  }
+		  item = strtok(right, ".");
+		  for (int j = 0; item != NULL; j++) {
+			  int eid = atoi(item);
+			  f->right[j] = eid;
+			  item = strtok(NULL, ".");
+		  }
 
-		df->addData(f);
+		  df->addData(f);
+
+		}
 	}
-
 	return df;
 }
 set<Variant*, VariantCmp>* importTranscripts(DataFrame* df, SEXP transcriptsR)

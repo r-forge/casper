@@ -32,7 +32,11 @@ setMethod("variants", signature(object="denovoGeneExpr"), function(object) {
 }
 )
 
-          
+setGeneric("variants<-", function(object,value) standardGeneric("variants<-"))
+setReplaceMethod("variants", "denovoGeneExpr", function(object, value) { object@variants <- value; object })
+
+
+
 #Class denovoGenomeExpr
 setClass("denovoGenomeExpr", representation(islands = "list"))
 
