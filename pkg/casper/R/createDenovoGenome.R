@@ -207,11 +207,13 @@ genomeBystrand <- function(DB, strand){
 mergeStrDenovo <- function(plus, minus){  
   nullplus <- unlist(lapply(plus@transcripts, is.null))
   newplus <- unlist(lapply(plus@islands[nullplus], function(x) paste(names(x), collapse=".")))
-  names(newplus) <- names(plus@islands)[nullplus]
+  #names(newplus) <- names(plus@islands)[nullplus]
+  names(minus@islands) <- 1:length(minus@islands)
   nullminus <- unlist(lapply(minus@transcripts, is.null))
   newminus <- unlist(lapply(minus@islands[nullminus], function(x) paste(sort(names(x)), collapse=".")))
   names(newminus) <- names(minus@islands)[nullminus]
-  common <- names(newminus)[newminus %in% newplus]
+  common <- names(newminus)[!(newminus %in% newplus)]
+  #common <- newminus %in% newplus
   allislands <- c(plus@islands, minus@islands[!(names(minus@islands) %in% common)])
   names(allislands) <- 1:length(allislands)
   allstrand <- c(plus@islandStrand, minus@islandStrand[!(names(minus@islands) %in% common)])
@@ -237,10 +239,8 @@ createDenovoGenome <- function(reads, DB, readLen, stranded=FALSE,  minLinks=2, 
   newex <- findNewExons(reads, DB, readLen=readLen, pvalFilter=0.05)
   reads$id <- cumsum(reads$id == c(reads$id[-1], reads$id[1]))
   cat("Done...\nCreating denovo genome for positive strand\n")
-
   DBplus <- genomeBystrand(DB, "+")
   denovoplus <- assignExons2Gene(newex, DBplus, reads, maxDist=maxDist, stranded=stranded, minLinks=minLinks, maxLinkDist=maxLinkDist, mc.cores=mc.cores)
-
   cat("Done...\nCreating denovo genome for negative strand\n")
   DBminus <- genomeBystrand(DB, "-")
   denovominus <- assignExons2Gene(newex, DBminus, reads, maxDist=maxDist, stranded=stranded, minLinks=minLinks, maxLinkDist=maxLinkDist, mc.cores=mc.cores)
