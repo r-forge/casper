@@ -145,19 +145,8 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
                        )
     names(newexons) <- names(new)
   
-    newexons <- RangedData(IRanges(start=unlist(lapply(newexons, start)), end=unlist(lapply(newexons, end))), space=unlist(lapply(newexons, function(x) as.character(space(x)))), id=unlist(lapply(newexons, "[[", "id")), island=unlist(lapply(newexons, "[[", "island")))
-    allexons <- rbind(old, newexons)
-    exon2island <- as.data.frame(allexons)
+    exon2island <- rbind(as.data.frame(old), newexons)
     rownames(exon2island) <- exon2island$id
-    islands <- split(exon2island, exon2island$island)
-    
-    if(mc.cores>1) {
-      require(multicore)
-      islands <- mclapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y}, mc.cores=mc.cores)
-    } else {
-      islands <- lapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y})
-     }
-    exons <- newexons
   }
 
   exon2island <- as.data.frame(exons)
@@ -171,13 +160,14 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
   names(transcripts) <- names(islands)
   tmp <- split(extxs, tx2gene)
   transcripts[names(tmp)] <- tmp
-    
+
+  islands <- split(exon2island, exon2island$island)
   cat("fixing genome structure\n")
   exStrand <- rep(DB@islandStrand, unlist(lapply(DB@islands, length)))
   names(exStrand) <- unlist(lapply(DB@islands, names))
-  sel <- unlist(lapply(islands, function(x) names(x)[1]))
+  sel <- unlist(lapply(islands, function(x) x$id[1]))
   names(sel) <- names(islands)
-  sel2 <- exStrand[sel]
+  sel2 <- exStrand[as.character(sel)]
   names(sel2) <- names(sel)
   sel2 <- sel2[!is.na(sel2)]
   islandStrand <- vector(length=length(islands))
@@ -185,14 +175,18 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
   islandStrand[names(sel2)] <- sel2
   sel <- islandStrand=="-"
   islandStrand[islandStrand=="FALSE"] <- NA
-
-#  if(any(islandStrand[!is.na(islandStrand)]=="-")) {
-#    sel <- islandStrand=="-"
-#    sel[is.na(sel)] <- TRUE
-#    islands[sel] <- lapply(islands[sel], rev)
-#    transcripts[sel] <- lapply(transcripts[sel], rev)
-#  }
   
+  if(mc.cores>1) {
+    require(multicore)
+    if(unique(islandStrand[!is.na(islandStrand)])=='+') {
+      islands <- mclapply(names(islands), function(x) {ord <- order(islands[[x]]$start); y <- IRanges(islands[[x]]$start[ord], islands[[x]]$end[ord]); names(y) <- islands[[x]]$id[ord]; y}, mc.cores=mc.cores)
+    } else islands <- mclapply(names(islands), function(x) {ord <- order(islands[[x]]$start, decreasing=T); y <- IRanges(islands[[x]]$start[ord], islands[[x]]$end[ord]); names(y) <- islands[[x]]$id[ord]; y}, mc.cores=mc.cores)
+  } else {
+    if(unique(islandStrand[!is.na(islandStrand)])=='+') {
+      islands <- lapply(names(islands), function(x) {ord <- order(islands[[x]]$start); y <- IRanges(islands[[x]]$start[ord], islands[[x]]$end[ord]); names(y) <- islands[[x]]$id[ord]; y})
+    } else islands <- mclapply(names(islands), function(x) {ord <- order(islands[[x]]$start, decreasing=T); y <- IRanges(islands[[x]]$start[ord], islands[[x]]$end[ord]); names(y) <- islands[[x]]$id[ord]; y}, mc.cores=mc.cores)
+  }
+
   ans <- new("annotatedGenome", islands=islands, transcripts=transcripts, exon2island=exon2island, exonsNI=exons, islandStrand=islandStrand, aliases=DB@aliases, genomeVersion=DB@genomeVersion, dateCreated=Sys.Date(), denovo=TRUE)
   ans
 }
@@ -232,7 +226,6 @@ mergeStrDenovo <- function(plus, minus){
   names(islnam) <- unlist(lapply(allislands, names))
   ex2is$island <- islnam[as.character(ex2is$id)]
   allexonsNI <- RangedData(allexonsNI)
-  allislands <- lapply(allislands,function(z) z[order(start(z))])
   ans <- new("annotatedGenome", aliases=plus@aliases, denovo=TRUE, exonsNI=allexonsNI, islandStrand=allstrand, transcripts=alltrans, exon2island=ex2is, dateCreated=Sys.Date(), genomeVersion=plus@genomeVersion, islands=allislands)
   ans
   }
@@ -258,3 +251,4 @@ createDenovoGenome <- function(reads, DB, readLen, stranded=FALSE,  minLinks=2, 
   denovo
 }
 
+ 

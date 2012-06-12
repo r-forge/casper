@@ -15,8 +15,6 @@ setMethod("show", signature(object="pathCounts"), function(object) {
   } else cat("Known pathCounts object with",length(object@counts),"islands and", sum(!unlist(lapply(object@counts, is.null))),"non zero islands.\n")
 })
 
-
-
 pathCounts<-function(reads, DB, mc.cores=1) {
 
   cat("Finding overlaps between reads and exons\n")
