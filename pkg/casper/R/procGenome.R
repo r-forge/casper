@@ -97,7 +97,6 @@ mapEx<-function(exs, exkey){
 procGenome<-function(genome, mc.cores=1){
 
   genDB<-makeTranscriptDbFromUCSC(genome=genome, tablename="refGene")
-
   cat("Processing Exons and Transcrips\n")
   txs<-transcripts(genDB,columns=c("tx_id","tx_name","gene_id","exon_id","cds_id"))
   txs<-txs[match(unique(unlist(txs@elementMetadata$tx_name)), unlist(txs@elementMetadata$tx_name)),]
@@ -106,6 +105,7 @@ procGenome<-function(genome, mc.cores=1){
   
   #aliases <- txs[exid %in% names(table(exid))[table(exid)>1],]
   txs <- txs[match(unique(exid), exid),]
+  
   aliases <- values(txs)[1:3]
   aliases[,3] <- unlist(aliases[,3])
   aliases <- as.data.frame(aliases, stringsAsFactors=F)
@@ -203,7 +203,11 @@ procGenome<-function(genome, mc.cores=1){
   sel <- unlist(lapply(transcripts, function(x) names(x)[1]))
   islandStrand <- txStrand[sel]
   names(islandStrand) <- names(islands)
+
+  sel <- islandStrand=='-'
+  transcripts[sel] <- lapply(transcripts[sel], function(x) lapply(x,rev))
   
   ans <- new("annotatedGenome", islands=islands, transcripts=transcripts, exon2island=exon2island, aliases=aliases, exonsNI=exonsNI, islandStrand=islandStrand, dateCreated=Sys.Date(), genomeVersion=genome, denovo=FALSE)
   ans
  } 
+
