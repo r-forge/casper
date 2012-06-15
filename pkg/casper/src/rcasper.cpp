@@ -20,9 +20,9 @@ double cumu_fragsta(double x)
 	return y1 + (x-x1) * (y2-y1)/(x2-x1);
 }
 
-DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR) 
+DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP strandR) 
 {
-	int nexons=Rf_length(exonsR), nfraglen=Rf_length(fraglenR), readLength=INTEGER(readLengthR)[0];
+	int nexons=Rf_length(exonsR), nfraglen=Rf_length(fraglenR), readLength=INTEGER(readLengthR)[0], strand=INTEGER(strandR)[0];
 	int *exons=INTEGER(exonsR), *exonwidth=INTEGER(exonwidthR), *lenvals=INTEGER(lenvalsR);
 	double *fraglen= REAL(fraglenR);
 
@@ -61,30 +61,47 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP 
 		if (mid == NULL) continue;
 		mid[0] = '\0';
 		char* right = mid+1;
-		int leftc = 0, rightc= 0;
+		int leftc = 0, rightc = 0;
+		if(strand==-1){
+                  char* tmp = new char[strlen(left)+1];
+                  strcpy(tmp, left);
+                  left = new char[strlen(right) + 1];
+                  strcpy(left, right);
+                  right = new char[strlen(tmp) + 1];
+                  strcpy(right, tmp);
+                      }
 		for (int l = strlen(left)-1; l >= 0; l--) { if (left[l] == '.') leftc++; }  
 		for (int r = strlen(right)-1; r >= 0; r--) { if (right[r] == '.') rightc++; } 
 
 		Fragment* f = new Fragment(leftc, rightc, count);
+				
 
 		//Set sequence of visited exons
 		if ((leftc>0) && (rightc>0)) {
-		  left = left+1;
-		  right[strlen(right)-1] = '\0';
+		  if(strand==1) {
+                    left = left+1;
+                    right[strlen(right)-1] = '\0';
+                  } else {
+                    right = right+1;
+                    left[strlen(left)-1] = '\0';
+                  }
 		  char* item;
+	
 		  item = strtok(left, ".");  //split string
 		  for (int j = 0; item != NULL; j++) {
 			  int eid = atoi(item);
-			  f->left[j] = eid;
+			  if(strand==1) f->left[j] = eid;
+			  else f->left[leftc-j-1] = eid;
 			  item = strtok(NULL, ".");
 		  }
 		  item = strtok(right, ".");
 		  for (int j = 0; item != NULL; j++) {
 			  int eid = atoi(item);
-			  f->right[j] = eid;
+			  if(strand==1) f->right[j] = eid;
+			  else f->right[rightc-j-1] = eid;
 			  item = strtok(NULL, ".");
 		  }
-
+	
 		  df->addData(f);
 
 		}
@@ -103,19 +120,19 @@ set<Variant*, VariantCmp>* importTranscripts(DataFrame* df, SEXP transcriptsR)
 		trow = VECTOR_ELT(transcriptsR, i);
 		ntsub = LENGTH(trow);
 		tvals = INTEGER(trow);
-
+		
 		vector<Exon*>* el = new vector<Exon*>();
 		for (int s = 0; s < ntsub; s++) {
-			int eid = tvals[s];
+                  
+                  int eid = tvals[s];
 			Exon* ex = df->id2exon[eid];
 			el->push_back(ex);
-		}
+                }
 
 		v = new Variant(el);
 		v->id= i;
 		int nbchar= Rf_length(STRING_ELT(tnames,i));
 		v->name= string(CHAR(STRING_ELT(tnames, i)), nbchar);
-
 		initvars->insert(v);
 	}
 
@@ -127,7 +144,7 @@ extern "C"
 
   //Estimate isoform expression for multiple genes. Calls calcKnownSingle repeadtedly
   //Input args same as for calcDenovoMultiple
-  SEXP calcKnownMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR) 
+  SEXP calcKnownMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR, SEXP strandR) 
 	{
 		int i, ngenes=LENGTH(geneidR);
 		SEXP ansMultiple, ansSingle;
@@ -135,7 +152,7 @@ extern "C"
 		PROTECT(ansMultiple= allocVector(VECSXP, ngenes));
 
 		for (i=0; i<ngenes; i++) {
-		  ansSingle= calcKnownSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, geneidR, priorqR);
+		  ansSingle= calcKnownSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, priorqR, VECTOR_ELT(strandR, i));
 		  SET_VECTOR_ELT(ansMultiple,i,ansSingle);
 		}
 		
@@ -145,44 +162,60 @@ extern "C"
 
   //Estimate isoform expression (known variants case)
   //Input args same as for calcDenovoSingle
-  SEXP calcKnownSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP geneidR, SEXP priorqR)
+  SEXP calcKnownSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR, SEXP strandR)
 	{
-		DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR);
+		DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR, strandR);
 		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR);
 		
 		double priorq = REAL(priorqR)[0];
 
-		Model* model = new Model(new vector<Variant*>(initvars->begin(), initvars->end()));
+		//Model* model = new Model(new vector<Variant*>(initvars->begin(), initvars->end()));
+		Model* model = new Model(initvars);
 		Casper* casp = new Casper(model, df);
 		casp->priorq = priorq;
 
 		int vc = model->count();
 		double* em = casp->calculateMode();
 
-		SEXP Rc;
-		PROTECT(Rc = allocVector(REALSXP, vc));
-		double* res = REAL(Rc);
-		for (int i = 0; i < vc; i++)
-		{
-			res[i] = em[i];
-		}
+         	SEXP ans;
+                PROTECT(ans= allocVector(VECSXP, 2));
+
+  		SET_VECTOR_ELT(ans, 0, allocVector(REALSXP,vc));  //stores estimated expression
+                SET_VECTOR_ELT(ans, 1, allocVector(STRSXP,vc)); //stores variant names
+
+	   
+                
+		double *expr= REAL(VECTOR_ELT(ans,0));
+                SEXP varnamesR= VECTOR_ELT(ans,1);              		
+		
+	 	for (int j=0; j< vc; j++) {
+                   
+                    Variant* v = model->get(j);
+                    int varidx= model->indexOf(v);
+                    expr[j]= em[varidx]; //estimated expression
+                    if (initvars->count(v)>0) v->name= (*initvars->find(v))->name;  //respect initial variant names
+                    const char *cname= (v->name).c_str();
+                    SET_STRING_ELT(varnamesR,j,mkChar(cname));  //variant name
+                       }
+
+		
 		UNPROTECT(1);
 
-		return Rc;
+		return ans;
 	}
 
-  SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP modelUnifPriorR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP niterR, SEXP exactMarginalR, SEXP verboseR) 
+  SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP modelUnifPriorR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP niterR, SEXP exactMarginalR, SEXP verboseR, SEXP strandR) 
 	{
 		//De novo isoform discovery and estimate expression for multiple genes. Calls calcDenovoSingle repeadtedly
 		int i, ngenes=LENGTH(geneidR);
 		SEXP ansMultiple, ansSingle;
 
 		PROTECT(ansMultiple= allocVector(VECSXP, ngenes));
-
+		
 		for (i=0; i<ngenes; i++) {
 		  int nexons = min(LENGTH(VECTOR_ELT(exonsR,i)), LENGTH(nvarPriorR));
 
-		  ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, modelUnifPriorR, VECTOR_ELT(nvarPriorR,nexons-1), VECTOR_ELT(nexonPriorR,nexons-1), priorqR, minppR, selectBest, methodR, VECTOR_ELT(niterR,i), exactMarginalR, verboseR);
+		  ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, modelUnifPriorR, VECTOR_ELT(nvarPriorR,nexons-1), VECTOR_ELT(nexonPriorR,nexons-1), priorqR, minppR, selectBest, methodR, VECTOR_ELT(niterR,i), exactMarginalR, verboseR, VECTOR_ELT(strandR, i));
 		  SET_VECTOR_ELT(ansMultiple,i,ansSingle);
 		}
 		
@@ -190,7 +223,7 @@ extern "C"
 		return ansMultiple;
 	}
 
-  SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP modelUnifPriorR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP niterR, SEXP exactMarginalR, SEXP verboseR)
+  SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP modelUnifPriorR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP niterR, SEXP exactMarginalR, SEXP verboseR, SEXP strandR)
 	{
 	//De novo isoform discovery and estimate expression for a single gene
 	//Input
@@ -217,7 +250,7 @@ extern "C"
 	  int exactMarginal= INTEGER(exactMarginalR)[0];
 	  double minpp = REAL(minppR)[0], priorq = REAL(priorqR)[0];
 
-	  DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR); //read input
+	  DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR, strandR); //read input
 	  set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR); //initialize model
 
 	  //df->debugprint();  //debug
@@ -266,7 +299,7 @@ extern "C"
 			}
 		}
 		resModes = seppl->resultModes();
-
+		
 		//vector<Variant*>* allpossvariants = df->allVariants();
 
 		// END OF CALCULATIONS
@@ -356,7 +389,7 @@ extern "C"
 				expr[rowid]= i;  //model id
 				Variant* v = m->get(j);
 				int varidx= m->indexOf(v);
-				expr[rowid+nrowpi]= resModes[m][varidx]; //estimated expression
+			        expr[rowid+nrowpi]= resModes[m][varidx]; //estimated expression
 				if (initvars->count(v)>0) v->name= (*initvars->find(v))->name;  //respect initial variant names
 				const char *cname= (v->name).c_str();
 				SET_STRING_ELT(varnamesR,rowid,mkChar(cname));  //variant name

@@ -1,36 +1,41 @@
 
 calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, priorq=3, mc.cores=1) {
   if (missing(readLength)) stop("readLength must be specified")
-#  if (class(genomeDB)!='knownGenome') stop("genomeDB must be of class 'knownGenome'")
+  if (genomeDB@denovo) stop("genomeDB must be a known genome")
+  if (pc@denovo) stop("pc must be a pathCounts object from known genome")
   
   #Format input
-  startcdf <- as.double(ecdf(distrs$stDis)(seq(0,1,.001)))
+  startcdf <- distrs$stDis(seq(0,1,.001))
   lendis <- as.double(distrs$lenDis/sum(distrs$lenDis))
   lenvals <- as.integer(names(distrs$lenDis))
   readLength <- as.integer(readLength)
   priorq <- as.double(priorq)
-  if (missing(geneid)) geneid <- names(genomeDB@genes)[sapply(genomeDB@genes,length)>1]
+  if (missing(geneid)) geneid <- names(genomeDB@islands)[sapply(genomeDB@islands,length)>1]
 
-  exons <- lapply(genomeDB@genes,function(z) as.integer(names(z)))
-  exonwidth <- lapply(genomeDB@genes,width)
-
-  if (!all(geneid %in% names(exons))) stop('geneid not found in genomeDB@genes')
-  if (!all(geneid %in% names(pc))) stop('geneid not found in pc')
+  exons <- lapply(genomeDB@islands,function(z) as.integer(names(z)))
+  exonwidth <- lapply(genomeDB@islands,width)
+  strand <- genomeDB@islandStrand
+  
+  if (!all(geneid %in% names(exons))) stop('geneid not found in genomeDB@islands')
+  if (!all(geneid %in% names(pc@counts))) stop('geneid not found in pc')
   if (!all(geneid %in% names(genomeDB@transcripts))) stop('geneid not found in genomeDB@transcripts')
-
+  if (!all(geneid %in% names(genomeDB@islandStrand))) stop('geneid not found in genomeDB@islandStrand')
+    
   #Define basic function
   f <- function(z) {
     geneid <- as.integer(z)
     exons <- exons[z]
     exonwidth <- exonwidth[z]
     transcripts <- genomeDB@transcripts[z]
-    pc <- pc[z]
-    ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,geneid=geneid,pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq)
+    strand <- as.list(as.integer(ifelse(strand[z]=='+', 1, -1)))
+    pc <- pc@counts[z]
+    ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,geneid=as.list(geneid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq, strand=strand)
+    ans <- lapply(1:length(ans), function(x) {res <- ans[[x]][[1]]; names(res) <- ans[[x]][[2]]; res})
     ans
   }
 
   #Run
-  if (mc.cores>1) {
+  if (mc.cores>1 && length(geneid)>mc.cores) {
     if ('multicore' %in% loadedNamespaces()) {
       #split into smaller jobs
       nsplit <- floor(length(geneid)/mc.cores)
@@ -42,9 +47,9 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
     ans <- f(geneid)
     names(ans) <- geneid
   }
-
   #Format as ExpressionSet
-  fdata <- data.frame(transcript=as.vector(unlist(lapply(genomeDB@transcripts[geneid],names))), gene=rep(names(ans),sapply(ans,length)))
+  #fdata <- data.frame(transcript=as.vector(unlist(lapply(genomeDB@transcripts[geneid],names))), gene=rep(names(ans),sapply(ans,length)))
+  fdata <- data.frame(transcript=unlist(lapply(ans, names)), gene=rep(names(ans),sapply(ans,length)))
   exprsx <- matrix(unlist(ans),ncol=1)
   rownames(exprsx) <- rownames(fdata) <- fdata$transcript
   fdata <- new("AnnotatedDataFrame",fdata)
@@ -52,7 +57,7 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
 
   #Return absolute expression levels
   if (!relativeExpr) {
-    nreads <- rep(sapply(pc[geneid],sum),sapply(genomeDB@transcripts[geneid],length))
+    nreads <- rep(sapply(pc@counts[geneid],sum),sapply(genomeDB@transcripts[geneid],length))
     exprs(ans) <- exprs(ans)*nreads
     exprs(ans) <- t(t(exprs(ans))/colSums(exprs(ans)))
   }
@@ -60,8 +65,8 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
 }
 
 
-calcKnownMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, priorq) {
-  ans <- .Call("calcKnownMultiple",exons,exonwidth,transcripts,geneid,pc,startcdf, lendis, lenvals, readLength, priorq)
+calcKnownMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, priorq, strand) {
+  ans <- .Call("calcKnownMultiple",exons,exonwidth,transcripts,geneid,pc,startcdf, lendis, lenvals, readLength, priorq, strand)
   return(ans)
 }
 

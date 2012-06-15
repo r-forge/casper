@@ -79,7 +79,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
     modelUnifPrior <- as.integer(1)
   }
   if (!(method %in% c('auto','rwmcmc','priormcmc','exact'))) stop("method must be auto, rwmcmc, priormcmc or exact")
-  
+
   #Format input
   sseq <- seq(0,1,.001)
   startcdf <- as.double(distrs$stDis(sseq))
@@ -88,7 +88,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   lenvals <- as.integer(seq(min(lenvals),max(lenvals),1))
   lendis <- rep(0,length(lenvals)); names(lendis) <- as.character(lenvals)
   lendis[names(distrs$lenDis)] <- as.double(distrs$lenDis/sum(distrs$lenDis))
-    
+
   readLength <- as.integer(readLength)
   priorq <- as.double(priorq)
   nvarPrior <- lapply(nvarPrior,as.double)
@@ -107,6 +107,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   
   exons <- lapply(genomeDB@islands[geneid],function(z) as.integer(names(z)))
   exonwidth <- lapply(genomeDB@islands[geneid],width)
+  strand <- genomeDB@islandStrand
   if (missing(niter)) {
      niter <- as.list(as.integer(ifelse(sapply(exons,length)>20,10^3,10^4)))
   } else {
@@ -118,7 +119,8 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   f <- function(z) {
     geneid <- as.integer(z)
     transcripts <- genomeDB@transcripts[z]
-    ans <- calcDenovoMultiple(exons=exons[z],exonwidth=exonwidth[z],transcripts=transcripts,geneid=as.list(geneid),pc=pc@counts[z],startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,modelUnifPrior=modelUnifPrior,nvarPrior=nvarPrior,nexonPrior=nexonPrior,priorq=priorq,minpp=minpp,selectBest=selectBest,method=method,niter=niter[z],exactMarginal=exactMarginal,verbose=verbose)
+    strand <- as.list(as.integer(ifelse(strand[z]=='+', 1,-1)))
+    ans <- calcDenovoMultiple(exons=exons[z],exonwidth=exonwidth[z],transcripts=transcripts,geneid=as.list(geneid),pc=pc@counts[z],startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,modelUnifPrior=modelUnifPrior,nvarPrior=nvarPrior,nexonPrior=nexonPrior,priorq=priorq,minpp=minpp,selectBest=selectBest,method=method,niter=niter[z],exactMarginal=exactMarginal,verbose=verbose, strand=strand)
     mapply(function(z1,z2) formatDenovoOut(z1,z2), ans, genomeDB@islands[z], SIMPLIFY=FALSE)
   }
 
@@ -143,7 +145,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
     sel <- !sapply(pc@counts[geneid], is.null)
     all <- geneid
     geneid <- geneid[sel]
-    if (mc.cores>1) {
+    if (mc.cores>1 && length(geneid)>mc.cores) {
       if ('multicore' %in% loadedNamespaces()) {
         #split into smaller jobs
         nsplit <- floor(min(length(geneid), mc.cores)/mc.cores)
@@ -152,6 +154,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
         ans <- do.call(c,ans)
       } else stop('multicore library has not been loaded!')
     } else {
+
       ans <- f(geneid)
       names(ans) <- geneid
     }
@@ -213,8 +216,8 @@ formatDenovoOut <- function(ans, genesel) {
   new("denovoGeneExpr",posprob=ans$posprob,expression=ans$expression,variants=ans$variants,integralSum=ans$integralSum,npathDeleted=ans$npathDeleted)
 }
 
-calcDenovoMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, modelUnifPrior, nvarPrior, nexonPrior, priorq, minpp, selectBest, method, niter, exactMarginal, verbose) {
-  ans <- .Call("calcDenovoMultiple",exons,exonwidth,transcripts,geneid,pc,startcdf,lendis,lenvals,readLength,modelUnifPrior,nvarPrior,nexonPrior,priorq,minpp,selectBest,method,niter,exactMarginal,verbose)
+calcDenovoMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, modelUnifPrior, nvarPrior, nexonPrior, priorq, minpp, selectBest, method, niter, exactMarginal, verbose, strand) {
+  ans <- .Call("calcDenovoMultiple",exons,exonwidth,transcripts,geneid,pc,startcdf,lendis,lenvals,readLength,modelUnifPrior,nvarPrior,nexonPrior,priorq,minpp,selectBest,method,niter,exactMarginal,verbose, strand)
   return(ans)
 }
 

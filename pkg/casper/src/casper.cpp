@@ -67,8 +67,6 @@ void Casper::calculateMode(double* pi) {
       pi[i]= newpi;
     }
   }
-  //printf("%d\n",r); //debug
-
 }
 
 double Casper::calculateIntegral() {
