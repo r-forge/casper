@@ -215,7 +215,7 @@ extern "C"
 		for (i=0; i<ngenes; i++) {
 		  int nexons = min(LENGTH(VECTOR_ELT(exonsR,i)), LENGTH(nvarPriorR));
 
-		  ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, modelUnifPriorR, VECTOR_ELT(nvarPriorR,nexons-1), VECTOR_ELT(nexonPriorR,nexons-1), priorqR, minppR, selectBest, methodR, VECTOR_ELT(niterR,i), exactMarginalR, verboseR, VECTOR_ELT(strandR, i));
+		  ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, modelUnifPriorR, VECTOR_ELT(nvarPriorR,nexons-1), VECTOR_ELT(nexonPriorR,nexons-1), priorqR, minppR, selectBest, methodR, VECTOR_ELT(niterR,i), exactMarginalR, VECTOR_ELT(strandR, i));
 		  SET_VECTOR_ELT(ansMultiple,i,ansSingle);
 		}
 		
@@ -223,7 +223,7 @@ extern "C"
 		return ansMultiple;
 	}
 
-  SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP modelUnifPriorR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP niterR, SEXP exactMarginalR, SEXP verboseR, SEXP strandR)
+  SEXP calcDenovoSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP modelUnifPriorR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP niterR, SEXP exactMarginalR, SEXP strandR)
 	{
 	//De novo isoform discovery and estimate expression for a single gene
 	//Input
@@ -244,9 +244,8 @@ extern "C"
 	// - methodR: 1 is exhaustive enumeration; 2 random walk MCMC; 3 prior proposal MCMC; 0 auto (exhaustive for <=4 exons, RW-MCMC otherwise)
 	// - niter: number of mcmc iterations
 	// - exactMarginal: set to 0 to estimate post prob from proportion of MCMC visits; set to 1 to use marginal likelihoods of MCMC visited models
-	// - verbose: set verbose != 0 to print warnings & progress info
 
-	  int  selBest = INTEGER(selectBest)[0], method= INTEGER(methodR)[0], verbose = INTEGER(verboseR)[0], niter= INTEGER(niterR)[0];
+	  int  selBest = INTEGER(selectBest)[0], method= INTEGER(methodR)[0], niter= INTEGER(niterR)[0];
 	  int exactMarginal= INTEGER(exactMarginalR)[0];
 	  double minpp = REAL(minppR)[0], priorq = REAL(priorqR)[0];
 
@@ -258,7 +257,6 @@ extern "C"
 	  //tmpm->debugprint(); //debug
 
 	  int discarded = df->fixUnexplFrags(initvars); //add variants to initial model
-	  //if (verbose > 0) Rprintf("discarded %i fragments\n", discarded);
 	  //Model* tmp2 = new Model(initvars);  //debug
 	  //tmp2->debugprint();  //debug
 
@@ -305,7 +303,7 @@ extern "C"
 		// END OF CALCULATIONS
 		
 		Model* bestModel;
-		double bestModelProb = -1;
+		double bestModelProb = -1, bestModelPrior = -1;
 
 		map<Model*, double, ModelCmp>::iterator mvi = resProbs.begin();
 		while (mvi != resProbs.end())
@@ -314,6 +312,7 @@ extern "C"
 			{
 				bestModelProb = mvi->second;
 				bestModel = mvi->first;
+				bestModelPrior = seppl->calculatePrior(bestModel);
 			}
 
 			if (mvi->second < minpp) 
@@ -336,7 +335,7 @@ extern "C"
 		int i;
 		int nrowpi=0, nx;
 		if (selBest==0) { nx= resProbs.size(); } else { nx=1; }
-		SET_VECTOR_ELT(ans, 0, allocMatrix(REALSXP,nx,2));
+		SET_VECTOR_ELT(ans, 0, allocMatrix(REALSXP,nx,3));
 		SET_VECTOR_ELT(ans, 5, allocVector(STRSXP,nx));
 		double *resProbsR= REAL(VECTOR_ELT(ans,0));
 		
@@ -347,12 +346,14 @@ extern "C"
 				Model* m = mi->first;
 				resProbsR[i]= i;
 				resProbsR[i+nx]= resProbs[m];
+				resProbsR[i+2*nx]= exp(seppl->calculatePrior(m));
 				nrowpi+= m->count();
 				//SET_STRING_ELT(VECTOR_ELT(ans,5),i,mkChar(m->getCodeStr(allpossvariants)));  //model name
 			}
 		} else {
 			resProbsR[0]= 0;
 			resProbsR[nx]= resProbs[bestModel];
+			resProbsR[2*nx]= exp(seppl->calculatePrior(bestModel));
 			nrowpi+= bestModel->count();
 			//SET_STRING_ELT(VECTOR_ELT(ans,5),0,mkChar(bestModel->getCodeStr(allpossvariants)));  //model name
 		}

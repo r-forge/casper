@@ -35,7 +35,8 @@ private:
 	vector<double> poibinProbs; //Poisson-Binomial probs, needed by calculatePrior
 
 	map<Model*, double, ModelCmp> counts;
-	map<Model*, double, ModelCmp> integrals;
+	map<Model*, double, ModelCmp> integrals; //stores log(marginal likelihood) + log(model prior prob)
+        map<Model*, double, ModelCmp> priorprobs; //stores log(model prior prob)
 	map<Model*, double*, ModelCmp> modes;
 };
 

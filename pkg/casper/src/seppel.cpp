@@ -75,7 +75,7 @@ double Seppel::calcIntegral(Model* model, Model* similarModel)
   if (model == NULL) return 1;
   if (integrals.count(model) > 0) return integrals[model];
 
-  double like = 1;
+  double like = 1, prior = 1;
   Casper* casp = new Casper(model, frame);
 
   if (casp->isValid()) {
@@ -84,10 +84,12 @@ double Seppel::calcIntegral(Model* model, Model* similarModel)
     casp->calculateMode(mode);
     modes[model] = mode;
     like = casp->calculateIntegral(mode, model->count());
-    like += calculatePrior(model);
+    prior = calculatePrior(model);
+    like += prior;
 
   }
   integrals[model] = like;
+  priorprobs[model] = prior;
 
   return like;
 }
@@ -98,16 +100,18 @@ double Seppel::calcIntegral(Model* model)
   if (model == NULL) return 1;
   if (integrals.count(model) > 0) return integrals[model];
 
-  double like = 1;
+  double like = 1, prior = 1;
   Casper* casp = new Casper(model, frame);
 
   if (casp->isValid()) {
     double* mode = casp->calculateMode();
     modes[model] = mode;
     like = casp->calculateIntegral(mode, model->count());
-    like += calculatePrior(model);
+    prior = calculatePrior(model);
+    like += prior;
   }
   integrals[model] = like;
+  priorprobs[model] = prior;
 
   return like;
 }
@@ -317,6 +321,8 @@ double* Seppel::normalizeIntegrals(double* values, int n)
 
 
 double Seppel::calculatePrior(Model* model) {
+
+  if (priorprobs.count(model) > 0) return priorprobs[model];
 
   if (modelUnifPrior==1) {
 

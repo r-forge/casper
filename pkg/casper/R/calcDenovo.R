@@ -200,7 +200,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
 
 formatDenovoOut <- function(ans, genesel) {
   ans[[1]] <- data.frame(ans[[1]])
-  colnames(ans[[1]]) <- c('model','posprob')
+  colnames(ans[[1]]) <- c('model','posprob','priorprob')
   #ans[[1]] <- data.frame(ans[[1]],ans[[6]])
   #colnames(ans[[1]]) <- c('model','posprob','modelid')
   ans[[6]] <- NULL
