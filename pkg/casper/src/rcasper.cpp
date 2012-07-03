@@ -206,17 +206,19 @@ extern "C"
 
   SEXP calcDenovoMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP modelUnifPriorR, SEXP nvarPriorR, SEXP nexonPriorR, SEXP priorqR, SEXP minppR, SEXP selectBest, SEXP methodR, SEXP niterR, SEXP exactMarginalR, SEXP verboseR, SEXP strandR) 
 	{
-		//De novo isoform discovery and estimate expression for multiple genes. Calls calcDenovoSingle repeadtedly
-		int i, ngenes=LENGTH(geneidR);
-		SEXP ansMultiple, ansSingle;
+	  //De novo isoform discovery and estimate expression for multiple genes. Calls calcDenovoSingle repeadtedly
+	  int i, ngenes=LENGTH(geneidR), ngenes10, verbose= INTEGER(verboseR)[0];
+	  SEXP ansMultiple, ansSingle;
 
 		PROTECT(ansMultiple= allocVector(VECSXP, ngenes));
-		
+
+		if (ngenes>10) ngenes10= ngenes/10; else ngenes10=1;		
 		for (i=0; i<ngenes; i++) {
 		  int nexons = min(LENGTH(VECTOR_ELT(exonsR,i)), LENGTH(nvarPriorR));
 
 		  ansSingle= calcDenovoSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, modelUnifPriorR, VECTOR_ELT(nvarPriorR,nexons-1), VECTOR_ELT(nexonPriorR,nexons-1), priorqR, minppR, selectBest, methodR, VECTOR_ELT(niterR,i), exactMarginalR, VECTOR_ELT(strandR, i));
 		  SET_VECTOR_ELT(ansMultiple,i,ansSingle);
+		  if (verbose && (i%ngenes10)==0) Rprintf(".");
 		}
 		
 		UNPROTECT(1);

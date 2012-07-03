@@ -19,10 +19,16 @@ setValidity("denovoGeneExpr", valid_denovoGeneExpr)
 setMethod("show", signature(object="denovoGeneExpr"), function(object) {
   cat("denovoGeneExpr object\n")
   cat("\nPosterior model probabilities\n")
-  show(object@posprob)
-  cat("\nEstimated expression (conditional on each model)\n")
-  show(object@expression)
-  cat("\nUse 'variants' method to access exon starts/ends for all variants\n")
+  show(head(object@posprob))
+  cat("...\nEstimated expression (conditional on each model)\n")
+  show(head(object@expression))
+  cat("...\nUse posprob() to access posterior probabilities; variants() to get exons in each variant\n")
+}
+)
+
+setGeneric("posprob", function(object) standardGeneric("posprob"))
+setMethod("posprob", signature(object="denovoGeneExpr"), function(object) {
+  object@posprob
 }
 )
 
@@ -62,7 +68,7 @@ setMethod("as.list", signature(x="denovoGenomeExpr"), function(x) {x@islands})
 ## Function calcDenovo
 #########################################################################
 
-calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprior, minpp=0.001, selectBest=FALSE, method='auto', niter, exactMarginal=TRUE, verbose=FALSE, mc.cores=1) {
+calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprior, minpp=0.001, selectBest=FALSE, method='auto', niter, exactMarginal=TRUE, verbose=TRUE, mc.cores=1) {
   if (missing(readLength)) stop("readLength must be specified")
   if (class(genomeDB)!='annotatedGenome') stop("genomeDB must be of class 'annotatedGenome'")
   if (!genomeDB@denovo) stop("genomeDB must be a de novo annotated genome. Use createDenovoGenome")
@@ -81,6 +87,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   if (!(method %in% c('auto','rwmcmc','priormcmc','exact'))) stop("method must be auto, rwmcmc, priormcmc or exact")
 
   #Format input
+  if (verbose) cat("Formatting input...\n")
   sseq <- seq(0,1,.001)
   startcdf <- as.double(distrs$stDis(sseq))
 
@@ -148,10 +155,10 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
     if (mc.cores>1 && length(geneid)>mc.cores) {
       if ('multicore' %in% loadedNamespaces()) {
         #split into smaller jobs
-        nsplit <- floor(min(length(geneid), mc.cores)/mc.cores)
-        geneid <- lapply(1:min(length(geneid), mc.cores), function(z) { geneid[((z-1)*nsplit+1):min((z*nsplit),length(geneid))] })
-        ans <- mclapply(geneid,f,mc.cores=min(length(geneid), mc.cores))
-        ans <- do.call(c,ans)
+        nsplit <- ceiling(max(length(geneid), mc.cores)/mc.cores)
+        geneidList <- lapply(1:min(length(geneid), mc.cores), function(z) geneid[seq(z,length(geneid),by=mc.cores)])
+        ans <- mclapply(geneidList,f,mc.cores=min(length(geneidList), mc.cores))
+        ans <- do.call(c,ans); names(ans) <- unlist(geneidList); ans <- ans[geneid]
       } else stop('multicore library has not been loaded!')
     } else {
 
@@ -175,6 +182,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   if (length(geneidUnknown)>0) { geneidini <- geneid; geneid <- geneid[!(geneid %in% geneidUnknown)] }
 
   #Run
+  if (verbose==1) cat("Performing model search (this may take a while)")
   if (length(geneidUnknown)==0) {
     ans <- runCalc(geneid)
   } else {
@@ -193,16 +201,15 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
     sel <- ifelse(difndel<0 || (difndel==0 && (difsum+difmax)>=0), TRUE, FALSE)
     ans[geneidUnknown[sel]] <- ansforw[sel]; ans[geneidUnknown[!sel]] <- ansrev[!sel]
   }
+  if (verbose==1) cat("\n")
   new("denovoGenomeExpr", islands=ans)
 }
-
 
 
 formatDenovoOut <- function(ans, genesel) {
   ans[[1]] <- data.frame(ans[[1]])
   colnames(ans[[1]]) <- c('model','posprob','priorprob')
-  #ans[[1]] <- data.frame(ans[[1]],ans[[6]])
-  #colnames(ans[[1]]) <- c('model','posprob','modelid')
+  ans[[1]] <- ans[[1]][order(ans[[1]][,'posprob'],decreasing=TRUE),]
   ans[[6]] <- NULL
   ans[[2]] <- data.frame(ans[[2]],ans[[3]])
   ans[[3]] <- NULL
