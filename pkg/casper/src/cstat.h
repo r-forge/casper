@@ -117,9 +117,10 @@ void fserror(char *proc, char *act, char *what);
 void errorC(char *,char *, int);
 void err_msg(char *fct, char *txt, int n1, int n2, int n3);
 
-/**************************************************************/
-/* Memory allocation                                          */
-/**************************************************************/
+
+/****************************************************************/
+/* C Memory allocation                                          */
+/****************************************************************/
 
 float   *vector2(int,int);
 double  *dvector(int,int);

@@ -1,4 +1,5 @@
 #include "variant.h"
+#include "cppmemory.h"
 
 Variant::Variant(vector<Exon*>* exons)
 {
@@ -44,6 +45,12 @@ Variant::Variant(vector<Exon*>* exons)
 	this->hashcode = gethash();
 }
 
+Variant::~Variant () {
+  zaparray(exons); //delete [] exons;  //we delete the vector with exon pointers, not the exons themselves. After deleting a variant we want to keep the exons for other future variants
+  zaparray(positions); //delete [] positions;
+  zaparray(codes); //delete [] codes;
+}
+
 int Variant::indexOf(int exonid)
 {
 	return this->idmap[exonid];
@@ -73,16 +80,12 @@ bool Variant::contains(Fragment* frag)
 	return true;
 }
 
-char* Variant::toString()
+void Variant::toString(char *str)
 {
-	char* str = new char[exonCount*16];
-	str[0] = '\0';
+  str[0] = '\0';
 
-	for (int e = 0; e < exonCount; e++)
-	{
-		sprintf(str, "%s,%i", str, exons[e]->id);
-	}
-	return str;
+  for (int e = 0; e < exonCount; e++) sprintf(str, "%s,%i", str, exons[e]->id);
+
 }
 
 int Variant::compare(const Variant* other)

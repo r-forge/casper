@@ -1,10 +1,16 @@
 #include "seppel.h"
 #include <iostream>
+#include "cppmemory.h"
 
 Seppel::Seppel(DataFrame* frame)
 {
   this->frame = frame;
   this->modelUnifPrior= 1;
+
+  varis = new vector<Variant*>();
+  varisSet = new set<Variant*>();
+  models = new vector<Model*>();
+  modelsSet = new set<Model*>();
 }
 
 Seppel::Seppel(DataFrame* frame, double* nvarPrior, double* nexonPrior) 
@@ -14,6 +20,11 @@ Seppel::Seppel(DataFrame* frame, double* nvarPrior, double* nexonPrior)
 
   this->frame = frame;
   this->modelUnifPrior= 0;
+
+  varis = new vector<Variant*>();
+  varisSet = new set<Variant*>();
+  models = new vector<Model*>();
+  modelsSet = new set<Model*>();
 
   //Prior on number of exons in a variant
   tmp = 0;
@@ -35,6 +46,28 @@ Seppel::Seppel(DataFrame* frame, double* nvarPrior, double* nexonPrior)
   psum = log(psum);
   for (int i=0; i< imax; i++) priorpNbVars[i] -= psum;
 }
+
+Seppel::~Seppel() {
+
+  //Free all considered variants & models
+  std::for_each(varis->begin(), varis->end(), DeleteFromVector());
+  varis->clear();
+
+  std::for_each(models->begin(), models->end(), DeleteFromVector());
+  models->clear();
+
+  std::for_each(varisSet->begin(), varisSet->end(), DeleteFromVector());
+  varisSet->clear();
+
+  std::for_each(modelsSet->begin(), modelsSet->end(), DeleteFromVector());
+  modelsSet->clear();
+
+  //Free modes for each model
+  map<Model*, double*, ModelCmp>::const_iterator it;
+  for (it = modes.begin(); it != modes.end(); it++) { delete [] it->second; }
+
+}
+
 
 double* Seppel::initMode(Model* model, Model* similarModel) {
 
@@ -91,6 +124,7 @@ double Seppel::calcIntegral(Model* model, Model* similarModel)
   integrals[model] = like;
   priorprobs[model] = prior;
 
+  delete casp;
   return like;
 }
 
@@ -113,12 +147,13 @@ double Seppel::calcIntegral(Model* model)
   integrals[model] = like;
   priorprobs[model] = prior;
 
+  delete casp;
   return like;
 }
 
 void Seppel::exploreExact()
 {
-	vector<Model*>* models = frame->allModels();
+  frame->allModels(varis, models);  //store all possible variants & models
 
 	vector<Model*>::const_iterator mi;
 	for (mi = models->begin(); mi != models->end(); mi++)
@@ -129,33 +164,38 @@ void Seppel::exploreExact()
 }
 void Seppel::exploreUnif(int runs)
 {
-	vector<Model*>* allmodels = frame->allModels();
-	vector<Model*>* models = new vector<Model*>();
+
+  vector<Variant*>* varis = new vector<Variant*>();
+  vector<Model*>* models = new vector<Model*>();
+  frame->allModels(varis, models);  //store all possible variants & models
+
+  vector<Model*>* possiblemodels = new vector<Model*>();
 	vector<Model*>::const_iterator ami;
-	for (ami = allmodels->begin(); ami != allmodels->end(); ami++)
+	for (ami = models->begin(); ami != models->end(); ami++)
 	{
 		Casper* ncasp = new Casper(*ami, frame);
 		if (ncasp->isValid())
 		{
-			models->push_back(ncasp->model);
+			possiblemodels->push_back(ncasp->model);
 			counts[ncasp->model] = 0;
 		}
+		delete ncasp;
 	}
-	if (models->size() == 0)
+	if (possiblemodels->size() == 0)
 	{
 		return;
 	}
 
-	int onum = runifdisc(0, models->size() - 1);
-	Model* omodl = models->at(onum);
+	int onum = runifdisc(0, possiblemodels->size() - 1);
+	Model* omodl = possiblemodels->at(onum);
 	double olike = calcIntegral(omodl);
 
 	int accepted = 0;
 	
 	for (int r = 0; r < runs; r++)
 	{
-		int nnum = runifdisc(0, models->size() - 1);
-		Model* nmodl = models->at(nnum);
+		int nnum = runifdisc(0, possiblemodels->size() - 1);
+		Model* nmodl = possiblemodels->at(nnum);
 
 		double nlike = calcIntegral(nmodl);
 		if (nlike != 1)
@@ -172,30 +212,30 @@ void Seppel::exploreUnif(int runs)
 		}
 		counts[omodl]++;
 	}
+	delete [] possiblemodels;
 }
 void Seppel::exploreSmart(Model* startmodel, int runs)
 {
-    //FILE * pFile = fopen("C:\\prop_file.txt", "w");
-    //FILE * vFile = fopen("C:\\visi_file.txt", "w");
 
-	Model* omodl = startmodel;
+  modelsSet->insert(startmodel);
+  //models->push_back(startmodel);
+	Model *omodl = startmodel;
 	double olike = calcIntegral(omodl);
-	SmartModelDist* odist = new SmartModelDist(this, frame, omodl, 0.8);
+	SmartModelDist* odist = new SmartModelDist(this, frame, omodl, 0.8, modelsSet);
 	
 	int accepted = 0;
 
 	for (int r = 0; r < runs; r++)
 	{
-		Model* nmodl = odist->sample();
-		double nlike = calcIntegral(nmodl,omodl);
-		//double nlike = calcIntegral(nmodl);
-
-		//fprintf(vFile, "%s\n", getmodelcode2(allvars, omodl));
-		//fprintf(pFile, "%s\n", getmodelcode2(allvars, nmodl));
+	  Model* nmodl = odist->sample(varisSet);  //propose new model, add variants to varisSet
+	  modelsSet->insert(nmodl);
+	  //models->push_back(nmodl);
+	  double nlike = calcIntegral(nmodl,omodl);
+	  //double nlike = calcIntegral(nmodl);
 
 		if (nlike != 1)
 		{
-			SmartModelDist* ndist = new SmartModelDist(this, frame, nmodl, 0.8);
+		  SmartModelDist* ndist = new SmartModelDist(this, frame, nmodl, 0.8, modelsSet);  //create proposal, add considered models to models
 
 			double nprob = odist->densityLn(nmodl);
 			double oprob = ndist->densityLn(omodl);
@@ -204,12 +244,14 @@ void Seppel::exploreSmart(Model* startmodel, int runs)
 			double lp = exp(l);
 			
 			double x = runif();
-			if (x < lp)
-			{
-				omodl = nmodl;
-				odist = ndist;
-				olike = nlike;
-				accepted++;
+			if (x < lp) {
+			  omodl = nmodl;
+			  delete odist;
+			  odist = ndist;
+			  olike = nlike;
+			  accepted++;
+			} else {
+			  delete ndist;
 			}
 		}
 
@@ -219,11 +261,9 @@ void Seppel::exploreSmart(Model* startmodel, int runs)
 			count = counts[omodl];
 		}
 		counts[omodl] = count + 1;	
-		//printf("%d\n",r); //debug
 	}
+	delete odist;
 
-	//fclose(pFile);
-	//fclose(vFile);
 }
 
 map<Model*, double*, ModelCmp> Seppel::resultModes()
@@ -288,7 +328,7 @@ map<Model*, double, ModelCmp> Seppel::resultPPMCMC()
 	return probs;
 }
 
-double* Seppel::normalizeIntegrals(double* values, int n)
+void Seppel::normalizeIntegrals(double *probs, double *values, int n)
 {
 	double imax = -DBL_MAX;
 	
@@ -305,7 +345,7 @@ double* Seppel::normalizeIntegrals(double* values, int n)
 
 	double lsum = imax + log(asum);
 	
-	double* probs = new double[n];
+	//double* probs = new double[n];
 	double psum = 0;
 	for (int i = 0; i < n; i++)
 	{
@@ -316,7 +356,7 @@ double* Seppel::normalizeIntegrals(double* values, int n)
 	{
 		probs[i] = probs[i] / psum;
 	}
-	return probs;
+	//return probs;
 }
 
 

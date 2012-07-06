@@ -5,6 +5,7 @@ class DiscreteDF
 {
 public:
         DiscreteDF(double* data, int* values, int size);
+	~DiscreteDF();
 
 	int size;
         int value(int i);

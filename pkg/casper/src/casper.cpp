@@ -73,27 +73,39 @@ double Casper::calculateIntegral() {
   int n = model->count();
   double* mode = calculateMode();
   double ans= calculateIntegral(mode, n);
+  delete [] mode;
   return ans;
 }
 double Casper::calculateIntegral(double *mode, int n)
 {
- 	if (n == 1)
-	{
-		return priorLikelihoodLn(mode);
-	}
+  if (n == 1) { return priorLikelihoodLn(mode); }
 
-	double* thmode = mlogit(mode, n);
-    double*** H = vtHess(thmode, n);
-    double** G = vtGradG(thmode, n);
-    double** S = normapprox(G, H, mode, thmode, n);
+  double *thmode, ***H, **G, **S;
 
-	double emlk = priorLikelihoodLn(mode);
-	double gdet = vtGradLogdet(G, n);
-	double sdet = log(det(S, n - 1));
+  thmode = new double[n - 1];
+  mlogit(thmode, mode, n);
 
-	double integral = emlk + gdet + (double)(n - 1) / 2.0 * log(2 * M_PI) - 0.5 * sdet;
+  H= darray3(n,n,n);
+  vtHess(H, thmode, n);
+
+  G = dmatrix(0,n,0,n);
+  vtGradG(G,thmode, n);
+
+  S= dmatrix(0,n,0,n);
+  normapprox(S, G, H, mode, thmode, n);
+
+  double emlk = priorLikelihoodLn(mode);
+  double gdet = vtGradLogdet(G, n);
+  double sdet = log(det(S, n - 1));
+
+  double integral = emlk + gdet + (double)(n - 1) / 2.0 * log(2 * M_PI) - 0.5 * sdet;
+
+  delete [] thmode;
+  free_darray3(H,n,n,n);
+  free_dmatrix(G,0,n,0,n);
+  free_dmatrix(S,0,n,0,n);
 	
-    return integral;
+  return integral;
 }
 
 
@@ -117,13 +129,14 @@ double Casper::priorLn(double* pi)
 	int n = model->count();
 
 	double* alpha = new double[n];
-	for (int i = 0; i < n; i++)
-    {
-		alpha[i] = priorq;
-	}
+	for (int i = 0; i < n; i++) alpha[i] = priorq;
 
 	int log = 1;
-	return ddirichlet(pi, alpha, &n, &log);
+	double ans= ddirichlet(pi, alpha, &n, &log);
+
+	delete [] alpha;
+
+	return ans;
 }
 
 double Casper::likelihoodLn(double* pi)
@@ -171,14 +184,10 @@ map<Fragment*, double> Casper::fragdist(double* pi)
 	return mem;
 }
 
-double** Casper::normapprox(double** G, double*** H, double* mode, double* thmode, int n)
+void Casper::normapprox(double **S, double** G, double*** H, double* mode, double* thmode, int n)
 {
 	map<Fragment*, double> mem = fragdist(mode);
-	double** S = new double*[n - 1];
-	for (int i = 0; i < n - 1; i++)
-	{
-		S[i] = new double[n - 1];
-	}
+
 	for (int l = 0; l < n - 1; l++)
 	{
 		for (int m = l; m < n - 1; m++)
@@ -209,44 +218,29 @@ double** Casper::normapprox(double** G, double*** H, double* mode, double* thmod
 			}
 		}
 	}
-	return S;
+
 }
-double* Casper::mlogit(double* pi, int n)
-{
-	double* theta = new double[n - 1];
-	for (int i = 0; i < n - 1; i++)
-	{
-		theta[i] = log(pi[i + 1] / pi[0]);
-	}
-	return theta;
+void Casper::mlogit(double *theta, double* pi, int n) {
+
+  for (int i = 0; i < n - 1; i++) theta[i] = log(pi[i + 1] / pi[0]);
+
 }
-double* Casper::milogit(double* theta, int n)
+void Casper::milogit(double *pi, double* theta, int n)
 {
 	double sum = 1.0;
-	for (int i = 0; i < n - 1; i++)
-	{
-		sum += exp(theta[i]);
-	}
-	double* pi = new double[n];
+
+	for (int i = 0; i < n - 1; i++) sum += exp(theta[i]);
+
 	pi[0] = 1.0 / sum;
-	for (int i = 0; i < n - 1; i++)
-	{
-		pi[i + 1] = exp(theta[i]) / sum;
-	}
-	return pi;
+	for (int i = 0; i < n - 1; i++) pi[i + 1] = exp(theta[i]) / sum;
+
 }
-double** Casper::vtGradG(double* th, int n)
+void Casper::vtGradG(double **G, double* th, int n)
 {
 	double sum = 1.0;
 	for (int i = 0; i < n - 1; i++)
 	{
 		sum += exp(th[i]);
-	}
-
-	double** G = new double*[n];
-	for (int i = 0; i < n; i++)
-	{
-		G[i] = new double[n - 1];
 	}
 
 	for (int l = 0; l < n - 1; l++)
@@ -268,7 +262,7 @@ double** Casper::vtGradG(double* th, int n)
 			}
 		}
 	}
-	return G;
+	//return G;
 }
 double Casper::vtGradLogdet(double** G, int n)
 {
@@ -281,22 +275,12 @@ double Casper::vtGradLogdet(double** G, int n)
 	double logdet = log(mydet);
     return logdet;
 }
-double*** Casper::vtHess(double* th, int n)
+void Casper::vtHess(double ***H, double* th, int n)
 {
 	double sum = 1.0;
 	for (int i = 0; i < n - 1; i++)
 	{
 		sum += exp(th[i]);
-	}
-
-	double*** H = new double**[n];
-	for (int i = 0; i < n; i++)
-	{
-		H[i] = new double*[n - 1];
-		for (int j = 0; j < n - 1; j++)
-		{
-			H[i][j] = new double[n - 1];
-		}
 	}
 
 	for (int d = 0; d < n; d++)
@@ -352,7 +336,6 @@ double*** Casper::vtHess(double* th, int n)
 		}
 	}
 
-	return H;
 }
 
 double Casper::det(double** a, int n)

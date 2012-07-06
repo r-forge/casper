@@ -9,4 +9,5 @@ public:
 	int count;
 
 	Fragment(int leftc, int rightc, int count);
+	~Fragment();
 };

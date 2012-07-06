@@ -1,4 +1,5 @@
 #include "discretedf.h"
+#include "cppmemory.h"
 
 DiscreteDF::DiscreteDF(double* data, int* vals, int size)
 {
@@ -16,6 +17,13 @@ DiscreteDF::DiscreteDF(double* data, int* vals, int size)
 	  cumu[i] = sum;
 	}
 }
+
+DiscreteDF::~DiscreteDF() {
+  zaparray(values);   //delete [] values;
+  zaparray(prob);   //delete [] prob;
+  zaparray(cumu);   //delete [] cumu;
+}
+
 int DiscreteDF::value(int i) { return values[i]; }
 double DiscreteDF::probability(int i) { return prob[i]; }
 double DiscreteDF::cumulativeProbability(int i) { return cumu[i]; }

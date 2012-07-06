@@ -6,6 +6,7 @@
 #include "casper.h"
 #include "rcasper.h"
 #include "seppel.h"
+#include "cppmemory.h"
 
 int verbose = 1;
 
@@ -55,21 +56,26 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP 
 
 		//Set nb of left & right visited exons
 		const char* pname = CHAR(STRING_ELT(pnames, i));
-		char* left = new char[strlen(pname) + 1];
+		char* varname = new char[strlen(pname) + 1];
+		char* left= varname;
 		strcpy(left, pname);
 		char* mid = strchr(left, '-');
 		if (mid == NULL) continue;
 		mid[0] = '\0';
 		char* right = mid+1;
 		int leftc = 0, rightc = 0;
-		if(strand==-1){
-                  char* tmp = new char[strlen(left)+1];
-                  strcpy(tmp, left);
-                  left = new char[strlen(right) + 1];
-                  strcpy(left, right);
-                  right = new char[strlen(tmp) + 1];
-                  strcpy(right, tmp);
-                      }
+		if(strand==-1) {
+		  char *tmp= left;
+		  left= right;
+		  right= tmp;
+                  //char* tmp = new char[strlen(left)+1];
+                  //strcpy(tmp, left);
+                  //left = new char[strlen(right) + 1];
+                  //strcpy(left, right);
+                  //right = new char[strlen(tmp) + 1];
+                  //strcpy(right, tmp);
+		  //delete [] tmp;
+		}
 		for (int l = strlen(left)-1; l >= 0; l--) { if (left[l] == '.') leftc++; }  
 		for (int r = strlen(right)-1; r >= 0; r--) { if (right[r] == '.') rightc++; } 
 
@@ -105,13 +111,16 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP 
 		  df->addData(f);
 
 		}
+
+		delete [] varname;
+
 	}
 	return df;
 }
-set<Variant*, VariantCmp>* importTranscripts(DataFrame* df, SEXP transcriptsR)
+
+void importTranscripts(set<Variant*, VariantCmp> *initvars, DataFrame* df, SEXP transcriptsR)
 {
 	int nt = LENGTH(transcriptsR);
-	set<Variant*, VariantCmp>* initvars = new set<Variant*, VariantCmp>();
 	SEXP tnames = getAttrib(transcriptsR, R_NamesSymbol);
 	Variant *v;
 	SEXP trow;
@@ -123,10 +132,9 @@ set<Variant*, VariantCmp>* importTranscripts(DataFrame* df, SEXP transcriptsR)
 		
 		vector<Exon*>* el = new vector<Exon*>();
 		for (int s = 0; s < ntsub; s++) {
-                  
                   int eid = tvals[s];
-			Exon* ex = df->id2exon[eid];
-			el->push_back(ex);
+		  Exon* ex = df->id2exon[eid];
+		  el->push_back(ex);
                 }
 
 		v = new Variant(el);
@@ -134,9 +142,9 @@ set<Variant*, VariantCmp>* importTranscripts(DataFrame* df, SEXP transcriptsR)
 		int nbchar= Rf_length(STRING_ELT(tnames,i));
 		v->name= string(CHAR(STRING_ELT(tnames, i)), nbchar);
 		initvars->insert(v);
+		delete el;
 	}
 
-	return initvars;
 }
 
 extern "C"
@@ -165,8 +173,10 @@ extern "C"
   SEXP calcKnownSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR, SEXP strandR)
 	{
 		DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR, strandR);
-		set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR);
-		
+
+		set<Variant*, VariantCmp> *initvars = new set<Variant*, VariantCmp>();
+		importTranscripts(initvars, df, transcriptsR);
+
 		double priorq = REAL(priorqR)[0];
 
 		//Model* model = new Model(new vector<Variant*>(initvars->begin(), initvars->end()));
@@ -200,6 +210,11 @@ extern "C"
 
 		
 		UNPROTECT(1);
+		delete df;
+		delete initvars;
+		delete model;
+		delete casp;
+		zaparray(em);
 
 		return ans;
 	}
@@ -252,13 +267,15 @@ extern "C"
 	  double minpp = REAL(minppR)[0], priorq = REAL(priorqR)[0];
 
 	  DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR, strandR); //read input
-	  set<Variant*, VariantCmp>* initvars = importTranscripts(df, transcriptsR); //initialize model
+
+	  set<Variant*, VariantCmp> *initvars = new set<Variant*, VariantCmp>();
+	  importTranscripts(initvars, df, transcriptsR);
 
 	  //df->debugprint();  //debug
 	  //Model* tmpm = new Model(initvars);  //debug
 	  //tmpm->debugprint(); //debug
 
-	  int discarded = df->fixUnexplFrags(initvars); //add variants to initial model
+	  int discarded = df->fixUnexplFrags(initvars); //add variants to initvars (initial model)
 	  //Model* tmp2 = new Model(initvars);  //debug
 	  //tmp2->debugprint();  //debug
 
@@ -300,9 +317,8 @@ extern "C"
 		}
 		resModes = seppl->resultModes();
 		
-		//vector<Variant*>* allpossvariants = df->allVariants();
-
 		// END OF CALCULATIONS
+
 		
 		Model* bestModel;
 		double bestModelProb = -1, bestModelPrior = -1;
@@ -430,6 +446,11 @@ extern "C"
 		INTEGER(VECTOR_ELT(ans,7))[0]= discarded;
 
 		UNPROTECT(1);
+		delete seppl;
+		delete df;
+		delete initvars;
+
 		return(ans);
 	}
+
 }

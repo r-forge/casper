@@ -47,12 +47,12 @@ class Casper
 
   map<Fragment*, double> fragdist(double* pi);
 
-  double** normapprox(double** G, double*** H, double* mode, double* thmode, int n);
-  double* mlogit(double* pi, int n);
-  double* milogit(double* theta, int n);
-  double** vtGradG(double* th, int n);
+  void normapprox(double **S, double** G, double*** H, double* mode, double* thmode, int n);
+  void mlogit(double *theta, double* pi, int n);
+  void milogit(double *pi, double* theta, int n);
+  void vtGradG(double **G, double* th, int n);
   double vtGradLogdet(double** G, int n);
-  double*** vtHess(double* th, int n);
+  void vtHess(double ***H, double* th, int n);
   double det(double** a, int n);
 };
 

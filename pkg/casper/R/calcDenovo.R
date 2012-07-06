@@ -154,6 +154,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
     geneid <- geneid[sel]
     if (mc.cores>1 && length(geneid)>mc.cores) {
       if ('multicore' %in% loadedNamespaces()) {
+        #ans <- mclapply(geneid, f, mc.cores=mc.cores)
         #split into smaller jobs
         nsplit <- ceiling(max(length(geneid), mc.cores)/mc.cores)
         geneidList <- lapply(1:min(length(geneid), mc.cores), function(z) geneid[seq(z,length(geneid),by=mc.cores)])

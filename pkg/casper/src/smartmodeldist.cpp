@@ -1,9 +1,10 @@
 #include "seppel.h"
+#include "cppmemory.h"
 
 const double SmartModelDist::exon_weight = 1.0;
 const double SmartModelDist::create_prob = 0.5;
 
-SmartModelDist::SmartModelDist(Seppel* seppel, DataFrame* frame, Model* center, double exp_exons)
+SmartModelDist::SmartModelDist(Seppel* seppel, DataFrame* frame, Model* center, double exp_exons, set<Model*> *models)
 {
 	this->seppel = seppel;
 	this->center = center;
@@ -11,7 +12,7 @@ SmartModelDist::SmartModelDist(Seppel* seppel, DataFrame* frame, Model* center, 
 	this->frame = frame;
 
 	updatepks();
-	buildrmtable();
+	buildrmtable(models);
 
 	pnull = 0;
 	vector<Variant*>::const_iterator vi;
@@ -39,6 +40,12 @@ SmartModelDist::SmartModelDist(Seppel* seppel, DataFrame* frame, Model* center, 
 		pcreate = create_prob;
 	}
 }
+
+SmartModelDist::~SmartModelDist() {
+  zaparray(exon_used);
+  zaparray(exon_prob);
+}
+
 
 void SmartModelDist::updatepks()
 {
@@ -87,11 +94,12 @@ void SmartModelDist::updatepks()
 	}
 }
 
-void SmartModelDist::buildrmtable()
+void SmartModelDist::buildrmtable(set<Model*> *models)
+//void SmartModelDist::buildrmtable(vector<Model*> *models)
 {
-	Model** possible = new Model*[center->items.size()];
-	double* integrals = new double[center->items.size()];
-	int n = 0;
+  Model** possible = new Model*[center->items.size()];  //vector of model pointers
+  double* integrals = new double[center->items.size()];
+  int n = 0;
 
 	list<Variant*>* copy = new list<Variant*>(center->items.begin(), center->items.end());
 	for (unsigned int i = 0; i < center->items.size(); i++)
@@ -101,34 +109,40 @@ void SmartModelDist::buildrmtable()
 		Model* m = new Model(copy);
 		copy->push_back(v);
 
+		models->insert(m);
+		//models->push_back(m);
+		//varisSet->insert(v);  //not needed, as these variants have already been added previously
+
 		double like = seppel->calcIntegral(m,center); 
 		//double like = seppel->calcIntegral(m); //debug
 		if (like != 1)
 		{
 			possible[n] = m;
-			//integrals[n] = like;
-			integrals[n] = -200;
+			integrals[n] = like;
+			//integrals[n] = -200;  //debug
 			n++;
 		}
 	}
 
-	if (n == 0)
-	{
-		return;
-	}
+	if (n == 0) { return; }
 
-	double* probs = Seppel::normalizeIntegrals(integrals, n);
+	double *probs = new double[n];
+	Seppel::normalizeIntegrals(probs, integrals, n);
 	for (int i = 0; i < n; i++)
 	{
 		Model* m = possible[i];
 		removeprobs[m] = probs[i];
 	}
+
+	zaparray(possible);
+	zaparray(integrals);
+	zaparray(probs);
 }
 
 Variant* SmartModelDist::makevar()
 {
 
-	vector<Exon*>* nex = new vector<Exon*>();
+	vector<Exon*> *nex = new vector<Exon*>();
 	for (unsigned int i = 0; i < frame->exons.size(); i++)
 	{
 		double pk = exon_prob[i];
@@ -141,6 +155,8 @@ Variant* SmartModelDist::makevar()
 	}
 
 	Variant* nva = new Variant(nex);
+
+	delete nex;
 	return nva;
 }
 double SmartModelDist::prob(Variant* v)
@@ -161,7 +177,7 @@ double SmartModelDist::prob(Variant* v)
 	return p;
 }
 
-Model* SmartModelDist::sample()
+Model* SmartModelDist::sample(set<Variant*> *varisSet)
 {
 	vector<Variant*>* newm = new vector<Variant*>();
 	vector<Variant*>::const_iterator vi;
@@ -173,6 +189,7 @@ Model* SmartModelDist::sample()
 		do
 		{
 			v = makevar();
+			varisSet->insert(v);
 		}
 		while (v->exonCount == 0 || center->contains(v));
 		
@@ -181,7 +198,9 @@ Model* SmartModelDist::sample()
 			newm->push_back(*vi);
 		}
 		newm->push_back(v);
-		return new Model(newm);
+		Model *ans= new Model(newm);
+		delete newm;
+		return ans;
 	}
 	else
 	{

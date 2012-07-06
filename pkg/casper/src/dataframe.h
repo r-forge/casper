@@ -6,13 +6,14 @@ using namespace std;
 class DataFrame
 {
 public:
+	DataFrame(DiscreteDF* fraglen_dist, double (*fragsta_cumu)(double));
+	~DataFrame();
+
 	// all exons mapped by their id
 	vector<Exon*> exons;
 	map<int, Exon*> id2exon;
 	// all fragments
 	list<Fragment*> data;
-
-	DataFrame(DiscreteDF* fraglen_dist, double (*fragsta_cumu)(double));
 
 	void addData(Fragment* f);
 	void addExon(Exon* e);
@@ -26,8 +27,8 @@ public:
 	int fixUnexplFrags(set<Variant*, VariantCmp>* initvars);
 
 	// returns a list of all possible models that could explain this data
-	vector<Model*>* allModels();
-	vector<Variant*>* allVariants();
+	void allModels(vector<Variant*> *varis, vector<Model*> *models);
+        void allVariants(vector<Variant*> *varis);
 	int frag_readlen;
 
 	void debugprint();

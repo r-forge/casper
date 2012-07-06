@@ -10,6 +10,7 @@ using namespace std;
 class Variant
 {
 public:
+
 	int id;
 	std::string name;
 
@@ -29,6 +30,7 @@ public:
 	int hashcode;
 
 	Variant(vector<Exon*>* exons);
+	~Variant ();
 
 	// index of the exon in the exon list of this variant
 	int indexOf(int exonid);
@@ -37,7 +39,7 @@ public:
 	// checks whether the exon is used in this variant
 	bool contains(Exon* v);
 	
-	char* toString();
+	void toString(char *str);
 
 	// compares two variants, 0 if equal. -1 and +1 used for sorting in maps
 	int compare(const Variant* other);

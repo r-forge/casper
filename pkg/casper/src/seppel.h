@@ -5,6 +5,7 @@ class Seppel
 public:
 	Seppel(DataFrame* frame);
 	Seppel(DataFrame* frame, double* nvarPrior, double* nexonPrior);
+	~Seppel();
 
 	double calcIntegral(Model* model);  //compute integral (requires computing mode)
 	double calcIntegral(Model* model, Model* similarModel); //same but initializes mode using mode from a similar model (saves time)
@@ -18,7 +19,7 @@ public:
 	map<Model*, double, ModelCmp> resultPPIntegral();  //compute post prob using marginal likelihoods. Sets integralSum & integralMax
 	map<Model*, double, ModelCmp> resultPPMCMC();
 
-	static double* normalizeIntegrals(double* values, int n);
+	static void normalizeIntegrals(double *probs, double *values, int n);
 	double integralSum; //sum integrals/exp(integralMax)
 	double integralMax; //maximum log(integrals), i.e. log(marginal likelihood) + log(prior)
 
@@ -27,6 +28,12 @@ public:
 
 private:
 	DataFrame* frame;
+
+	vector<Variant*> *varis;  //stores all considered variants linearly (good for explicit enumeration)
+	set<Variant*> *varisSet; //same but stores in a set (good for random search where 1 variant/model can be visited twice)
+
+	vector<Model*> *models; //stores all considered models linearly (good for explicit enumeration)
+	set<Model*> *modelsSet; //same but stores in a set (good for random search where 1 model can be visited twice)
 
 	vector<double> priorpNbExons; //prior prob for a single variant to have 1,2... exons
 	vector<double> priorpNbVars;  //log prior prob for 1,2... variants
@@ -44,22 +51,23 @@ private:
 class SmartModelDist
 {
 public:
-	SmartModelDist(Seppel* seppel, DataFrame* frame, Model* center, double exp_exons);
+  SmartModelDist(Seppel* seppel, DataFrame* frame, Model* center, double exp_exons, set<Model*> *models);
+  ~SmartModelDist();
 	
-	// sample a proposal
-	Model* sample();
-	// densitiy of the proposal
-	double densityLn(Model* model);
+  // sample a proposal
+  Model* sample(set<Variant*> *varisSet);
+  // densitiy of the proposal
+  double densityLn(Model* model);
 
 private:
-	// extra weight of an exon if its already used
-	static const double exon_weight;
-	// probability to create, delete is 1-pcreate
-    static const double create_prob;
+  // extra weight of an exon if its already used
+  static const double exon_weight;
+  // probability to create, delete is 1-pcreate
+  static const double create_prob;
 	
-	DataFrame* frame;
-	Seppel* seppel;
-    Model* center;
+  DataFrame* frame;
+  Seppel* seppel;
+  Model* center;
 
     // expected number of exons for a gene of this length
     double exp_exons;
@@ -76,7 +84,8 @@ private:
 	map<Model*, double, ModelCmp> removeprobs;
 
 	void updatepks();
-	void buildrmtable();
+	void buildrmtable(set<Model*> *models);
+	//void buildrmtable(vector<Model*> *models);
 	Variant* makevar();
 	double prob(Variant* v);
 };

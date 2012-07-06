@@ -1,4 +1,5 @@
 #include "dataframe.h"
+#include "cppmemory.h"
 
 DataFrame::DataFrame(DiscreteDF* fraglen_dist, double (*fragsta_cumu)(double))
 {
@@ -10,6 +11,14 @@ DataFrame::DataFrame(DiscreteDF* fraglen_dist, double (*fragsta_cumu)(double))
         fraglen_maxx= fraglen_dist->value((fraglen_dist->size)-1);
 	//	for (fraglen_minx = 0; fraglen_dist->probability(fraglen_minx) == 0; fraglen_minx++) ;
 	//	for (fraglen_maxx = fraglen_dist->size - 1; fraglen_dist->probability(fraglen_maxx) == 0; fraglen_maxx--) ;
+}
+
+DataFrame::~DataFrame() {
+  std::for_each(exons.begin(), exons.end(), DeleteFromVector());
+  std::for_each(data.begin(), data.end(), DeleteFromVector());
+  //FreeClear( &exons );
+  //FreeClear( &data );
+  delete fraglen_dist;
 }
 
 void DataFrame::addData(Fragment* f)
@@ -126,6 +135,7 @@ Variant* DataFrame::path2Variant(Fragment* f)
 		itexon++;
 	}
 	Variant* v = new Variant(el);
+	delete el;
 	return v;
 }
 
@@ -188,6 +198,7 @@ int DataFrame::fixUnexplFrags(set<Variant*, VariantCmp>* initvars)
 		}
 	}
 
+	delete queue;
 	return discarded;
 }
 
@@ -225,23 +236,22 @@ void DataFrame::allModelsRec(vector<Variant*>* stack, unsigned int level, vector
 	stack->pop_back();	
 	allModelsRec(stack, level + 1, vars, models);
 }
-vector<Model*>* DataFrame::allModels()
+void DataFrame::allModels(vector<Variant*> *varis, vector<Model*> *models)
 {
-	vector<Variant*>* varis = new vector<Variant*>();
-	vector<Exon*>* estack = new vector<Exon*>();
-	allVariantsRec(estack, 0, varis);
+  vector<Exon*>* estack = new vector<Exon*>();
+  allVariantsRec(estack, 0, varis);
 	
-	vector<Variant*>* vstack = new vector<Variant*>();
-	vector<Model*>* models = new vector<Model*>();
-	allModelsRec(vstack, 0, varis, models);
-	return models;
+  vector<Variant*>* vstack = new vector<Variant*>();
+  allModelsRec(vstack, 0, varis, models);
+
+  delete estack; 
+  delete vstack; 
 }
-vector<Variant*>* DataFrame::allVariants()
+void DataFrame::allVariants(vector<Variant*> *varis)
 {
-	vector<Variant*>* varis = new vector<Variant*>();
 	vector<Exon*>* estack = new vector<Exon*>();
 	allVariantsRec(estack, 0, varis);
-	return varis;
+	delete estack;
 }
 
 void DataFrame::debugprint()

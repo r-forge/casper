@@ -68,7 +68,10 @@ char* Model::toString()
 	for (vi = idmap.begin(); vi != idmap.end(); vi++)
 	{
 		Variant* v = vi->first;
-		sprintf(str, "%s {%s}", str, v->toString());
+		char* vstr = new char[v->exonCount*16];
+		v->toString(vstr);
+		sprintf(str, "%s {%s}", str, vstr);
+		delete [] vstr;
 	}
 
 	return str;
