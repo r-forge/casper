@@ -193,8 +193,13 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
     
     #Islands with unknown strand. Run 2 strands and select the one with largest post prob
     genomeDB@transcripts[geneidUnknown] <- lapply(genomeDB@islands[geneidUnknown],function(z) list(var1=as.integer(names(z))))
+    strand[geneidUnknown] <- '+'
     ansforw <- runCalc(geneidUnknown)
-    genomeDB@transcripts[geneidUnknown] <- lapply(genomeDB@islands[geneidUnknown],function(z) list(var1=rev(as.integer(names(z)))))
+    strand[geneidUnknown] <- '-'
+    genomeDB@transcripts[geneidUnknown] <- lapply(genomeDB@transcripts[geneidUnknown],rev)
+    genomeDB@islands[geneidUnknown] <- lapply(genomeDB@islands[geneidUnknown], rev)
+    exons[geneidUnknown] <- lapply(exons[geneidUnknown], rev)
+    exonwidth[geneidUnknown] <- lapply(exonwidth[geneidUnknown], rev)
     ansrev <- runCalc(geneidUnknown)
     difndel <- sapply(ansforw,function(z) z@npathDeleted) - sapply(ansrev,function(z) z@npathDeleted)
     difmax <- sapply(ansforw,function(z) z@integralSum['logmax']) - sapply(ansrev,function(z) z@integralSum['logmax'])
@@ -231,10 +236,11 @@ calcDenovoMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startc
 
 
 
-variantMargExpr <- function(x,minpp) {
+variantMargExpr <- function(x,minProbExpr=0.5, minExpr=0.05) {
   #Marginal expression for each variant (obtained via model averaging) and marginal post prob of being expressed
-  # - minpp: variants with marginal post prob < minpp are not reported
-  if (missing(minpp)) minpp <- 0.1
+  # - minProbExpr: variants with marginal post prob < minProbExpr are not reported
+  # - minExpr: variants with expression < minExpr are not reported
+  # Note: at least one variant is always reported. If no variants satisfy minProbExpr and minExpr, the variant with largest expression is reported
   pospr <- x@posprob$posprob/sum(x@posprob$posprob)
   names(pospr) <- x@posprob$model
   pospr <- pospr[as.character(x@expression$model)]
@@ -243,10 +249,13 @@ variantMargExpr <- function(x,minpp) {
   ans <- matrix(unlist(ans),ncol=2,byrow=TRUE)
   colnames(ans) <- c('expr','probExpressed')
   rownames(ans) <- n
-  return(ans[ans[,'probExpressed']>minpp,])
+  sel <- ans[,'probExpressed']>minProbExpr & ans[,'expr']>minExpr
+  if (any(sel)) ans <- ans[sel,,drop=FALSE] else ans <- ans[which.max(ans[,'expr']),,drop=FALSE]
+  ans[,'expr'] <- ans[,'expr']/sum(ans[,'expr'])
+  return(ans)
 }
 
-relativeExpr <- function(expr, method='modelAvg', minpp=0.1){
+relativeExpr <- function(expr, method='modelAvg', minProbExpr=0.5, minExpr=0.05){
   if (!(method %in% c("bestModel", "modelAvg"))) stop("method must be one of 'bestModel' or 'modelAvg'")
   if (class(expr)!='denovoGenomeExpr') stop("expr must be of class 'denovoGenomeExpr'")
   if (method=='bestModel'){
@@ -259,7 +268,7 @@ relativeExpr <- function(expr, method='modelAvg', minpp=0.1){
     })
     ans <- do.call(c, unname(ans))
   } else {
-    ans <- lapply(as.list(expr), variantMargExpr, minpp=minpp)
+    ans <- lapply(as.list(expr), variantMargExpr, minProbExpr=minProbExpr, minExpr=minExpr)
     ans <- do.call("c", unname(ans))
   }
   ans

@@ -68,19 +68,11 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP 
 		  char *tmp= left;
 		  left= right;
 		  right= tmp;
-                  //char* tmp = new char[strlen(left)+1];
-                  //strcpy(tmp, left);
-                  //left = new char[strlen(right) + 1];
-                  //strcpy(left, right);
-                  //right = new char[strlen(tmp) + 1];
-                  //strcpy(right, tmp);
-		  //delete [] tmp;
 		}
 		for (int l = strlen(left)-1; l >= 0; l--) { if (left[l] == '.') leftc++; }  
 		for (int r = strlen(right)-1; r >= 0; r--) { if (right[r] == '.') rightc++; } 
 
 		Fragment* f = new Fragment(leftc, rightc, count);
-				
 
 		//Set sequence of visited exons
 		if ((leftc>0) && (rightc>0)) {
@@ -107,9 +99,12 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP 
 			  else f->right[rightc-j-1] = eid;
 			  item = strtok(NULL, ".");
 		  }
-	
-		  df->addData(f);
 
+		  if (((strand==1) && (f->left[f->leftc -1] <= f->right[0])) || ((strand== -1) && (f->left[f->leftc -1] >= f->right[0]))) {
+		    df->addData(f);
+		  } else {
+		    delete f;
+		  }
 		}
 
 		delete [] varname;

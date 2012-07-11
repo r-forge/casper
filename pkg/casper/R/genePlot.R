@@ -16,14 +16,14 @@ genPlot<-function(goi, genomeDB, reads, exp){
 }
 
 
-setGeneric("plotExpr", function(gene, minpp, names.arg, xlab='(kb)', ylab='', xlim, cex=1, yaxt='n', ...) standardGeneric("plotExpr"))
+setGeneric("plotExpr", function(gene, minProbExpr=.5, minExpr=.1, names.arg, xlab='(kb)', ylab='', xlim, cex=1, yaxt='n', ...) standardGeneric("plotExpr"))
 
 setMethod("plotExpr",signature(gene="denovoGeneExpr"),
-  function(gene, minpp, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', ...) {
+  function(gene, minProbExpr, minExpr, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', ...) {
     n <- names(variants(gene))
     n[nchar(n)>30] <- paste("Variant ",1:sum(nchar(n)>30),sep="")
     names(n) <- names(variants(gene))
-    v <- variantMargExpr(gene,minpp=minpp)
+    v <- variantMargExpr(gene,minProbExpr=minProbExpr,minExpr=minExpr)
     names.arg <- n[rownames(v)]
     names.arg <- paste(names.arg,' (Rel. expr.=',round(v[,'expr'],3),'; P(expressed)=',round(v[,'probExpressed'],3),')',sep='')
     names(names.arg) <- n[rownames(v)]
