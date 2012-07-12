@@ -1,5 +1,5 @@
 
-calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, priorq=3, mc.cores=1) {
+calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, priorq=3, report=0, niter=10^3, burnin=100, mc.cores=1) {
   if (missing(readLength)) stop("readLength must be specified")
   if (genomeDB@denovo) stop("genomeDB must be a known genome")
   if (pc@denovo) stop("pc must be a pathCounts object from known genome")
@@ -10,6 +10,11 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
   lenvals <- as.integer(names(distrs$lenDis))
   readLength <- as.integer(readLength)
   priorq <- as.double(priorq)
+  report <- as.integer(report)
+  niter <- as.integer(niter)
+  burnin <- as.integer(burnin)
+  if (!report %in% 0:2) stop("Argument report must be equal to 0, 1 or 2")
+  if ((niter<=burnin) & report>=2) stop("Too many burnin iterations specified")
   if (missing(geneid)) geneid <- names(genomeDB@islands)[sapply(genomeDB@islands,length)>1]
 
   exons <- lapply(genomeDB@islands,function(z) as.integer(names(z)))
@@ -29,8 +34,14 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
     transcripts <- genomeDB@transcripts[z]
     strand <- as.list(as.integer(ifelse(strand[z]=='+', 1, -1)))
     pc <- pc@counts[z]
-    ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,geneid=as.list(geneid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq, strand=strand)
-    ans <- lapply(1:length(ans), function(x) {res <- ans[[x]][[1]]; names(res) <- ans[[x]][[2]]; res})
+    ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,geneid=as.list(geneid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq, strand=strand, report=report, niter=niter, burnin=burnin)
+    if (report==0) {
+      ans <- lapply(ans, function(z) { res=vector("list",1); res[[1]]= z[[1]]; names(res[[1]])= z[[2]]; res })
+    } else if (report==1) {
+      ans <- lapply(ans, function(z) { res=vector("list",2); res[[1]]= z[[1]]; res[[2]]= z[[3]]; names(res[[1]])= names(res[[2]])= z[[2]]; res })
+    } else if (report==2) {
+      ans <- lapply(ans, function(z) { res=vector("list",3); res[[1]]= z[[1]]; res[[2]]= z[[3]]; res[[3]]= matrix(z[[4]],nrow=niter-burnin); names(res[[1]])= names(res[[2]])= z[[2]]; res })
+    }
     ans
   }
 
@@ -48,9 +59,16 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
     names(ans) <- geneid
   }
   #Format as ExpressionSet
-  #fdata <- data.frame(transcript=as.vector(unlist(lapply(genomeDB@transcripts[geneid],names))), gene=rep(names(ans),sapply(ans,length)))
-  fdata <- data.frame(transcript=unlist(lapply(ans, names)), gene=rep(names(ans),sapply(ans,length)))
-  exprsx <- matrix(unlist(ans),ncol=1)
+  transcript <- unlist(lapply(ans, function(z) names(z[[1]])))
+  gene <- rep(names(ans),sapply(ans,function(z) length(z[[1]])))
+  fdata <- data.frame(transcript=transcript, gene=gene)
+  exprsx <- matrix(unlist(lapply(ans,'[[',1)),ncol=1)
+  if (report>=1) fdata$SE <- sqrt(unlist(lapply(ans,'[[',2)))
+  if (report>=2) {
+    q <- lapply(ans,function(z) apply(z[[3]],2,quantile,probs=c(.025,.975)))
+    q <- t(do.call(cbind,q))
+    fdata$ci95.low <- q[,1]; fdata$ci95.high <- q[,2]
+  }
   rownames(exprsx) <- rownames(fdata) <- fdata$transcript
   fdata <- new("AnnotatedDataFrame",fdata)
   ans <- new("ExpressionSet",exprs=exprsx,featureData=fdata)
@@ -65,8 +83,8 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
 }
 
 
-calcKnownMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, priorq, strand) {
-  ans <- .Call("calcKnownMultiple",exons,exonwidth,transcripts,geneid,pc,startcdf, lendis, lenvals, readLength, priorq, strand)
+calcKnownMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, priorq, strand, report, niter, burnin) {
+  ans <- .Call("calcKnownMultiple",exons,exonwidth,transcripts,geneid,pc,startcdf, lendis, lenvals, readLength, priorq, strand, report, niter, burnin)
   return(ans)
 }
 

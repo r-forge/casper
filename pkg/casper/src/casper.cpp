@@ -69,6 +69,90 @@ void Casper::calculateMode(double* pi) {
   }
 }
 
+void Casper::IPMH(double *pi, double *paccept, int niter, int burnin) {
+  double* mode = calculateMode();
+  IPMH(pi, paccept, niter, burnin, mode);
+  delete [] mode;
+}
+
+void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mode) {
+  double **S;
+  int n = model->count();
+  S= dmatrix(0,n,0,n);
+  normapprox(S, mode, n);
+  IPMH(pi, paccept, niter, burnin, mode, S);
+  free_dmatrix(S,0,n,0,n);
+}
+
+void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mode, double **S) {
+  double det, lold, lnew;
+  double *thmode, *thold, *thnew, *piold, *pinew, **Gold, **Gnew, **cholS, **cholSinv;
+  int n = model->count();
+
+  //Pre-compute useful quantities
+  thmode = new double[n - 1];
+  mlogit(thmode, mode, n);
+
+  cholS= dmatrix(0,n,0,n);
+  cholSinv= dmatrix(0,n,0,n);
+  choldc(S,n,cholS);
+  choldc_inv(S,n,cholSinv); 
+  det= choldc_det(cholSinv,n);
+
+  //MCMC
+  thold = new double[n - 1];
+  thnew = new double[n - 1];
+  piold = new double[n];
+  pinew = new double[n];
+  Gold = dmatrix(0,n,0,n);
+  Gnew = dmatrix(0,n,0,n);
+
+  rmvtC(thold, n, thmode, cholS, 3);
+  milogit(piold, thold, n);
+  lold= priorLikelihoodLn(piold) - dmvtC(thold, n, thmode, cholSinv, det, 3, 1);;
+
+  vtGradG(Gold,thold, n);
+  lold+= vtGradLogdet(Gold, n);
+
+  (*paccept)= 0;
+  for (int i=0; i<niter; i++) {
+    rmvtC(thnew, n, thmode, cholS, 3);
+    milogit(pinew, thnew, n);
+    lnew= priorLikelihoodLn(pinew) - dmvtC(thnew, n, thmode, cholSinv, det, 3, 1);
+    vtGradG(Gnew,thnew,n);
+    lnew+= vtGradLogdet(Gnew, n);
+    double p= exp(lnew - lold);
+    double u = runif();
+    if (u <= p)	{
+      (*paccept) += 1;
+      double ltemp= lnew;
+      lnew = lold; lold = ltemp;
+      double *thtemp;
+      thtemp= thnew; thnew= thold; thold= thtemp;
+      double *pitemp;
+      pitemp= pinew; pinew= piold; piold= pitemp;
+      double **Gtemp;
+      Gtemp= Gnew; Gnew= Gold; Gold= Gtemp;
+    } 
+
+    if (i>=burnin) {
+      int idx= i-burnin;
+      for (int j=0; j<n; j++) pi[idx+j*niter]= piold[j];
+    }
+  }
+  (*paccept) = (*paccept)/(niter+.0);
+
+  delete [] thmode;
+  delete [] thold;
+  delete [] thnew;
+  delete [] piold;
+  delete [] pinew;
+  free_dmatrix(Gold,0,n,0,n);
+  free_dmatrix(Gnew,0,n,0,n);
+  free_dmatrix(cholS,0,n,0,n);
+  free_dmatrix(cholSinv,0,n,0,n);
+}
+
 double Casper::calculateIntegral() {
   int n = model->count();
   double* mode = calculateMode();
@@ -184,6 +268,27 @@ map<Fragment*, double> Casper::fragdist(double* pi)
 	return mem;
 }
 
+
+void Casper::normapprox(double **S, double *mode, int n) {
+  double **G, ***H, *thmode;
+
+  thmode = new double[n - 1];
+  mlogit(thmode, mode, n);
+
+  H= darray3(n,n,n);
+  vtHess(H, thmode, n);
+
+  G = dmatrix(0,n,0,n);
+  vtGradG(G,thmode, n);
+
+  normapprox(S, G, H, mode, thmode, n);
+
+  delete [] thmode;
+  free_darray3(H,n,n,n);
+  free_dmatrix(G,0,n,0,n);
+}
+
+
 void Casper::normapprox(double **S, double** G, double*** H, double* mode, double* thmode, int n)
 {
 	map<Fragment*, double> mem = fragdist(mode);
@@ -266,14 +371,11 @@ void Casper::vtGradG(double **G, double* th, int n)
 }
 double Casper::vtGradLogdet(double** G, int n)
 {
-	double** GS = &G[1];
-    double mydet = det(GS, n - 1);
-	if (mydet < 0)
-	{
-		mydet = -mydet;
-	}
-	double logdet = log(mydet);
-    return logdet;
+  double** GS = &G[1];
+  double mydet = det(GS, n - 1);
+  if (mydet < 0) mydet = -mydet;
+  double logdet = log(mydet);
+  return logdet;
 }
 void Casper::vtHess(double ***H, double* th, int n)
 {

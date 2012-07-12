@@ -147,7 +147,7 @@ extern "C"
 
   //Estimate isoform expression for multiple genes. Calls calcKnownSingle repeadtedly
   //Input args same as for calcDenovoMultiple
-  SEXP calcKnownMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR, SEXP strandR) 
+  SEXP calcKnownMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR, SEXP strandR, SEXP returnR, SEXP niterR, SEXP burninR) 
 	{
 		int i, ngenes=LENGTH(geneidR);
 		SEXP ansMultiple, ansSingle;
@@ -155,7 +155,7 @@ extern "C"
 		PROTECT(ansMultiple= allocVector(VECSXP, ngenes));
 
 		for (i=0; i<ngenes; i++) {
-		  ansSingle= calcKnownSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, priorqR, VECTOR_ELT(strandR, i));
+		  ansSingle= calcKnownSingle(VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, priorqR, VECTOR_ELT(strandR, i), returnR, niterR, burninR);
 		  SET_VECTOR_ELT(ansMultiple,i,ansSingle);
 		}
 		
@@ -165,7 +165,10 @@ extern "C"
 
   //Estimate isoform expression (known variants case)
   //Input args same as for calcDenovoSingle
-  SEXP calcKnownSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR, SEXP strandR)
+  // - returnR: set to 0 to return only estimated expression. 1: additionally, return asymptotic variances. 2: additionally, return posterior samples
+  // - niterR: number of iterations to obtain posterior samples
+  // - burninR: number of burnin iterations
+  SEXP calcKnownSingle(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR, SEXP strandR, SEXP returnR, SEXP niterR, SEXP burninR)
 	{
 		DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR, strandR);
 
@@ -186,9 +189,7 @@ extern "C"
                 PROTECT(ans= allocVector(VECSXP, 2));
 
   		SET_VECTOR_ELT(ans, 0, allocVector(REALSXP,vc));  //stores estimated expression
-                SET_VECTOR_ELT(ans, 1, allocVector(STRSXP,vc)); //stores variant names
-
-	   
+                SET_VECTOR_ELT(ans, 1, allocVector(STRSXP,vc)); //stores variant names	   
                 
 		double *expr= REAL(VECTOR_ELT(ans,0));
                 SEXP varnamesR= VECTOR_ELT(ans,1);              		
@@ -201,7 +202,23 @@ extern "C"
                     if (initvars->count(v)>0) v->name= (*initvars->find(v))->name;  //respect initial variant names
                     const char *cname= (v->name).c_str();
                     SET_STRING_ELT(varnamesR,j,mkChar(cname));  //variant name
-                       }
+                }
+
+		if (INTEGER(returnR)[0]>0) {
+		  SET_VECTOR_ELT(ans, 2, allocVector(REALSXP,vc)); //stores variance of estimated expression (logit scale)
+		  double *vexpr= REAL(VECTOR_ELT(ans,2));
+		  double **S= dmatrix(0,vc,0,vc);
+		  casp->normapprox(S, em, vc);
+		  for (int j=0; j<vc; j++) vexpr[j]= S[j][j];
+
+		  if (INTEGER(returnR)[0]>1) {
+		    double paccept;
+		    SET_VECTOR_ELT(ans, 3, allocVector(REALSXP,vc)); //stores posterior samples
+		    double *pi = REAL(VECTOR_ELT(ans,3));
+		    casp->IPMH(pi, &paccept, INTEGER(niterR)[0], INTEGER(burninR)[0], em, S);
+		  }
+		  free_dmatrix(S,0,vc,0,vc);
+		}
 
 		
 		UNPROTECT(1);

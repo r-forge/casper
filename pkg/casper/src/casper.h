@@ -22,6 +22,15 @@ class Casper
   double* calculateMode();  //initialize to equal expression for all variants
   void calculateMode(double* pi);  //use pi as initial value, and return it updated with solution
 
+  // Normal approximation to posterior on logit re-parameterization
+  void normapprox(double **S, double *mode, int n);
+  void normapprox(double **S, double** G, double*** H, double* mode, double* thmode, int n);
+
+  // Independent proposal Metropolis-Hastings
+  void IPMH(double *pi, double *paccept, int niter, int burnin);  //stores sample in pi, proportion of accepted proposals in paccept
+  void IPMH(double *pi, double *paccept, int niter, int burnin, double *mode);  //same but uses pre-computed mode
+  void IPMH(double *pi, double *paccept, int niter, int burnin, double *mode, double **S); //same using pre-computed mode & hessian
+
   // gives the integral given the current model and data
   double calculateIntegral();  //uses mode=calculateMode() and n= model->count()
   double calculateIntegral(double* mode, int n);  //do integral with pre-computed mode
@@ -47,7 +56,6 @@ class Casper
 
   map<Fragment*, double> fragdist(double* pi);
 
-  void normapprox(double **S, double** G, double*** H, double* mode, double* thmode, int n);
   void mlogit(double *theta, double* pi, int n);
   void milogit(double *pi, double* theta, int n);
   void vtGradG(double **G, double* th, int n);
