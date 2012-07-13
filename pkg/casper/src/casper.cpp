@@ -4,8 +4,8 @@
 using namespace std;
 
 const int Casper::is_runs = 100;
-const int Casper::em_maxruns = 100;
-const double Casper::em_tol = 0.001;
+int Casper::em_maxruns = 100;
+double Casper::em_tol = 0.001;
 const double Casper::mh_gammah = 2;
 double Casper::priorq = 3;
 
@@ -78,10 +78,10 @@ void Casper::IPMH(double *pi, double *paccept, int niter, int burnin) {
 void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mode) {
   double **S;
   int n = model->count();
-  S= dmatrix(0,n,0,n);
-  normapprox(S, mode, n);
+  S= dmatrix(1,n,1,n);
+  normapprox(S, mode, n, 1);
   IPMH(pi, paccept, niter, burnin, mode, S);
-  free_dmatrix(S,0,n,0,n);
+  free_dmatrix(S,1,n,1,n);
 }
 
 void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mode, double **S) {
@@ -91,13 +91,13 @@ void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mo
 
   //Pre-compute useful quantities
   thmode = new double[n - 1];
-  mlogit(thmode, mode, n);
+  mlogit(thmode, mode, n-1);
 
-  cholS= dmatrix(0,n,0,n);
-  cholSinv= dmatrix(0,n,0,n);
-  choldc(S,n,cholS);
-  choldc_inv(S,n,cholSinv); 
-  det= choldc_det(cholSinv,n);
+  cholS= dmatrix(1,n-1,1,n-1);
+  cholSinv= dmatrix(1,n-1,1,n-1);
+  choldc(S,n-1,cholS);
+  choldc_inv(S,n-1,cholSinv); 
+  det= choldc_det(cholSinv,n-1);
 
   //MCMC
   thold = new double[n - 1];
@@ -109,7 +109,7 @@ void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mo
 
   rmvtC(thold, n, thmode, cholS, 3);
   milogit(piold, thold, n);
-  lold= priorLikelihoodLn(piold) - dmvtC(thold, n, thmode, cholSinv, det, 3, 1);;
+  lold= priorLikelihoodLn(piold) - dmvtC(thold, n, thmode, cholSinv, det, 3, 1);
 
   vtGradG(Gold,thold, n);
   lold+= vtGradLogdet(Gold, n);
@@ -149,8 +149,8 @@ void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mo
   delete [] pinew;
   free_dmatrix(Gold,0,n,0,n);
   free_dmatrix(Gnew,0,n,0,n);
-  free_dmatrix(cholS,0,n,0,n);
-  free_dmatrix(cholSinv,0,n,0,n);
+  free_dmatrix(cholS,1,n-1,1,n-1);
+  free_dmatrix(cholSinv,1,n-1,1,n-1);
 }
 
 double Casper::calculateIntegral() {
@@ -176,7 +176,7 @@ double Casper::calculateIntegral(double *mode, int n)
   vtGradG(G,thmode, n);
 
   S= dmatrix(0,n,0,n);
-  normapprox(S, G, H, mode, thmode, n);
+  normapprox(S, G, H, mode, thmode, n, 0);
 
   double emlk = priorLikelihoodLn(mode);
   double gdet = vtGradLogdet(G, n);
@@ -269,7 +269,7 @@ map<Fragment*, double> Casper::fragdist(double* pi)
 }
 
 
-void Casper::normapprox(double **S, double *mode, int n) {
+void Casper::normapprox(double **S, double *mode, int n, int Sidx_ini) {
   double **G, ***H, *thmode;
 
   thmode = new double[n - 1];
@@ -281,7 +281,7 @@ void Casper::normapprox(double **S, double *mode, int n) {
   G = dmatrix(0,n,0,n);
   vtGradG(G,thmode, n);
 
-  normapprox(S, G, H, mode, thmode, n);
+  normapprox(S, G, H, mode, thmode, n, Sidx_ini);
 
   delete [] thmode;
   free_darray3(H,n,n,n);
@@ -289,15 +289,17 @@ void Casper::normapprox(double **S, double *mode, int n) {
 }
 
 
-void Casper::normapprox(double **S, double** G, double*** H, double* mode, double* thmode, int n)
+void Casper::normapprox(double **S, double** G, double*** H, double* mode, double* thmode, int n, int Sidx_ini)
 {
 	map<Fragment*, double> mem = fragdist(mode);
 
 	for (int l = 0; l < n - 1; l++)
 	{
+	  int rowS= l+Sidx_ini;
 		for (int m = l; m < n - 1; m++)
 		{
-			S[l][m] = 0;
+		  int colS= m+Sidx_ini;
+			S[rowS][colS] = 0;
 			map<Fragment*, map<Variant*, double> >::const_iterator fi;
 			for (fi = mempprobs.begin(); fi != mempprobs.end(); fi++)
 			{
@@ -311,15 +313,15 @@ void Casper::normapprox(double **S, double** G, double*** H, double* mode, doubl
 					term2 += P * G[d][l];
 					term3 += P * G[d][m];
 				}
-				S[l][m] -= fi->first->count * (term1 * mem[fi->first] - term2 * term3) / pow(mem[fi->first], 2);
+				S[rowS][colS] -= fi->first->count * (term1 * mem[fi->first] - term2 * term3) / pow(mem[fi->first], 2);
 			}
 			for (int d = 0; d < n; d++)
 			{
-				S[l][m] -= (priorq - 1.0) * (H[d][l][m] * mode[d] - G[d][l] * G[d][m]) / pow(mode[d], 2);
+				S[rowS][colS] -= (priorq - 1.0) * (H[d][l][m] * mode[d] - G[d][l] * G[d][m]) / pow(mode[d], 2);
 			}
 			if (l != m)
 			{
-				S[m][l] = S[l][m];
+				S[rowS][colS] = S[l][m];
 			}
 		}
 	}

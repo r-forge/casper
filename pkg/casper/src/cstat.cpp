@@ -1733,16 +1733,27 @@ void choldc_inv(double **a, int n, double **aout) {
   /*Given a positive-definite symmetric matrix a[1..n][1..n], this routine computes the inverse
    of its Cholesky matrix. That is, if A=L * L' it returns the inverse of L
    (note that inv(A)= inv(L)' * inv(L)) */
+  choldc(a,n,aout);
+  choldc_inv_internal(aout, n);
+}
+
+void cholS_inv(double **cholS, int n, double **cholSinv) {
+  /*Given the Cholesky decomposition of a matrix S, which we denote cholS, returns the inverse of cholS */
+  int i,j;
+  for (i=1;i<=n;i++) for (j=i+1;j<=n;j++) cholSinv[i][j]= cholS[i][j];
+  choldc_inv_internal(cholSinv,n);
+}
+
+void choldc_inv_internal(double **cholS, int n) {
+  /*Computes inverse of Cholesky matrix cholS and stores the result in cholS*/
   int i,j,k;
   double sum;
-
-  choldc(a,n,aout);
   for (i=1;i<=n;i++) {
-    aout[i][i]=1.0/aout[i][i];
+    cholS[i][i]=1.0/cholS[i][i];
     for (j=i+1;j<=n;j++) {
       sum=0.0;
-      for (k=i;k<j;k++) sum -= aout[j][k]*aout[k][i];
-      aout[j][i]=sum/aout[j][j];
+      for (k=i;k<j;k++) sum -= cholS[j][k]*cholS[k][i];
+      cholS[j][i]=sum/cholS[j][j];
     }
   }
 }

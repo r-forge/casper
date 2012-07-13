@@ -23,8 +23,8 @@ class Casper
   void calculateMode(double* pi);  //use pi as initial value, and return it updated with solution
 
   // Normal approximation to posterior on logit re-parameterization
-  void normapprox(double **S, double *mode, int n);
-  void normapprox(double **S, double** G, double*** H, double* mode, double* thmode, int n);
+  void normapprox(double **S, double *mode, int n, int Sidx_ini=0);
+  void normapprox(double **S, double** G, double*** H, double* mode, double* thmode, int n, int Sidx_ini=0);
 
   // Independent proposal Metropolis-Hastings
   void IPMH(double *pi, double *paccept, int niter, int burnin);  //stores sample in pi, proportion of accepted proposals in paccept
@@ -39,6 +39,8 @@ class Casper
   bool isValid();
 
   static double priorq;
+  static int em_maxruns;
+  static double em_tol;
 
  private:
 
@@ -46,8 +48,6 @@ class Casper
   map<Variant*, map<Fragment*, double> > memvprobs;
 
   static const int is_runs;
-  static const int em_maxruns;
-  static const double em_tol;
   static const double mh_gammah;
   
   double priorLn(double* pi);

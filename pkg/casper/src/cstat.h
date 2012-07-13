@@ -204,7 +204,9 @@ void minvec(double *x, int ini, int fi, double *xmin, int *minpos); //min of a v
 void maxvec(double *x, int ini, int fi, double *xmax, int *maxpos); //max of a vector and position at which max occurs
 
 void choldc(double **a, int n, double **aout);   //Cholesky decomposition
-void choldc_inv(double **a, int n, double **aout); //Inverse of Cholesky decomposition
+void choldc_inv(double **a, int n, double **aout); //Inverse of Cholesky decomposition (input is original matrix)
+void cholS_inv(double **cholS, int n, double **cholSinv); //Inverse of Cholesky decomposition (input is Cholesky matrix, faster)
+void choldc_inv_internal(double **cholS, int n);
 double choldc_det(double **chols, int n); //Determinant of a symmetric def+ using its Cholesky decomp
 void inv_posdef(double **a, int n, double **aout); //Inverse of a symmetric, positive definite matrix
 void inv_posdef_upper(double **a, int n, double **aout); //Same but only returns upper triangular elements

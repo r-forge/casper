@@ -180,13 +180,15 @@ extern "C"
 		//Model* model = new Model(new vector<Variant*>(initvars->begin(), initvars->end()));
 		Model* model = new Model(initvars);
 		Casper* casp = new Casper(model, df);
-		casp->priorq = priorq;
+		Casper::priorq = priorq; //		casp->priorq = priorq;
+		Casper::em_maxruns = 1000;
+		Casper::em_tol= 0.0001;
 
 		int vc = model->count();
 		double* em = casp->calculateMode();
 
          	SEXP ans;
-                PROTECT(ans= allocVector(VECSXP, 2));
+                PROTECT(ans= allocVector(VECSXP, 3));
 
   		SET_VECTOR_ELT(ans, 0, allocVector(REALSXP,vc));  //stores estimated expression
                 SET_VECTOR_ELT(ans, 1, allocVector(STRSXP,vc)); //stores variant names	   
@@ -207,9 +209,10 @@ extern "C"
 		if (INTEGER(returnR)[0]>0) {
 		  SET_VECTOR_ELT(ans, 2, allocVector(REALSXP,vc)); //stores variance of estimated expression (logit scale)
 		  double *vexpr= REAL(VECTOR_ELT(ans,2));
-		  double **S= dmatrix(0,vc,0,vc);
-		  casp->normapprox(S, em, vc);
-		  for (int j=0; j<vc; j++) vexpr[j]= S[j][j];
+		  double **S= dmatrix(1,vc,1,vc);
+		  casp->normapprox(S, em, vc, 1);
+		  vexpr[0]= 0;
+		  for (int j=0; j<vc-1; j++) vexpr[j+1]= S[j+1][j+1];
 
 		  if (INTEGER(returnR)[0]>1) {
 		    double paccept;
@@ -217,7 +220,7 @@ extern "C"
 		    double *pi = REAL(VECTOR_ELT(ans,3));
 		    casp->IPMH(pi, &paccept, INTEGER(niterR)[0], INTEGER(burninR)[0], em, S);
 		  }
-		  free_dmatrix(S,0,vc,0,vc);
+		  free_dmatrix(S,1,vc,1,vc);
 		}
 
 		
@@ -292,6 +295,8 @@ extern "C"
 	  //tmp2->debugprint();  //debug
 
 	  Casper::priorq = priorq;
+	  Casper::em_maxruns = 100;
+	  Casper::em_tol= 0.001;
 
 	  map<Model*, double, ModelCmp> resProbs;
 	  map<Model*, double*, ModelCmp> resModes;
