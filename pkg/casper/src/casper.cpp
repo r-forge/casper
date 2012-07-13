@@ -91,7 +91,7 @@ void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mo
 
   //Pre-compute useful quantities
   thmode = new double[n - 1];
-  mlogit(thmode, mode, n-1);
+  mlogit(thmode, mode, n);
 
   cholS= dmatrix(1,n-1,1,n-1);
   cholSinv= dmatrix(1,n-1,1,n-1);
@@ -107,18 +107,18 @@ void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mo
   Gold = dmatrix(0,n,0,n);
   Gnew = dmatrix(0,n,0,n);
 
-  rmvtC(thold, n, thmode, cholS, 3);
+  rmvtC(thold-1, n-1, thmode-1, cholS, 3);
   milogit(piold, thold, n);
-  lold= priorLikelihoodLn(piold) - dmvtC(thold, n, thmode, cholSinv, det, 3, 1);
+  lold= priorLikelihoodLn(piold) - dmvtC(thold-1, n-1, thmode-1, cholSinv, det, 3, 1);
 
   vtGradG(Gold,thold, n);
   lold+= vtGradLogdet(Gold, n);
 
   (*paccept)= 0;
   for (int i=0; i<niter; i++) {
-    rmvtC(thnew, n, thmode, cholS, 3);
+    rmvtC(thnew-1, n-1, thmode-1, cholS, 3);
     milogit(pinew, thnew, n);
-    lnew= priorLikelihoodLn(pinew) - dmvtC(thnew, n, thmode, cholSinv, det, 3, 1);
+    lnew= priorLikelihoodLn(pinew) - dmvtC(thnew-1, n-1, thmode-1, cholSinv, det, 3, 1);
     vtGradG(Gnew,thnew,n);
     lnew+= vtGradLogdet(Gnew, n);
     double p= exp(lnew - lold);
@@ -137,7 +137,7 @@ void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mo
 
     if (i>=burnin) {
       int idx= i-burnin;
-      for (int j=0; j<n; j++) pi[idx+j*niter]= piold[j];
+      for (int j=0; j<n; j++) pi[idx+j*(niter-burnin)]= piold[j];
     }
   }
   (*paccept) = (*paccept)/(niter+.0);
@@ -291,42 +291,37 @@ void Casper::normapprox(double **S, double *mode, int n, int Sidx_ini) {
 
 void Casper::normapprox(double **S, double** G, double*** H, double* mode, double* thmode, int n, int Sidx_ini)
 {
-	map<Fragment*, double> mem = fragdist(mode);
+  map<Fragment*, double> mem = fragdist(mode);
 
-	for (int l = 0; l < n - 1; l++)
-	{
-	  int rowS= l+Sidx_ini;
-		for (int m = l; m < n - 1; m++)
+  int rowS, colS;
+  for (int l = 0; l < n - 1; l++) {
+    rowS= l+Sidx_ini;
+      for (int m = l; m < n - 1; m++) {
+	  colS= m+Sidx_ini;
+	  S[rowS][colS] = 0;
+	  map<Fragment*, map<Variant*, double> >::const_iterator fi;
+	  for (fi = mempprobs.begin(); fi != mempprobs.end(); fi++)
+	    {
+	      double term1 = 0, term2 = 0, term3 = 0;
+	      map<Variant*, double>::const_iterator vi;
+	      for (vi = fi->second.begin(); vi != fi->second.end(); vi++)
 		{
-		  int colS= m+Sidx_ini;
-			S[rowS][colS] = 0;
-			map<Fragment*, map<Variant*, double> >::const_iterator fi;
-			for (fi = mempprobs.begin(); fi != mempprobs.end(); fi++)
-			{
-				double term1 = 0, term2 = 0, term3 = 0;
-				map<Variant*, double>::const_iterator vi;
-				for (vi = fi->second.begin(); vi != fi->second.end(); vi++)
-				{
-					int d = model->indexOf(vi->first);
-					double P = vi->second;
-					term1 += P * H[d][l][m];
-					term2 += P * G[d][l];
-					term3 += P * G[d][m];
-				}
-				S[rowS][colS] -= fi->first->count * (term1 * mem[fi->first] - term2 * term3) / pow(mem[fi->first], 2);
-			}
-			for (int d = 0; d < n; d++)
-			{
-				S[rowS][colS] -= (priorq - 1.0) * (H[d][l][m] * mode[d] - G[d][l] * G[d][m]) / pow(mode[d], 2);
-			}
-			if (l != m)
-			{
-				S[rowS][colS] = S[l][m];
-			}
+		  int d = model->indexOf(vi->first);
+		  double P = vi->second;
+		  term1 += P * H[d][l][m];
+		  term2 += P * G[d][l];
+		  term3 += P * G[d][m];
 		}
+	      S[rowS][colS] -= fi->first->count * (term1 * mem[fi->first] - term2 * term3) / pow(mem[fi->first], 2);
+	    }
+	  for (int d = 0; d < n; d++) S[rowS][colS] -= (priorq - 1.0) * (H[d][l][m] * mode[d] - G[d][l] * G[d][m]) / pow(mode[d], 2);
+	  if (l != m) S[colS][rowS] = S[rowS][colS];
 	}
+    }
 
 }
+
+
 void Casper::mlogit(double *theta, double* pi, int n) {
 
   for (int i = 0; i < n - 1; i++) theta[i] = log(pi[i + 1] / pi[0]);

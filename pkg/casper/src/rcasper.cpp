@@ -182,13 +182,13 @@ extern "C"
 		Casper* casp = new Casper(model, df);
 		Casper::priorq = priorq; //		casp->priorq = priorq;
 		Casper::em_maxruns = 1000;
-		Casper::em_tol= 0.0001;
+		Casper::em_tol= 0.00001;
 
 		int vc = model->count();
 		double* em = casp->calculateMode();
 
          	SEXP ans;
-                PROTECT(ans= allocVector(VECSXP, 3));
+                PROTECT(ans= allocVector(VECSXP, 4));
 
   		SET_VECTOR_ELT(ans, 0, allocVector(REALSXP,vc));  //stores estimated expression
                 SET_VECTOR_ELT(ans, 1, allocVector(STRSXP,vc)); //stores variant names	   
@@ -216,9 +216,10 @@ extern "C"
 
 		  if (INTEGER(returnR)[0]>1) {
 		    double paccept;
-		    SET_VECTOR_ELT(ans, 3, allocVector(REALSXP,vc)); //stores posterior samples
+		    int niter= INTEGER(niterR)[0], burnin= INTEGER(burninR)[0];
+		    SET_VECTOR_ELT(ans, 3, allocVector(REALSXP,vc*(niter-burnin))); //stores posterior samples
 		    double *pi = REAL(VECTOR_ELT(ans,3));
-		    casp->IPMH(pi, &paccept, INTEGER(niterR)[0], INTEGER(burninR)[0], em, S);
+		    casp->IPMH(pi, &paccept, niter, burnin, em, S);
 		  }
 		  free_dmatrix(S,1,vc,1,vc);
 		}
