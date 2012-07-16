@@ -59,6 +59,8 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP 
 		char* varname = new char[strlen(pname) + 1];
 		char* left= varname;
 		strcpy(left, pname);
+		if (left[0] != '.') continue;
+		if (left[strlen(pname)-1] != '.') continue;
 		char* mid = strchr(left, '-');
 		if (mid == NULL) continue;
 		mid[0] = '\0';
