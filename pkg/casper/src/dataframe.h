@@ -24,7 +24,7 @@ public:
 
 	// create variant from fragment
 	Variant* path2Variant(Fragment* f); 
-	int fixUnexplFrags(set<Variant*, VariantCmp>* initvars);
+	int fixUnexplFrags(set<Variant*, VariantCmp>* initvars, int denovo);
 
 	// returns a list of all possible models that could explain this data
 	void allModels(vector<Variant*> *varis, vector<Model*> *models);

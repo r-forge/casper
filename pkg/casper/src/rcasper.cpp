@@ -174,8 +174,15 @@ extern "C"
 
 		set<Variant*, VariantCmp> *initvars = new set<Variant*, VariantCmp>();
 		importTranscripts(initvars, df, transcriptsR);
-
+		df->fixUnexplFrags(initvars, 0); // Discard fragments that are unexplained by know variants
 		double priorq = REAL(priorqR)[0];
+		int totC=0;
+		list<Fragment*>::const_iterator fi;
+		for (fi = df->data.begin(); fi != df->data.end(); fi++)
+		  {
+		    Fragment* f = *fi;
+		    totC += f->count;
+		  }
 
 		//Model* model = new Model(new vector<Variant*>(initvars->begin(), initvars->end()));
 		Model* model = new Model(initvars);
@@ -192,34 +199,38 @@ extern "C"
 
   		SET_VECTOR_ELT(ans, 0, allocVector(REALSXP,vc));  //stores estimated expression
                 SET_VECTOR_ELT(ans, 1, allocVector(STRSXP,vc)); //stores variant names	   
+		
                 
 		double *expr= REAL(VECTOR_ELT(ans,0));
                 SEXP varnamesR= VECTOR_ELT(ans,1);              		
 		
 	 	for (int j=0; j< vc; j++) {
-                   
-                    Variant* v = model->get(j);
-                    int varidx= model->indexOf(v);
-                    expr[j]= em[varidx]; //estimated expression
-                    if (initvars->count(v)>0) v->name= (*initvars->find(v))->name;  //respect initial variant names
-                    const char *cname= (v->name).c_str();
-                    SET_STRING_ELT(varnamesR,j,mkChar(cname));  //variant name
+		  Variant* v = model->get(j);
+		  int varidx= model->indexOf(v);
+		  if(totC>0) expr[j] = em[varidx]; //estimated expression
+		  else expr[j] = 0;
+		  if (initvars->count(v)>0) v->name= (*initvars->find(v))->name;  //respect initial variant names
+		  const char *cname= (v->name).c_str();
+		  SET_STRING_ELT(varnamesR,j,mkChar(cname));  //variant name
                 }
 
 		if (INTEGER(returnR)[0]>0) {
 		  SET_VECTOR_ELT(ans, 2, allocVector(REALSXP,vc)); //stores variance of estimated expression (logit scale)
 		  double *vexpr= REAL(VECTOR_ELT(ans,2));
 		  double **S= dmatrix(1,vc,1,vc);
-		  casp->normapprox(S, em, vc, 1);
-		  vexpr[0]= 0;
-		  for (int j=0; j<vc-1; j++) vexpr[j+1]= S[j+1][j+1];
-
+		  if(totC>0){
+		    casp->normapprox(S, em, vc, 1);
+		    vexpr[0]= 0;
+		    for (int j=0; j<vc-1; j++) vexpr[j+1]= S[j+1][j+1];
+		  } else for (int j=0; j<vc; j++) vexpr[j] = 0;
 		  if (INTEGER(returnR)[0]>1) {
 		    double paccept;
-		    int niter= INTEGER(niterR)[0], burnin= INTEGER(burninR)[0];
-		    SET_VECTOR_ELT(ans, 3, allocVector(REALSXP,vc*(niter-burnin))); //stores posterior samples
-		    double *pi = REAL(VECTOR_ELT(ans,3));
-		    casp->IPMH(pi, &paccept, niter, burnin, em, S);
+		      int niter= INTEGER(niterR)[0], burnin= INTEGER(burninR)[0];
+		      SET_VECTOR_ELT(ans, 3, allocVector(REALSXP,vc*(niter-burnin))); //stores posterior samples
+		      double *pi = REAL(VECTOR_ELT(ans,3));
+		      if(totC>0){
+			casp->IPMH(pi, &paccept, niter, burnin, em, S);
+		      } else for(int j=0; j<vc; j++) pi[j]=0;
 		  }
 		  free_dmatrix(S,1,vc,1,vc);
 		}
@@ -291,7 +302,7 @@ extern "C"
 	  //Model* tmpm = new Model(initvars);  //debug
 	  //tmpm->debugprint(); //debug
 
-	  int discarded = df->fixUnexplFrags(initvars); //add variants to initvars (initial model)
+	  int discarded = df->fixUnexplFrags(initvars, 1); //add variants to initvars (initial model)
 	  //Model* tmp2 = new Model(initvars);  //debug
 	  //tmp2->debugprint();  //debug
 

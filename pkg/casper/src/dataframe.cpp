@@ -61,7 +61,7 @@ double DataFrame::probability(Variant* v, Fragment* f)
 		int fe = v->indexOf(f->left[f->leftc - 1]);
 		int bs = v->indexOf(f->right[0]);
 		int be = v->indexOf(f->right[f->rightc - 1]);
-
+		
 		p = prob(fs, fe, bs, be, v->positions, v->length);
 	}
 	return p;
@@ -77,19 +77,17 @@ double DataFrame::prob(int fs, int fe, int bs, int be, int* pos, double T)
 	double a2 = max(pos[bs] + frag_readlen, pos[be] + 1);
 	// upper bound for start of right transcript
 	double b2 = min(pos[bs + 1] + frag_readlen - 1, pos[be + 1]);
-
 	double psum = 0;
-
+	if( ((a2 + frag_readlen) - b1) > fraglen_dist->value(0)) return psum; 
         for (int i=0; i< fraglen_dist->size; i++) { //stop before T
 	  double l= fraglen_dist->value(i);
 	  double mb = 1.0 - l / T;
 	  double rb = min(min(b1, b2 - l) / T, mb);
 	  double lb = min((max(a1, a2 - l) - 1.0) / T, mb);
-
 	  if (lb >= rb) { continue; }
 
 	  double punc = (fragsta_cumu(rb) - fragsta_cumu(lb)) / fragsta_cumu(mb);
-
+	  
 	  double factor = 0;
 	  if (l <= T && punc > 0) {
 	    factor = fraglen_dist->probability(i);
@@ -97,7 +95,7 @@ double DataFrame::prob(int fs, int fe, int bs, int be, int* pos, double T)
 	      factor /= fraglen_dist->cumulativeProbability((int)(T-fraglen_minx));
 	    }
 	  }
-
+	  
 	  psum += punc * factor;
 	}
 	return psum;
@@ -140,7 +138,7 @@ Variant* DataFrame::path2Variant(Fragment* f)
 }
 
 
-int DataFrame::fixUnexplFrags(set<Variant*, VariantCmp>* initvars)
+int DataFrame::fixUnexplFrags(set<Variant*, VariantCmp>* initvars, int denovo)
 {
 	// copy all fragments
 	set<Fragment*>* queue = new set<Fragment*>(data.begin(), data.end());
@@ -149,15 +147,15 @@ int DataFrame::fixUnexplFrags(set<Variant*, VariantCmp>* initvars)
 	set<Variant*, VariantCmp>::iterator vi;
 	for (vi = initvars->begin(); vi != initvars->end(); vi++) 
 	{
-		// remove the fragments that this variant can explain from our queue
+	        // remove the fragments that this variant can explain from our queue
 		map<Fragment*, double> probs = probabilities(*vi);
 		map<Fragment*, double>::iterator si;
 		for (si = probs.begin(); si != probs.end(); si++) 
 		{
-			set<Fragment*>::iterator ri = queue->find(si->first);
+		  set<Fragment*>::iterator ri = queue->find(si->first);
 			if (ri != queue->end())
 			{
-				queue->erase(ri);
+			  queue->erase(ri);
 			}
 		}
 	}
@@ -165,39 +163,51 @@ int DataFrame::fixUnexplFrags(set<Variant*, VariantCmp>* initvars)
 	int discarded = 0;
 
 	// while we still have unexplained fragments
-	while (queue->size() > 0)
-	{
+	
+	if(denovo){
+	  while (queue->size() > 0)
+	    {
 		// pop the first fragment
-		Fragment* frag = *queue->begin();
-		queue->erase(queue->begin());
-
-		Variant* nv = path2Variant(frag);
+	      Fragment* frag = *queue->begin();
+	      queue->erase(queue->begin());
+	      
+	      Variant* nv = path2Variant(frag);
 
 		// check if the new variant can explain the fragment
-		map<Fragment*, double> probs = probabilities(nv);
-		if (probs.count(frag) > 0)
+	      map<Fragment*, double> probs = probabilities(nv);
+	      if (probs.count(frag) > 0)
 		{
-			initvars->insert(nv);
+		  initvars->insert(nv);
 
 			// delete all fragments that this variant can explain
-			map<Fragment*, double>::iterator si;
-			for (si = probs.begin(); si != probs.end(); si++) 
+		  map<Fragment*, double>::iterator si;
+		  for (si = probs.begin(); si != probs.end(); si++) 
+		    {
+		      set<Fragment*>::iterator ri = queue->find(si->first);
+		      if (ri != queue->end())
 			{
-				set<Fragment*>::iterator ri = queue->find(si->first);
-				if (ri != queue->end())
-				{
-					queue->erase(ri);
-				}
+			  queue->erase(ri);
 			}
+		    }
 		}
-		else
+	      else
 		{
 			// this fragment cant be explained
-			discarded++;
-			data.remove(frag);
+		  discarded++;
+		  data.remove(frag);
 		}
-	}
-
+	    }
+	} 
+	else
+	  {
+	    // discard all unexplained fragments by know variants in known case
+	    while (queue->size() > 0) {
+	      Fragment* frag = *queue->begin();
+              queue->erase(queue->begin());
+	      data.remove(frag);
+	      discarded++;
+	    }
+	  }
 	delete queue;
 	return discarded;
 }
