@@ -25,8 +25,8 @@ public:
 	//bool strand;
 
 	// used for hashing
-	int codelen;
-	int* codes;
+	/*int codelen;
+	int* codes;*/
 	int hashcode;
 
 	Variant(vector<Exon*>* exons);

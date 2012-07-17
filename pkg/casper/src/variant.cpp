@@ -11,32 +11,32 @@ Variant::Variant(vector<Exon*>* exons)
 	this->exons = new Exon*[exonCount];
 	this->positions = new int[exonCount + 1];
 	this->positions[0] = 1;
-		
-    this->codelen = (exonCount + 31) / 32;
-    this->codes = new int[codelen];
+
+	/*this->codelen = (exonCount + 31) / 32;
+	this->codes = new int[codelen];
 	for (int i = 0; i < codelen; i++)
 	{
-		this->codes[i] = 0;
-	}
+	this->codes[i] = 0;
+	}*/
 
 	int i = 0;
 	vector<Exon*>::const_iterator ei;
 	for (ei = exons->begin(); ei != exons->end(); ei++)
 	{
-	  Exon* exon = *ei;
+		Exon* exon = *ei;
 
-	  std::ostringstream out;
-	  out << (exon->id);
-	  (*this).name += out.str();
-	  (*this).name += ",";
+		std::ostringstream out;
+		out << (exon->id);
+		(*this).name += out.str();
+		(*this).name += ",";
 
-	  this->idmap[exon->id] = i;
-	  this->exons[i] = exon;
-	  this->positions[i + 1] = this->positions[i] + exon->length;
-		
-	  int j = exon->num;
-	  this->codes[j / 32] |= 1 << (j % 32);
-	  i++;
+		this->idmap[exon->id] = i;
+		this->exons[i] = exon;
+		this->positions[i + 1] = this->positions[i] + exon->length;
+
+		/*int j = exon->num;
+		this->codes[j / 32] |= 1 << (j % 32);*/
+		i++;
 	}
 
 	(*this).name = (*this).name.substr(0, (*this).name.size()-1); //remove last ","
@@ -46,9 +46,9 @@ Variant::Variant(vector<Exon*>* exons)
 }
 
 Variant::~Variant () {
-  zaparray(exons); //delete [] exons;  //we delete the vector with exon pointers, not the exons themselves. After deleting a variant we want to keep the exons for other future variants
-  zaparray(positions); //delete [] positions;
-  zaparray(codes); //delete [] codes;
+	zaparray(exons); //delete [] exons;  //we delete the vector with exon pointers, not the exons themselves. After deleting a variant we want to keep the exons for other future variants
+	zaparray(positions); //delete [] positions;
+	//zaparray(codes); //delete [] codes;
 }
 
 int Variant::indexOf(int exonid)
@@ -82,9 +82,9 @@ bool Variant::contains(Fragment* frag)
 
 void Variant::toString(char *str)
 {
-  str[0] = '\0';
+	str[0] = '\0';
 
-  for (int e = 0; e < exonCount; e++) sprintf(str, "%s,%i", str, exons[e]->id);
+	for (int e = 0; e < exonCount; e++) sprintf(str, "%s,%i", str, exons[e]->id);
 
 }
 
@@ -99,6 +99,19 @@ int Variant::compare(const Variant* other)
 		return +1;
 	}
 
+	for (int i = 0; i < exonCount; i++)
+	{
+		if (this->exons[i] != other->exons[i])
+		{
+			if (this->exons[i] > other->exons[i])
+			{
+				return +1;
+			}
+			// then (this->exons[i] < other->exons[i])
+			return -1;
+		}
+	}
+	/*
 	for (int c = 0; c < this->codelen; c++) 
 	{
 		if (this->codes[c] < other->codes[c])
@@ -109,7 +122,7 @@ int Variant::compare(const Variant* other)
 		{
 			return +1;
 	    }
-	}
+	}*/
 
 	return 0;
 }
@@ -117,10 +130,21 @@ int Variant::gethash()
 {
 	int h = 0;
 
-	for (int c = 0; c < codelen; c++)
+	for (int i = 0; i < exonCount; i++)
 	{
-		h ^= codes[c];
+		Exon* exon = exons[i];
+		h = exon->num + 17 * h;
+		// hashing using a prime number
 	}
 
 	return h;
+
+	/*int h = 0;
+
+	for (int c = 0; c < codelen; c++)
+	{
+	h ^= codes[c];
+	}
+
+	return h;*/
 }
