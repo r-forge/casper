@@ -61,7 +61,6 @@ double DataFrame::probability(Variant* v, Fragment* f)
 		int fe = v->indexOf(f->left[f->leftc - 1]);
 		int bs = v->indexOf(f->right[0]);
 		int be = v->indexOf(f->right[f->rightc - 1]);
-		
 		p = prob(fs, fe, bs, be, v->positions, v->length);
 	}
 	return p;
@@ -78,7 +77,7 @@ double DataFrame::prob(int fs, int fe, int bs, int be, int* pos, double T)
 	// upper bound for start of right transcript
 	double b2 = min(pos[bs + 1] + frag_readlen - 1, pos[be + 1]);
 	double psum = 0;
-	if( ((a2 + frag_readlen) - b1) > fraglen_dist->value(0)) return psum; 
+	
         for (int i=0; i< fraglen_dist->size; i++) { //stop before T
 	  double l= fraglen_dist->value(i);
 	  double mb = 1.0 - l / T;
@@ -91,11 +90,11 @@ double DataFrame::prob(int fs, int fe, int bs, int be, int* pos, double T)
 	  double factor = 0;
 	  if (l <= T && punc > 0) {
 	    factor = fraglen_dist->probability(i);
+	    
 	    if (T < fraglen_maxx) {
 	      factor /= fraglen_dist->cumulativeProbability((int)(T-fraglen_minx));
 	    }
 	  }
-	  
 	  psum += punc * factor;
 	}
 	return psum;
