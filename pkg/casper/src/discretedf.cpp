@@ -1,20 +1,30 @@
 #include "discretedf.h"
 #include "cppmemory.h"
+#include <stdio.h>
 
 DiscreteDF::DiscreteDF(double* data, int* vals, int size)
 {
-	this->size = size;
-        this->values= new int[size];
-	this->prob = new double[size];
-	this->cumu = new double[size];
-
+  //this->size = size;
+        this->size = vals[size-1]-vals[0];
+        this->values= new int[this->size];
+	this->prob = new double[this->size];
+	this->cumu = new double[this->size];
 	double sum = 0;
-	for (int i = 0; i < size; i++)
+	int pos=0;
+	for (int i = 0; i < this->size; i++)
 	{
-	  values[i]= vals[i];
-	  sum = sum + data[i];
-	  prob[i] = data[i];
-	  cumu[i] = sum;
+	  if(vals[pos] == i+vals[0]){
+	    values[i] = vals[pos];
+	    sum = sum + data[pos];
+	    prob[i] = data[pos];
+	    cumu[i] = sum;
+	    pos++;
+	  } else {
+	    values[i] = i+vals[0];
+	    prob[i] = 0;
+	    cumu[i] = sum;
+	  }
+	  
 	}
 }
 
