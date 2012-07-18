@@ -76,15 +76,16 @@ void Casper::IPMH(double *pi, double *paccept, int niter, int burnin) {
 }
 
 void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mode) {
-  double **S;
+  double **Sinv;
   int n = model->count();
-  S= dmatrix(1,n,1,n);
-  normapprox(S, mode, n, 1);
-  IPMH(pi, paccept, niter, burnin, mode, S);
-  free_dmatrix(S,1,n,1,n);
+  Sinv= dmatrix(1,n,1,n);
+  normapprox(Sinv, mode, n, 1);
+  IPMH(pi, paccept, niter, burnin, mode, Sinv);
+  free_dmatrix(Sinv,1,n,1,n);
 }
 
-void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mode, double **S) {
+void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mode, double **Sinv) {
+  //Note: input parameter S is the Hessian at the mode, i.e. the inverse of the covariance matrix
   double det, lold, lnew;
   double *thmode, *thold, *thnew, *piold, *pinew, **Gold, **Gnew, **cholS, **cholSinv;
   int n = model->count();
@@ -95,9 +96,12 @@ void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mo
 
   cholS= dmatrix(1,n-1,1,n-1);
   cholSinv= dmatrix(1,n-1,1,n-1);
-  choldc(S,n-1,cholS);
-  choldc_inv(S,n-1,cholSinv); 
+  choldc(Sinv,n-1,cholSinv);
+  choldc_inv(Sinv,n-1,cholS); 
   det= choldc_det(cholSinv,n-1);
+  //choldc(S,n-1,cholS);
+  //choldc_inv(S,n-1,cholSinv); 
+  //det= choldc_det(cholSinv,n-1);
 
   //MCMC
   thold = new double[n - 1];

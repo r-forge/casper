@@ -208,7 +208,7 @@ void choldc_inv(double **a, int n, double **aout); //Inverse of Cholesky decompo
 void cholS_inv(double **cholS, int n, double **cholSinv); //Inverse of Cholesky decomposition (input is Cholesky matrix, faster)
 void choldc_inv_internal(double **cholS, int n);
 double choldc_det(double **chols, int n); //Determinant of a symmetric def+ using its Cholesky decomp
-void inv_posdef(double **a, int n, double **aout); //Inverse of a symmetric, positive definite matrix
+void inv_posdef(double **a, int n, double **aout); //Inverse of a symmetric, positive definite matrix a[1..n][1..n]
 void inv_posdef_upper(double **a, int n, double **aout); //Same but only returns upper triangular elements
 void invdet_posdef(double **a, int n, double **aout, double *det_a); //Inverse and determinant of positive def matrix
 void inv_posdef_chol(double **invchol, int n, double **aout); //Inverse given cholesky decomposition

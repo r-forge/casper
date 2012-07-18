@@ -147,6 +147,98 @@ void importTranscripts(set<Variant*, VariantCmp> *initvars, DataFrame* df, SEXP 
 extern "C"
 {
 
+  //Evaluate log(likelihood(pi)) + log(prior(pi)) for a grid of pi values in the known variants case
+  //Also returns posterior mode, Hessian at posterior mode & path probabilities for each variant
+  // Input
+  // - gridR: matrix with nb rows = nb of variants, nb cols = nb grid points
+  // (other args as in calcKnownSingle)
+  SEXP lhoodGrid(SEXP gridR, SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR, SEXP strandR) {
+
+    //CREATE CASPER INSTANCE
+    DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR, strandR);
+
+    set<Variant*, VariantCmp> *initvars = new set<Variant*, VariantCmp>();
+    importTranscripts(initvars, df, transcriptsR);
+    df->fixUnexplFrags(initvars, 0); // Discard fragments that are unexplained by know variants
+    double priorq = REAL(priorqR)[0];
+    int totC=0;
+    list<Fragment*>::const_iterator fi;
+    for (fi = df->data.begin(); fi != df->data.end(); fi++) {
+      Fragment* f = *fi;
+      totC += f->count;
+    }
+
+    Model* model = new Model(initvars);
+    Casper* casp = new Casper(model, df);
+    Casper::priorq = priorq;
+    Casper::em_maxruns = 1000;
+    Casper::em_tol= 0.00001;
+
+    int vc = model->count();
+    double* em = casp->calculateMode();
+
+    int nrow= Rf_nrows(gridR), ncol = Rf_ncols(gridR);
+
+    SEXP ans;
+    PROTECT(ans= allocVector(VECSXP, 6));
+
+    //RETURN LOG-LIKELIHOOD + LOG-PRIOR
+    SET_VECTOR_ELT(ans, 0, allocVector(REALSXP,ncol));
+    double *logpos= REAL(VECTOR_ELT(ans,0));
+    gridR = coerceVector(gridR, REALSXP); //coerce matrix to vector
+    double *pivals= REAL(gridR);
+    for (int i=0; i<ncol; i++) logpos[i]= casp->priorLikelihoodLn(pivals + nrow*i);
+
+    //RETURN POSTERIOR MODE & HESSIAN
+    SET_VECTOR_ELT(ans, 1, allocVector(REALSXP,vc));  //stores estimated expression
+    SET_VECTOR_ELT(ans, 2, allocVector(STRSXP,vc)); //stores variant names
+    SET_VECTOR_ELT(ans, 3, allocVector(REALSXP,1)); //stores logpos at the mode
+                
+    double *expr= REAL(VECTOR_ELT(ans,1));
+    SEXP varnamesR= VECTOR_ELT(ans,2);              		
+    double *fopt= REAL(VECTOR_ELT(ans,3));
+
+    for (int j=0; j< vc; j++) {
+      Variant* v = model->get(j);
+      int varidx= model->indexOf(v);
+      if(totC>0) expr[j] = em[varidx]; //estimated expression
+      else expr[j] = 0;
+      if (initvars->count(v)>0) v->name= (*initvars->find(v))->name;  //respect initial variant names
+      const char *cname= (v->name).c_str();
+      SET_STRING_ELT(varnamesR,j,mkChar(cname));  //variant name
+    }
+    fopt[0]= casp->priorLikelihoodLn(em);
+
+    SET_VECTOR_ELT(ans, 4, allocMatrix(REALSXP,vc-1,vc-1)); //stores variance of estimated expression (logit scale)
+    double *Svec= REAL(VECTOR_ELT(ans,4));
+    double **Sinv= dmatrix(1,vc,1,vc), **S= dmatrix(1,vc,1,vc);
+    if(totC>0){
+      casp->normapprox(Sinv, em, vc, 1);
+      inv_posdef(Sinv,vc-1,S);
+      for (int i=1; i<vc; i++) Svec[i-1 + (i-1)*(vc-1)]= S[i][i];
+      for (int i=1; i<vc; i++) for (int j=i+1; j<vc; j++) Svec[j-1 + (i-1)*(vc-1)]= Svec[i-1 + (j-1)*(vc-1)]= S[i][j];
+    }
+    free_dmatrix(Sinv,1,vc,1,vc); free_dmatrix(S,1,vc,1,vc);
+
+    //RETURN PATH PROBABILITIES FOR EACH VARIANT
+    int np = (casp->frame->data).size();
+    SET_VECTOR_ELT(ans, 5, allocMatrix(REALSXP,vc,np));  //stores estimated expression
+    double *probmatrix = REAL(VECTOR_ELT(ans, 5));
+    for (int i=0; i<vc; i++) {
+      Variant *v= casp->model->get(i);
+      map<Fragment*, double> vprobs= df->probabilities(v);
+      int j=0;
+      for (list<Fragment*>::iterator fi= df->data.begin(); fi != df->data.end(); fi++) {
+	Fragment *f= *fi;
+	probmatrix[i+vc*j]= vprobs[f];
+	j++;
+      }
+    }
+
+    UNPROTECT(1);
+    return ans;
+  }
+
   //Estimate isoform expression for multiple genes. Calls calcKnownSingle repeadtedly
   //Input args same as for calcDenovoMultiple
   SEXP calcKnownMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR, SEXP strandR, SEXP returnR, SEXP niterR, SEXP burninR) 
@@ -219,9 +311,10 @@ extern "C"
 		if (INTEGER(returnR)[0]>0) {
 		  SET_VECTOR_ELT(ans, 2, allocVector(REALSXP,vc)); //stores variance of estimated expression (logit scale)
 		  double *vexpr= REAL(VECTOR_ELT(ans,2));
-		  double **S= dmatrix(1,vc,1,vc);
+		  double **S= dmatrix(1,vc,1,vc), **Sinv= dmatrix(1,vc,1,vc);
 		  if(totC>0){
-		    casp->normapprox(S, em, vc, 1);
+		    casp->normapprox(Sinv, em, vc, 1);
+		    inv_posdef(Sinv,vc-1,S);
 		    vexpr[0]= 0;
 		    for (int j=0; j<vc-1; j++) vexpr[j+1]= S[j+1][j+1];
 		  } else for (int j=0; j<vc; j++) vexpr[j] = 0;
@@ -234,7 +327,7 @@ extern "C"
 			casp->IPMH(pi, &paccept, niter, burnin, em, S);
 		      } else for(int j=0; j<vc; j++) pi[j]=0;
 		  }
-		  free_dmatrix(S,1,vc,1,vc);
+		  free_dmatrix(S,1,vc,1,vc); free_dmatrix(Sinv,1,vc,1,vc);
 		}
 
 		

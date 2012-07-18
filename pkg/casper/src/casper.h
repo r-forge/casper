@@ -23,17 +23,22 @@ class Casper
   void calculateMode(double* pi);  //use pi as initial value, and return it updated with solution
 
   // Normal approximation to posterior on logit re-parameterization
-  void normapprox(double **S, double *mode, int n, int Sidx_ini=0);
-  void normapprox(double **S, double** G, double*** H, double* mode, double* thmode, int n, int Sidx_ini=0);
+  void normapprox(double **S, double *mode, int n, int Sidx_ini=0);  //note: S is Hessian at the mode, i.e. inverse of covariance matrix
+  void normapprox(double **S, double** G, double*** H, double* mode, double* thmode, int n, int Sidx_ini=0); //note: S is Hessian at the mode, i.e. inverse of covariance matrix
 
   // Independent proposal Metropolis-Hastings
   void IPMH(double *pi, double *paccept, int niter, int burnin);  //stores sample in pi, proportion of accepted proposals in paccept
   void IPMH(double *pi, double *paccept, int niter, int burnin, double *mode);  //same but uses pre-computed mode
-  void IPMH(double *pi, double *paccept, int niter, int burnin, double *mode, double **S); //same using pre-computed mode & hessian
+  void IPMH(double *pi, double *paccept, int niter, int burnin, double *mode, double **Sinv); //same using pre-computed mode & hessian
 
   // gives the integral given the current model and data
   double calculateIntegral();  //uses mode=calculateMode() and n= model->count()
   double calculateIntegral(double* mode, int n);  //do integral with pre-computed mode
+
+  // evaluate the likelihood & prior
+  double priorLikelihoodLn(double* pi);
+  double priorLn(double* pi);
+  double likelihoodLn(double* pi);
 
   // indicates whether the model can explain all fragments
   bool isValid();
@@ -49,10 +54,6 @@ class Casper
 
   static const int is_runs;
   static const double mh_gammah;
-  
-  double priorLn(double* pi);
-  double likelihoodLn(double* pi);
-  double priorLikelihoodLn(double* pi);
 
   map<Fragment*, double> fragdist(double* pi);
 

@@ -93,6 +93,49 @@ calcKnownMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcd
   }
 
 
+
+
+lhoodGrid <- function(pc, distrs, genomeDB, readLength, geneid, grid, priorq=2) {
+  if (length(geneid)>1) stop("Only 1 gene is allowed, please specify a single gene in argument 'geneid'")
+  if (missing(readLength)) stop("readLength must be specified")
+  if (genomeDB@denovo) stop("genomeDB must be a known genome")
+  if (pc@denovo) stop("pc must be a pathCounts object from known genome")
+
+  #Format input
+  startcdf <- distrs$stDis(seq(0,1,.001))
+  lendis <- as.double(distrs$lenDis/sum(distrs$lenDis))
+  lenvals <- as.integer(names(distrs$lenDis))
+  readLength <- as.integer(readLength)
+  priorq <- as.double(priorq)
+
+  exons <- as.integer(names(genomeDB@islands[[geneid]]))
+  exonwidth <- width(genomeDB@islands[[geneid]])
+  strand <- genomeDB@islandStrand[geneid]
+  geneid <- as.integer(geneid)
+  transcripts <- genomeDB@transcripts[[geneid]]
+  strand <- as.integer(ifelse(strand=='+', 1, -1))
+  pc <- pc@counts[[geneid]]
+  
+  if (missing(grid)) {
+    grid <- lapply(1:(length(transcripts)-1), function(z) seq(-10,10,length=10^(5/(length(transcripts)-1))))
+    #grid <- lapply(1:length(transcripts), function(z) seq(0.0001,.9999,length=10^(5/length(transcripts))))
+  } else {
+    if (!is.list(grid)) stop("grid must be of class list")
+    if (length(grid) != length(transcripts)-1) stop("grid must have one row less than the number of known transcripts")
+  }
+  milogit <- function(theta) cbind(rep(1,nrow(theta)),exp(theta))/(1+rowSums(exp(theta))) #matrix conversion
+  gridmat <- t(milogit(expand.grid(grid)))
+  
+  ans <- .Call("lhoodGrid",gridmat,exons,exonwidth,transcripts,pc,startcdf,lendis,lenvals,readLength,priorq,strand)
+  names(ans[[2]]) <- ans[[3]]; ans[[3]] <- NULL
+  names(ans) <- c('logpos','piest','logpos.piest','S','pathprob')
+  rownames(ans$pathprob) <- names(ans$piest)
+  ans$pathprob <- t(ans$pathprob)
+  ans$grid <- grid
+  return(ans)  
+}
+
+
 calcExpOld<-function(distrs, genomeDB, pc, readLength){
     if (missing(readLength)) stop("readLength must be specified")
       if (class(genomeDB)!="knownGenome") stop("genomeDB must be of class 'knownGenome'")
