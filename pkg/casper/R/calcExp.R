@@ -27,22 +27,22 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
 
       #Define basic function
       f <- function(z) {
-            geneid <- as.integer(z)
-                exons <- exons[z]
-                exonwidth <- exonwidth[z]
-                transcripts <- genomeDB@transcripts[z]
-                strand <- as.list(as.integer(ifelse(strand[z]=='+', 1, -1)))
-                pc <- pc@counts[z]
-                ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,geneid=as.list(geneid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq, strand=strand, report=report, niter=niter, burnin=burnin)
-                if (report==0) {
-                        ans <- lapply(ans, function(z) { res=vector("list",1); res[[1]]= z[[1]]; names(res[[1]])= z[[2]]; res })
-                      } else if (report==1) {
-                              ans <- lapply(ans, function(z) { res=vector("list",2); res[[1]]= z[[1]]; res[[2]]= z[[3]]; names(res[[1]])= names(res[[2]])= z[[2]]; res })
-                            } else if (report==2) {
-                                    ans <- lapply(ans, function(z) { res=vector("list",3); res[[1]]= z[[1]]; res[[2]]= z[[3]]; res[[3]]= matrix(z[[4]],nrow=niter-burnin); names(res[[1]])= names(res[[2]])= z[[2]]; res })
-                                  }
-                ans
-          }
+        geneid <- as.integer(z)
+        exons <- exons[z]
+        exonwidth <- exonwidth[z]
+        transcripts <- genomeDB@transcripts[z]
+        strand <- as.list(as.integer(ifelse(strand[z]=='+', 1, -1)))
+        pc <- pc@counts[z]
+        ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,geneid=as.list(geneid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq, strand=strand, report=report, niter=niter, burnin=burnin)
+        if (report==0) {
+          ans <- lapply(ans, function(z) { res=vector("list",1); res[[1]]= z[[1]]; names(res[[1]])= z[[2]]; res })
+        } else if (report==1) {
+          ans <- lapply(ans, function(z) { res=vector("list",2); res[[1]]= z[[1]]; res[[2]]= z[[3]]; names(res[[1]])= names(res[[2]])= z[[2]]; res })
+        } else if (report==2) {
+          ans <- lapply(ans, function(z) { res=vector("list",3); res[[1]]= z[[1]]; res[[2]]= z[[3]]; res[[3]]= matrix(z[[4]],nrow=niter-burnin); names(res[[1]])= names(res[[2]])= z[[2]]; res })
+        }
+        ans
+      }
 
       #Run
 
@@ -62,14 +62,24 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
       ans <- f(geneid)
       names(ans) <- geneid
     }
+    miss <- lapply(genomeDB@transcripts[all[!(all %in% names(ans))]], names)
     #Format as ExpressionSet
-    transcript <- unlist(lapply(ans, function(z) names(z[[1]])))
-    gene <- rep(names(ans),sapply(ans,function(z) length(z[[1]])))
+    transcript <- c(unlist(lapply(ans, function(z) names(z[[1]]))), unname(unlist(miss)))
+    gene <- c(rep(names(ans),sapply(ans,function(z) length(z[[1]]))), rep(names(miss), sapply(miss, length)))
     fdata <- data.frame(transcript=transcript, gene=gene)
-    exprsx <- matrix(unlist(lapply(ans,'[[',1)),ncol=1)
-    if (report>=1) fdata$SE <- sqrt(unlist(lapply(ans,'[[',2)))
+    misse <- rep(NA, length(unlist(miss)))
+    names(misse) <- unlist(miss)
+    exprsx <- matrix(c(unlist(lapply(ans,'[[',1)), misse) ,ncol=1)
+    rownames(exprsx) <- c(unlist(lapply(ans, function(z) names(z[[1]]))), names(misse))
+    exprsx[exprsx==-1] <- NA
+    if (report>=1) {
+      fdata$SE <- c(unlist(lapply(ans,'[[',2)), misse)
+      fdata$SE[fdata$SE==-1] <- NA
+      fdata$SE <- sqrt(fdata$SE)
+    }
     if (report>=2) {
       q <- lapply(ans,function(z) apply(z[[3]],2,quantile,probs=c(.025,.975)))
+      q[names(miss)] <- c(NA, NA)
       q <- t(do.call(cbind,q))
       fdata$ci95.low <- q[,1]; fdata$ci95.high <- q[,2]
     }
