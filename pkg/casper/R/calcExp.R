@@ -1,4 +1,4 @@
-calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, priorq=3, report=0, niter=10^3, burnin=100, mc.cores=1) {
+calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, priorq=2, report=0, niter=10^3, burnin=100, mc.cores=1, verbose=FALSE) {
     if (missing(readLength)) stop("readLength must be specified")
       if (genomeDB@denovo) stop("genomeDB must be a known genome")
       if (pc@denovo) stop("pc must be a pathCounts object from known genome")
@@ -12,6 +12,7 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
       report <- as.integer(report)
       niter <- as.integer(niter)
       burnin <- as.integer(burnin)
+      verbose <- as.integer(verbose)
       if (!report %in% 0:2) stop("Argument report must be equal to 0, 1 or 2")
       if ((niter<=burnin) & report>=2) stop("Too many burnin iterations specified")
       if (missing(geneid)) geneid <- names(genomeDB@islands)[sapply(genomeDB@islands,length)>1]
@@ -33,7 +34,7 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
         transcripts <- genomeDB@transcripts[z]
         strand <- as.list(as.integer(ifelse(strand[z]=='+', 1, -1)))
         pc <- pc@counts[z]
-        ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,geneid=as.list(geneid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq, strand=strand, report=report, niter=niter, burnin=burnin)
+        ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,geneid=as.list(geneid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq, strand=strand, report=report, niter=niter, burnin=burnin, verbose=verbose)
         if (report==0) {
           ans <- lapply(ans, function(z) { res=vector("list",1); res[[1]]= z[[1]]; names(res[[1]])= z[[2]]; res })
         } else if (report==1) {
@@ -44,11 +45,11 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
         ans
       }
 
-      #Run
-
+    #Run
     sel <- !sapply(pc@counts[geneid], is.null)
     all <- geneid
     geneid <- geneid[sel]
+    if (verbose) cat("Obtaining expression estimates...\n")
     if (mc.cores>1 && length(geneid)>mc.cores) {
       if ('multicore' %in% loadedNamespaces()) {
                     #split into smaller jobs
@@ -64,6 +65,7 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
     }
     miss <- lapply(genomeDB@transcripts[all[!(all %in% names(ans))]], names)
     #Format as ExpressionSet
+    if (verbose) cat("Formatting output...\n")
     transcript <- c(unlist(lapply(ans, function(z) names(z[[1]]))), unname(unlist(miss)))
     gene <- c(rep(names(ans),sapply(ans,function(z) length(z[[1]]))), rep(names(miss), sapply(miss, length)))
     fdata <- data.frame(transcript=transcript, gene=gene)
@@ -97,8 +99,8 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
   }
 
 
-calcKnownMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, priorq, strand, report, niter, burnin) {
-    ans <- .Call("calcKnownMultiple",exons,exonwidth,transcripts,geneid,pc,startcdf, lendis, lenvals, readLength, priorq, strand, report, niter, burnin)
+calcKnownMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, priorq, strand, report, niter, burnin, verbose) {
+    ans <- .Call("calcKnownMultiple",exons,exonwidth,transcripts,geneid,pc,startcdf, lendis, lenvals, readLength, priorq, strand, report, niter, burnin, verbose)
       return(ans)
   }
 
@@ -123,6 +125,7 @@ lhoodGrid <- function(pc, distrs, genomeDB, readLength, geneid, grid, priorq=2) 
   strand <- genomeDB@islandStrand[geneid]
   geneid <- as.integer(geneid)
   transcripts <- genomeDB@transcripts[[geneid]]
+  if (length(transcripts)==1) stop("Single transcript specified, estimation not run")
   strand <- as.integer(ifelse(strand=='+', 1, -1))
   pc <- pc@counts[[geneid]]
   
@@ -138,9 +141,10 @@ lhoodGrid <- function(pc, distrs, genomeDB, readLength, geneid, grid, priorq=2) 
   
   ans <- .Call("lhoodGrid",gridmat,exons,exonwidth,transcripts,pc,startcdf,lendis,lenvals,readLength,priorq,strand)
   names(ans[[2]]) <- ans[[3]]; ans[[3]] <- NULL
-  names(ans) <- c('logpos','piest','logpos.piest','S','pathprob')
+  names(ans) <- c('logpos','piest','logpos.piest','S','pathprob','marginalLhood')
   rownames(ans$pathprob) <- names(ans$piest)
   ans$pathprob <- t(ans$pathprob)
+  names(ans$marginalLhood) <- c('laplace','IS')
   ans$grid <- grid
   return(ans)  
 }

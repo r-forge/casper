@@ -3,7 +3,7 @@
 
 using namespace std;
 
-const int Casper::is_runs = 100;
+int Casper::is_runs = 10000;
 int Casper::em_maxruns = 100;
 double Casper::em_tol = 0.001;
 const double Casper::mh_gammah = 2;
@@ -69,24 +69,24 @@ void Casper::calculateMode(double* pi) {
   }
 }
 
-void Casper::IPMH(double *pi, double *paccept, int niter, int burnin) {
+void Casper::IPMH(double *pi, double *paccept, double *integralIS, int niter, int burnin) {
   double* mode = calculateMode();
-  IPMH(pi, paccept, niter, burnin, mode);
+  IPMH(pi, paccept, integralIS, niter, burnin, mode);
   delete [] mode;
 }
 
-void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mode) {
+void Casper::IPMH(double *pi, double *paccept, double *integralIS, int niter, int burnin, double *mode) {
   double **Sinv;
   int n = model->count();
   Sinv= dmatrix(1,n,1,n);
   normapprox(Sinv, mode, n, 1);
-  IPMH(pi, paccept, niter, burnin, mode, Sinv);
+  IPMH(pi, paccept, integralIS, niter, burnin, mode, Sinv);
   free_dmatrix(Sinv,1,n,1,n);
 }
 
-void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mode, double **Sinv) {
+void Casper::IPMH(double *pi, double *paccept, double *integralIS, int niter, int burnin, double *mode, double **Sinv) {
   //Note: input parameter S is the Hessian at the mode, i.e. the inverse of the covariance matrix
-  double det, lold, lnew;
+  double det, lold, lnew, l0;
   double *thmode, *thold, *thnew, *piold, *pinew, **Gold, **Gnew, **cholS, **cholSinv;
   int n = model->count();
 
@@ -99,9 +99,6 @@ void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mo
   choldc(Sinv,n-1,cholSinv);
   choldc_inv(Sinv,n-1,cholS); 
   det= choldc_det(cholSinv,n-1);
-  //choldc(S,n-1,cholS);
-  //choldc_inv(S,n-1,cholSinv); 
-  //det= choldc_det(cholSinv,n-1);
 
   //MCMC
   thold = new double[n - 1];
@@ -113,16 +110,18 @@ void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mo
 
   rmvtC(thold-1, n-1, thmode-1, cholS, 3);
   milogit(piold, thold, n);
-  lold= priorLikelihoodLn(piold) - dmvtC(thold-1, n-1, thmode-1, cholSinv, det, 3, 1);
+  l0= lold= priorLikelihoodLn(piold) - dmvtC(thold-1, n-1, thmode-1, cholSinv, det, 3, 1);
 
   vtGradG(Gold,thold, n);
   lold+= vtGradLogdet(Gold, n);
 
+  (*integralIS)= 0;
   (*paccept)= 0;
   for (int i=0; i<niter; i++) {
     rmvtC(thnew-1, n-1, thmode-1, cholS, 3);
     milogit(pinew, thnew, n);
     lnew= priorLikelihoodLn(pinew) - dmvtC(thnew-1, n-1, thmode-1, cholSinv, det, 3, 1);
+    (*integralIS) += exp(lnew-l0);
     vtGradG(Gnew,thnew,n);
     lnew+= vtGradLogdet(Gnew, n);
     double p= exp(lnew - lold);
@@ -145,6 +144,7 @@ void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mo
     }
   }
   (*paccept) = (*paccept)/(niter+.0);
+  (*integralIS) = l0 + log(*integralIS) - log(niter+.0);
 
   delete [] thmode;
   delete [] thold;
@@ -157,14 +157,27 @@ void Casper::IPMH(double *pi, double *paccept, int niter, int burnin, double *mo
   free_dmatrix(cholSinv,1,n-1,1,n-1);
 }
 
-double Casper::calculateIntegral() {
+
+double Casper::calculateIntegral(int method) {
   int n = model->count();
   double* mode = calculateMode();
-  double ans= calculateIntegral(mode, n);
+  double ans= calculateIntegral(mode, n, method);
   delete [] mode;
   return ans;
 }
-double Casper::calculateIntegral(double *mode, int n)
+
+double Casper::calculateIntegral(double *mode, int n, int method) {
+  double ans;
+  if (method==1) {
+    ans= LaplaceApprox(mode,n);
+  } else if (method==2) {
+    double *pi, paccept;
+    IPMH(pi, &paccept, &ans, is_runs, is_runs, mode);  //no samples stored, simply reports average joint / proposal ratio
+  }
+  return ans;
+}
+
+double Casper::LaplaceApprox(double *mode, int n)
 {
   if (n == 1) { return priorLikelihoodLn(mode); }
 
