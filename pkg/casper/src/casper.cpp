@@ -286,6 +286,40 @@ map<Fragment*, double> Casper::fragdist(double* pi)
 }
 
 
+
+void Casper::asymptoticSE(double *se, double *mode, int n) {
+  int Sidx_ini=1;
+  double **G, ***H, *thmode, **S, **Sinv;
+
+  thmode = new double[n - 1];
+  mlogit(thmode, mode, n);
+
+  H= darray3(n,n,n);
+  vtHess(H, thmode, n);
+
+  G = dmatrix(0,n-1,0,n-2);
+  vtGradG(G,thmode, n);
+
+  S= dmatrix(1,n-1,1,n-1); Sinv= dmatrix(1,n-1,1,n-1);
+  normapprox(Sinv, G, H, mode, thmode, n, Sidx_ini);
+  inv_posdef(Sinv,n-1,S);
+
+  double **GtS= dmatrix(0,n-1,1,n-1);
+  AB(G, 0, n-1, 0, n-2, S, 1, n-1, 1, n-1, GtS);
+
+  int i,j;
+  for (i=0; i<n; i++) {
+    for (j=0, se[i]=0; j<n-1; j++) se[i] += GtS[i][j+1] * G[i][j];
+    se[i] = sqrt(se[i]);
+  }
+
+  delete [] thmode;
+  free_darray3(H,n,n,n); free_dmatrix(G,0,n-1,0,n-2);
+  free_dmatrix(S,1,n-1,1,n-1); free_dmatrix(Sinv,1,n-1,1,n-1);
+  free_dmatrix(GtS,0,n-1,1,n-1);
+}
+
+
 void Casper::normapprox(double **S, double *mode, int n, int Sidx_ini) {
   double **G, ***H, *thmode;
 

@@ -247,7 +247,7 @@ extern "C"
 
   //Estimate isoform expression for multiple genes. Calls calcKnownSingle repeadtedly
   //Input args same as for calcDenovoMultiple
-  SEXP calcKnownMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR, SEXP strandR, SEXP returnR, SEXP niterR, SEXP burninR, SEXP verboseR) 
+  SEXP calcKnownMultiple(SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP geneidR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR, SEXP strandR, SEXP citypeR, SEXP niterR, SEXP burninR, SEXP verboseR) 
 	{
 		int i, ngenes=LENGTH(geneidR);
 		SEXP ansMultiple, ansSingle;
@@ -256,10 +256,10 @@ extern "C"
 		PROTECT(ansMultiple= allocVector(VECSXP, ngenes));
 
 		for (i=0; i<ngenes; i++) {
-		  ansSingle= calcKnownSingle(&paccept, VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, priorqR, VECTOR_ELT(strandR, i), returnR, niterR, burninR);
+		  ansSingle= calcKnownSingle(&paccept, VECTOR_ELT(exonsR,i), VECTOR_ELT(exonwidthR,i), VECTOR_ELT(transcriptsR,i), VECTOR_ELT(pathCountsR,i), fragstaR, fraglenR, lenvalsR, readLengthR, priorqR, VECTOR_ELT(strandR, i), citypeR, niterR, burninR);
 		  SET_VECTOR_ELT(ansMultiple,i,ansSingle);
 		}
-		if (INTEGER(verboseR)[0]==1 && INTEGER(returnR)[0]>1) Rprintf("Average MH acceptance rate %f\n",paccept/(ngenes+.0));
+		if (INTEGER(verboseR)[0]==1 && INTEGER(citypeR)[0]==2) Rprintf("Average MH acceptance rate %f\n",paccept/(ngenes+.0));
 		
 		UNPROTECT(1);
 		return ansMultiple;
@@ -267,10 +267,10 @@ extern "C"
 
   //Estimate isoform expression (known variants case)
   //Input args same as for calcDenovoSingle
-  // - returnR: set to 0 to return only estimated expression. 1: additionally, return asymptotic variances. 2: additionally, return posterior samples
+  // - citypeR: set to 0 to return only estimated expression. 1: additionally, return asymptotic variances. 2: additionally, return posterior samples
   // - niterR: number of iterations to obtain posterior samples
   // - burninR: number of burnin iterations
-  SEXP calcKnownSingle(double *paccept, SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR, SEXP strandR, SEXP returnR, SEXP niterR, SEXP burninR)
+  SEXP calcKnownSingle(double *paccept, SEXP exonsR, SEXP exonwidthR, SEXP transcriptsR, SEXP pathCountsR, SEXP fragstaR, SEXP fraglenR, SEXP lenvalsR, SEXP readLengthR, SEXP priorqR, SEXP strandR, SEXP citypeR, SEXP niterR, SEXP burninR)
 	{
 		DataFrame* df = importDataFrame(exonsR, exonwidthR, pathCountsR, fragstaR, fraglenR, lenvalsR, readLengthR, strandR);
 
@@ -316,27 +316,30 @@ extern "C"
 		  SET_STRING_ELT(varnamesR,j,mkChar(cname));  //variant name
                 }
 
-		if (INTEGER(returnR)[0]>0) {
+		if (INTEGER(citypeR)[0]>0) {
 		  SET_VECTOR_ELT(ans, 2, allocVector(REALSXP,vc)); //stores variance of estimated expression (logit scale)
 		  double *vexpr= REAL(VECTOR_ELT(ans,2));
-		  double **S= dmatrix(1,vc,1,vc), **Sinv= dmatrix(1,vc,1,vc);
-		  if(totC>0){
-		    casp->normapprox(Sinv, em, vc, 1);
-		    inv_posdef(Sinv,vc-1,S);
-		    vexpr[0]= 0;
-		    for (int j=0; j<vc-1; j++) vexpr[j+1]= S[j+1][j+1];
-		  } else for (int j=0; j<vc; j++) vexpr[j] = 0;
-		  if (INTEGER(returnR)[0]>1) {
+
+		  if (INTEGER(citypeR)[0]==1) {
+		    if (totC>0) casp->asymptoticSE(vexpr, em, vc); else { for (int j=0; j<vc; j++) vexpr[j] = 0; }
+		  } else if (INTEGER(citypeR)[0]==2) {
+		    if (totC>0) {
+		      double **S= dmatrix(1,vc,1,vc), **Sinv= dmatrix(1,vc,1,vc);
+		      casp->normapprox(Sinv, em, vc, 1);
+		      inv_posdef(Sinv,vc-1,S);
 		      int niter= INTEGER(niterR)[0], burnin= INTEGER(burninR)[0];
 		      SET_VECTOR_ELT(ans, 3, allocVector(REALSXP,vc*(niter-burnin))); //stores posterior samples
 		      double *pi = REAL(VECTOR_ELT(ans,3));
-		      if(totC>0){
-			double pacc, integralIS;
-			casp->IPMH(pi, &pacc, &integralIS, niter, burnin, em, Sinv);
-			(*paccept) += pacc;
-		      } else for(int j=0; j<vc; j++) pi[j]=0;
+		      double pacc, integralIS;
+		      casp->IPMH(pi, &pacc, &integralIS, niter, burnin, em, Sinv);
+		      (*paccept) += pacc;
+		      free_dmatrix(S,1,vc,1,vc); free_dmatrix(Sinv,1,vc,1,vc);
+		    } else {
+		      SET_VECTOR_ELT(ans, 3, allocVector(REALSXP,vc));
+		      double *pi = REAL(VECTOR_ELT(ans,3));
+		      for(int j=0; j<vc; j++) pi[j]=0;
+		    }
 		  }
-		  free_dmatrix(S,1,vc,1,vc); free_dmatrix(Sinv,1,vc,1,vc);
 		}
 
 		

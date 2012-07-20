@@ -22,6 +22,9 @@ class Casper
   double* calculateMode();  //initialize to equal expression for all variants
   void calculateMode(double* pi);  //use pi as initial value, and return it updated with solution
 
+  // Asymptotic standard error for mixture proportions (uses delta method)
+  void asymptoticSE(double *se, double *mode, int n);
+
   // Normal approximation to posterior on logit re-parameterization
   void normapprox(double **S, double *mode, int n, int Sidx_ini=0);  //note: S is Hessian at the mode, i.e. inverse of covariance matrix
   void normapprox(double **S, double** G, double*** H, double* mode, double* thmode, int n, int Sidx_ini=0); //note: S is Hessian at the mode, i.e. inverse of covariance matrix

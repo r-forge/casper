@@ -1614,16 +1614,30 @@ void Atx(double **A,double *x,double *z, int rowini, int rowfi, int colini, int 
   } 
 } 
 
+void AB(double **A, int rowiniA, int rowfiA, int coliniA, int colfiA, double **B, int rowiniB, int rowfiB, int coliniB, int colfiB, double **C) { 
+  int _i, _j, _k;
+  if ((colfiA-coliniA) != (rowfiB-rowiniB)) {
+    char proc[]="AtB", act[]="dimensions don't match";
+    errorC(proc, act, 1); 
+  }
+  int offset= rowiniB-coliniA;
+  for(_i=rowiniA;_i<=rowfiA;_i++)			 
+    for(_j=coliniB;_j<=colfiB;_j++)			 
+      for(C[_i][_j]=0,_k=coliniA;_k<=colfiA;_k++)	 
+	C[_i][_j]+=A[_i][_k]*B[offset+_k][_j]; 
+} 
+
 void AtB(double **A, int rowiniA, int rowfiA, int coliniA, int colfiA, double **B, int rowiniB, int rowfiB, int coliniB, int colfiB, double **C) { 
   int _i, _j, _k;
   if ((rowfiA-rowiniA) != (rowfiB-rowiniB)) {
     char proc[]="AtB", act[]="dimensions don't match";
     errorC(proc, act, 1); 
   }
+  int offset= rowiniB-rowiniA;
   for(_i=coliniA;_i<=colfiA;_i++)			 
     for(_j=coliniB;_j<=colfiB;_j++)			 
       for(C[_i][_j]=0,_k=rowiniA;_k<=rowfiA;_k++)	 
-	C[_i][_j]+=A[_k][_i]*B[_k][_j]; 
+	C[_i][_j]+=A[_k][_i]*B[offset+_k][_j]; 
 } 
 
 void a_plus_b(double *a, double *b, double *c, int ini, int fi) {
