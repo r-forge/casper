@@ -75,10 +75,10 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
     rownames(exprsx) <- c(unlist(lapply(ans, function(z) names(z[[1]]))), names(misse))
     exprsx[exprsx==-1] <- NA
     if (citype>=1) {
-      fdata$SE <- c(unlist(lapply(ans,'[[',2)), misse)
-      fdata$SE[fdata$SE==-1] <- NA
-      fdata$ci95.low <- exprsx - 1.96*fdata$SE; fdata$ci95.low[fdata$ci95.low<0] <- 0
-      fdata$ci95.high <- exprsx + 1.96*fdata$SE; fdata$ci95.high[fdata$ci95.high>1] <- 1
+      se <- c(unlist(lapply(ans,'[[',2)), misse)
+      se[se==-1] <- NA
+      fdata$ci95.low <- exprsx - 1.96*se; fdata$ci95.low[fdata$ci95.low<0] <- 0
+      fdata$ci95.high <- exprsx + 1.96*se; fdata$ci95.high[fdata$ci95.high>1] <- 1
     }
     if (citype>=2) {
       q <- lapply(ans,function(z) apply(z[[3]],2,quantile,probs=c(.025,.975)))
