@@ -90,7 +90,7 @@ SEXP joinExons(SEXP sexons, SEXP sreads, SEXP stot){
   char **tmpkey;
   tmpkey = malloc(finalSize * sizeof(char *));
   for(i=0; i<finalSize; i++) tmpkey[i] = malloc(200 * sizeof(char));
-
+  printf("%d %d %d\n", tot, finalSize, counter);
   hash_node_t *bucket;
   j=0;
   for(i=0; i<myhash.size; i++) {

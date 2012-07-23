@@ -20,24 +20,26 @@ int *procCigar(char *cigar, int *cigs){
 }
 
 
-void addRead2Frag(const char *qname, int flag, const char *chr, int start, const char *cigar, int totF, read_t *frags, int read){
+void addRead2Frag(const char *qname, int flag, const char *chr, int start, int strand, const char *cigar, int totF, read_t *frags, int read){
 	if(read==1){
-        frags[totF].qname = malloc((strlen(qname)+1) * sizeof(char));
-		strcpy(frags[totF].qname, qname);
-        frags[totF].flag_1=flag;
-        frags[totF].chr_1 = malloc((strlen(chr)+1) * sizeof(char));
-        strcpy(frags[totF].chr_1, chr);
-     	frags[totF].st_1=start;
-        frags[totF].cigar_1 = malloc((strlen(cigar)+1) * sizeof(char));
-     	strcpy(frags[totF].cigar_1, cigar);
-  		frags[totF].nreads=1;
+	  frags[totF].qname = malloc((strlen(qname)+1) * sizeof(char));
+	  strcpy(frags[totF].qname, qname);
+	  frags[totF].flag_1=flag;
+	  frags[totF].chr_1 = malloc((strlen(chr)+1) * sizeof(char));
+	  strcpy(frags[totF].chr_1, chr);
+	  frags[totF].st_1=start;
+	  frags[totF].cigar_1 = malloc((strlen(cigar)+1) * sizeof(char));
+	  strcpy(frags[totF].cigar_1, cigar);
+	  frags[totF].strand_1=strand;
+	  frags[totF].nreads=1;
 	} else {    
-        frags[totF].flag_2=flag;
-        frags[totF].chr_2 = malloc((strlen(chr)+1) * sizeof(char));
-        strcpy(frags[totF].chr_2, chr);
-		frags[totF].st_2=start; 
-        frags[totF].cigar_2 = malloc((strlen(cigar)+1) * sizeof(char));
-     	strcpy(frags[totF].cigar_2, cigar);
-		frags[totF].nreads=2;
+	  frags[totF].flag_2=flag;
+	  frags[totF].chr_2 = malloc((strlen(chr)+1) * sizeof(char));
+	  strcpy(frags[totF].chr_2, chr);
+	  frags[totF].st_2=start; 
+	  frags[totF].cigar_2 = malloc((strlen(cigar)+1) * sizeof(char));
+	  strcpy(frags[totF].cigar_2, cigar);
+	  frags[totF].strand_2 = strand;
+	  frags[totF].nreads=2;
 	}   
 }
