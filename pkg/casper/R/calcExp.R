@@ -1,15 +1,16 @@
-proc <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, priorq=3, report=0, niter=10^3, burnin=100, mc.cores=1) {
+procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, priorq=2, citype='none', niter=10^3, burnin=100, mc.cores=1, verbose=FALSE) {
   #Format input
   startcdf <- distrs$stDis(seq(0,1,.001))
   lendis <- as.double(distrs$lenDis/sum(distrs$lenDis))
   lenvals <- as.integer(names(distrs$lenDis))
   readLength <- as.integer(readLength)
   priorq <- as.double(priorq)
-  report <- as.integer(report)
+  citype <- as.integer(switch(citype, none=0, asymp=1, exact=2))
+  if (length(citype)==0) stop("citype should take the value 'none', 'asymp', or 'exact'")
   niter <- as.integer(niter)
   burnin <- as.integer(burnin)
-  if (!report %in% 0:2) stop("Argument report must be equal to 0, 1 or 2")
-  if ((niter<=burnin) & report>=2) stop("Too many burnin iterations specified")
+  verbose <- as.integer(verbose)
+  if ((niter<=burnin) & citype==2) stop("Too many burnin iterations specified. Decrease burnin or increase niter")
   if (missing(geneid)) geneid <- names(genomeDB@islands)[sapply(genomeDB@islands,length)>1]
   
   exons <- lapply(genomeDB@islands,function(z) as.integer(names(z)))
@@ -21,33 +22,8 @@ proc <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, pr
   if (!all(geneid %in% names(genomeDB@transcripts))) stop('geneid not found in genomeDB@transcripts')
   if (!all(geneid %in% names(genomeDB@islandStrand))) stop('geneid not found in genomeDB@islandStrand')
   
-
-      #Format input
-      startcdf <- distrs$stDis(seq(0,1,.001))
-      lendis <- as.double(distrs$lenDis/sum(distrs$lenDis))
-      lenvals <- as.integer(names(distrs$lenDis))
-      readLength <- as.integer(readLength)
-      priorq <- as.double(priorq)
-      citype <- as.integer(switch(citype, none=0, asymp=1, exact=2))
-      if (length(citype)==0) stop("citype should take the value 'none', 'asymp', or 'exact'")
-      niter <- as.integer(niter)
-      burnin <- as.integer(burnin)
-      verbose <- as.integer(verbose)
-      if ((niter<=burnin) & citype==2) stop("Too many burnin iterations specified. Decrease burnin or increase niter")
-      if (missing(geneid)) geneid <- names(genomeDB@islands)[sapply(genomeDB@islands,length)>1]
-
-      exons <- lapply(genomeDB@islands,function(z) as.integer(names(z)))
-      exonwidth <- lapply(genomeDB@islands,width)
-      strand <- genomeDB@islandStrand
-
-      if (!all(geneid %in% names(exons))) stop('geneid not found in genomeDB@islands')
-      if (!all(geneid %in% names(pc@counts))) stop('geneid not found in pc')
-      if (!all(geneid %in% names(genomeDB@transcripts))) stop('geneid not found in genomeDB@transcripts')
-      if (!all(geneid %in% names(genomeDB@islandStrand))) stop('geneid not found in genomeDB@islandStrand')
-
-
       #Define basic function
-
+  
   f <- function(z) {
     geneid <- as.integer(z)
     exons <- exons[z]
@@ -55,25 +31,20 @@ proc <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, pr
     transcripts <- genomeDB@transcripts[z]
     strand <- as.list(as.integer(ifelse(strand[z]=='+', 1, -1)))
     pc <- pc[z]
-    ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,geneid=as.list(geneid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq, strand=strand, report=report, niter=niter, burnin=burnin)
-    if (report==0) {
+    ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,geneid=as.list(geneid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq, strand=strand, citype=citype, niter=niter, burnin=burnin, verbose=verbose)
+    if (citype==0) {
       ans <- lapply(ans, function(z) { res=vector("list",1); res[[1]]= z[[1]]; names(res[[1]])= z[[2]]; res })
-    } else if (report==1) {
+    } else if (citype==1) {
       ans <- lapply(ans, function(z) { res=vector("list",2); res[[1]]= z[[1]]; res[[2]]= z[[3]]; names(res[[1]])= names(res[[2]])= z[[2]]; res })
-    } else if (report==2) {
+    } else if (citype==2) {
       ans <- lapply(ans, function(z) { res=vector("list",3); res[[1]]= z[[1]]; res[[2]]= z[[3]]; res[[3]]= matrix(z[[4]],nrow=niter-burnin); names(res[[1]])= names(res[[2]])= z[[2]]; res })
     }
     ans
   }
-
-
+  
     #Run
 
-  sel <- !sapply(pc[geneid], is.null)
-  all <- geneid
-  geneid <- geneid[sel]
-
-    sel <- !sapply(pc@counts[geneid], is.null)
+    sel <- !sapply(pc[geneid], is.null)
     all <- geneid
     geneid <- geneid[sel]
     if (verbose) cat("Obtaining expression estimates...\n")
@@ -90,9 +61,8 @@ proc <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, pr
       ans <- f(geneid)
       names(ans) <- geneid
     }
-    miss <- lapply(genomeDB@transcripts[all[!(all %in% names(ans))]], names)
 
-  
+    miss <- lapply(genomeDB@transcripts[all[!(all %in% names(ans))]], names)  
     #Format as ExpressionSet
 
     if (verbose) cat("Formatting output...\n")
@@ -149,20 +119,21 @@ mergeExp <- function(minus, plus){
   ans
 }
 
-calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, priorq=3, report=0, niter=10^3, burnin=100, mc.cores=1) {
+calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, priorq=2, citype='none', niter=10^3, burnin=100, mc.cores=1, verbose=FALSE) {
+
   if (missing(readLength)) stop("readLength must be specified")
   if (genomeDB@denovo) stop("genomeDB must be a known genome")
   if (pc@denovo) stop("pc must be a pathCounts object from known genome")
   if(pc@stranded){
     plusDB <- genomeBystrand(genomeDB, "+")
     plusGI <- geneid[geneid %in% names(plusDB@transcripts)]
-    plus <- proc(distrs, plusDB, pc@counts$plus, readLength=readLength, geneid=plusGI, relativeExpr=relativeExpr, priorq=priorq, report=report, niter=niter, burnin=burnin, mc.cores=mc.cores)
+    plus <- procExp(distrs, plusDB, pc=pc@counts$plus, readLength=readLength, geneid=plusGI, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
     minusDB <- genomeBystrand(genomeDB, "-")
     minusGI <- geneid[geneid %in% names(minusDB@transcripts)]
-    minus <- proc(distrs, minusDB, pc=pc@counts$minus, readLength=readLength, minusGI, relativeExpr=relativeExpr, priorq=priorq, report=report, niter=niter, burnin=burnin, mc.cores=mc.cores)
+    minus <- procExp(distrs, minusDB, pc=pc@counts$minus, readLength=readLength, geneid=minusGI, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
     ans <- mergeExp(plus, minus)
   } else {
-    ans <- proc(distrs, genomeDB, pc@counts[[1]], readLength=readLength, geneid, relativeExpr=relativeExpr, priorq=priorq, report=report, niter=niter, burnin=burnin, mc.cores=mc.cores)
+    ans <- procExp(distrs, genomeDB, pc=pc@counts[[1]], readLength=readLength, geneid=geneid, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
   }
   ans
 }
