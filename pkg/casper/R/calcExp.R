@@ -1,8 +1,8 @@
 procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, priorq=2, citype='none', niter=10^3, burnin=100, mc.cores=1, verbose=FALSE) {
   #Format input
-  startcdf <- distrs$stDis(seq(0,1,.001))
-  lendis <- as.double(distrs$lenDis/sum(distrs$lenDis))
-  lenvals <- as.integer(names(distrs$lenDis))
+  startcdf <- distrs@stDis(seq(0,1,.001))
+  lendis <- as.double(distrs@lenDis/sum(distrs@lenDis))
+  lenvals <- as.integer(names(distrs@lenDis))
   readLength <- as.integer(readLength)
   priorq <- as.double(priorq)
   citype <- as.integer(switch(citype, none=0, asymp=1, exact=2))
@@ -82,8 +82,8 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
     }
     if (citype>=2) {
       q <- lapply(ans,function(z) apply(z[[3]],2,quantile,probs=c(.025,.975)))
-      q[names(miss)] <- c(NA, NA)
-      q <- t(do.call(cbind,q))
+      p <- t(do.call(cbind,q))
+      q <- rbind(q, matrix(NA, nrow=length(misse), ncol=2))
       fdata$ci95.low <- q[,1]; fdata$ci95.high <- q[,2]
     }
     rownames(exprsx) <- rownames(fdata) <- fdata$transcript
@@ -151,9 +151,9 @@ lhoodGrid <- function(pc, distrs, genomeDB, readLength, geneid, grid, priorq=2) 
   if (pc@denovo) stop("pc must be a pathCounts object from known genome")
 
   #Format input
-  startcdf <- distrs$stDis(seq(0,1,.001))
-  lendis <- as.double(distrs$lenDis/sum(distrs$lenDis))
-  lenvals <- as.integer(names(distrs$lenDis))
+  startcdf <- distrs@stDis(seq(0,1,.001))
+  lendis <- as.double(distrs@lenDis/sum(distrs@lenDis))
+  lenvals <- as.integer(names(distrs@lenDis))
   readLength <- as.integer(readLength)
   priorq <- as.double(priorq)
 
@@ -192,11 +192,11 @@ calcExpOld<-function(distrs, genomeDB, pc, readLength){
       if (class(genomeDB)!="knownGenome") stop("genomeDB must be of class 'knownGenome'")
       dexo<-as.data.frame(genomeDB@exonsNI)
       mexo<-as.matrix(dexo[,c(5,4)])
-      startcdf <- as.double(ecdf(distrs$stDis)(seq(0,1,.001)))
-      #stafun = ecdf(distrs$stDis)
-      #fill<-c(rep(0,(min(as.numeric(names(distrs$lenDis))))), distrs$lenDis)
-      #names(fill)[1:min(as.numeric(names(distrs$lenDis)))]<-0:(min(as.numeric(names(distrs$lenDis)))-1)
-      lendis<- as.double(distrs$lenDis/sum(distrs$lenDis))
+      startcdf <- as.double(ecdf(distrs@stDis)(seq(0,1,.001)))
+      #stafun = ecdf(distrs@stDis)
+      #fill<-c(rep(0,(min(as.numeric(names(distrs@lenDis))))), distrs@lenDis)
+      #names(fill)[1:min(as.numeric(names(distrs@lenDis)))]<-0:(min(as.numeric(names(distrs@lenDis)))-1)
+      lendis<- as.double(distrs@lenDis/sum(distrs@lenDis))
       exp<-.Call("calc", mexo, genomeDB@newTx, pc, startcdf, lendis, as.integer(names(lendis)), as.integer(readLength))
       names(exp)<-names(genomeDB@newTx)
       exp<-as.matrix(exp)
