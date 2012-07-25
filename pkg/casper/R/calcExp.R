@@ -74,15 +74,17 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
     exprsx <- matrix(c(unlist(lapply(ans,'[[',1)), misse) ,ncol=1)
     rownames(exprsx) <- c(unlist(lapply(ans, function(z) names(z[[1]]))), names(misse))
     exprsx[exprsx==-1] <- NA
-    if (citype>=1) {
+    if (citype==1) {
       se <- c(unlist(lapply(ans,'[[',2)), misse)
       se[se==-1] <- NA
       fdata$ci95.low <- exprsx - 1.96*se; fdata$ci95.low[fdata$ci95.low<0] <- 0
       fdata$ci95.high <- exprsx + 1.96*se; fdata$ci95.high[fdata$ci95.high>1] <- 1
     }
-    if (citype>=2) {
+    if (citype==2) {
+      pp <- lapply(ans, '[', 3)
+      p <- lapply(ans, function(x) any(is.na(x[[3]])))
       q <- lapply(ans,function(z) apply(z[[3]],2,quantile,probs=c(.025,.975)))
-      p <- t(do.call(cbind,q))
+      q <- t(do.call(cbind,q))
       q <- rbind(q, matrix(NA, nrow=length(misse), ncol=2))
       fdata$ci95.low <- q[,1]; fdata$ci95.high <- q[,2]
     }

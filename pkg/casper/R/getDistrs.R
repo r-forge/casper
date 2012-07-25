@@ -40,16 +40,26 @@ getDistrs<-function(DB, bam, nreads=4*10^6){
   bam <- firstBamReads(bam, nreads=nreads)
 
   #Find fragment length distribution for fragments aligning to exons larger than 1000 bases
+
+  
   if (!all(c('qname','rname','qwidth','pos','mpos') %in% names(bam))) stop('bam must contain elements qname, rname, qwidth, pos, mpos')
   d <- bam$mpos - bam$pos
   sel <- d<0; n <- bam$qname[sel]; sp <- bam$rname[sel]; en <- bam$pos[sel]+bam$qwidth[sel]-1
   sel <- d>0; st <- bam$pos[sel]; names(st) <- bam$qname[sel]; st <- st[n]
   sel <- st<en; st <- st[sel]; en <- en[sel]; sp <- sp[sel]
+
+  if(!any(unique(sp) %in% names(exonsRD))) {
+    if(any(grepl('chr', names(exonsRD)))) {
+      sp <- as.factor(paste('chr', as.character(sp), sep=''))
+    } else if(any(grepl('chr', unique(sp)))) sp <- sub('chr', '', sp)
+  }
+
+  if(!any(unique(sp) %in% names(exonsRD))) stop('Different chromosome names in bam and genome')
   frags <- RangedData(IRanges(start=st,end=en),space=sp)
   n <- names(frags)[names(frags) %in% names(exonsRD)]
   fragsL<-frags[n]
-  fragsL<-subsetByOverlaps(fragsL, exonsRD[width(exonsRD)>1000,], type="within")
-  ld<-table(width(fragsL))
+  over <- findOverlaps(fragsL, exonsRD[width(exonsRD)>1000,], type="within")
+  ld<-table(width(frags)[queryHits(over)])
   ld <- ld[ld/sum(ld) > 0.0001]
 
   #Find fragment start distribution for fragments aligning to transcripts in genes with only one annotated tx
@@ -69,11 +79,12 @@ getDistrs<-function(DB, bam, nreads=4*10^6){
   exon_strand <- islandStrand[as.character(DB@exon2island$island[match(oneExons$id, DB@exon2island$id)])]
   oneExons$strand <- exon_strand
   oneExons$exon_rank <- exon_rank
-
   txid <- cumsum( oneExons$exon_rank==1 )
-  signwidth <- ifelse(oneExons$strand=="+", 1, -1)
-  signwidth <- signwidth*(oneExons$end - oneExons$start + 1)
-  oneExons$exstnogap <- 1+unlist(tapply(signwidth,INDEX=txid,function(z) {if(!any(z<0)){ c(0,cumsum(z[-length(z)]))} else {t <- -z ; rev(c(0, cumsum(rev(t)[-length(t)])))  }}))
+  #signwidth <- ifelse(oneExons$strand=="+", 1, -1)
+  #signwidth <- signwidth*(oneExons$end - oneExons$start + 1)
+  wid <- oneExons$end - oneExons$start + 1
+  #oneExons$exstnogap <- 1+unlist(tapply(signwidth,INDEX=txid,function(z) {if(!any(z<0)){ c(0,cumsum(z[-length(z)]))} else {t <- -z ; rev(c(0, cumsum(rev(t)[-length(t)])))  }}))
+  oneExons$exstnogap <- unlist(tapply(wid, txid, function(z) c(0, cumsum(z[-length(z)]))))
   oneExons$txlength <- unlist(tapply((oneExons$end - oneExons$start + 1),INDEX=txid,function(z) rep(sum(z),length(z))))
 
   oneExons <- RangedData(oneExons)
@@ -91,9 +102,8 @@ getDistrs<-function(DB, bam, nreads=4*10^6){
   stDis <- double(length(readst))
   sel <- str=='+';  stDis[sel] <- (exstnogap[sel]+readst[sel]-exst[sel])/txlength[sel]
   sel <- str=='-'; stDis[sel] <- (exstnogap[sel]+exen[sel]-readen[sel])/txlength[sel]
-
   stDis <- startDist(stDis, frlen, txlength)
-  
+
   list(lenDis=ld, stDis=stDis)
 }
 
