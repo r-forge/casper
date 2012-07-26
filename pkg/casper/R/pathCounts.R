@@ -20,13 +20,13 @@ setMethod("show", signature(object="pathCounts"), function(object) {
     if(object@stranded) {
       cat("Stranded known pathCounts object with",length(object@counts[[1]])+length(object@counts[[2]]),"islands and", sum(!unlist(lapply(object@counts[[1]], is.null))),"non zero positive islands and ", sum(!unlist(lapply(object@counts[[2]], is.null))),"non zero negative islands\n")
     }
-    else cat("Non-stranded known pathCounts object with",length(object@counts),"islands and", sum(!unlist(lapply(object@counts[[1]], is.null))),"non zero islands.\n")
+    else cat("Non-stranded known pathCounts object with",length(object@counts[[1]]),"islands and", sum(!unlist(lapply(object@counts[[1]], is.null))),"non zero islands.\n")
   }
 })
 
 
 
-  proc <- function(reads, DB, mc.cores){
+  procPaths <- function(reads, DB, mc.cores){
     cat("Finding overlaps between reads and exons\n")
     over<-findOverlaps(reads, DB@exonsNI)    
     readid<-as.character(reads$id)[queryHits(over)]
@@ -102,14 +102,14 @@ genomeBystrand <- function(DB, strand){
 
 pathCounts<-function(reads, DB, mc.cores=1) {
   if(!reads$stranded) {
-    counts <- proc(reads$pbam, DB, mc.cores)
+    counts <- procPaths(reads$pbam, DB, mc.cores)
     ans <- new("pathCounts", counts=list(counts), denovo=DB@denovo, stranded=reads$stranded)
   }
   else {
     plusDB <- genomeBystrand(DB, strand="+")
-    plus <- proc(reads$plus, plusDB, mc.cores)
+    plus <- procPaths(reads$plus, plusDB, mc.cores)
     minusDB <- genomeBystrand(DB, strand="-")
-    minus <- proc(reads$minus, minusDB, mc.cores)
+    minus <- procPaths(reads$minus, minusDB, mc.cores)
     ans <- new("pathCounts", counts=list(plus=plus, minus=minus), denovo=DB@denovo, stranded=reads$stranded)
   }
   ans
