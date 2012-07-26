@@ -105,6 +105,7 @@ void Casper::IPMH(double *pi, double *paccept, double *integralIS, int niter, in
     for (i=1; i<n; i++) if (vals[i]<lmin) lmin= vals[i];
     lmin = -lmin + .001;
     for (i=1; i<n; i++) Sinv[i][i] += lmin;
+    choldc(Sinv,n-1,cholSinv,&posdef);
     free_dvector(vals,1,n);
   }
   choldc_inv(Sinv,n-1,cholS,&posdef); 
