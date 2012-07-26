@@ -40,7 +40,7 @@ generateNOexons<-function(exByTx, startId=1, mc.cores){
     if(mc.cores>1) require(multicore)
     if(mc.cores>1) {
       if ('multicore' %in% loadedNamespaces()) {
-        exonsNI<-mclapply(levels(exByTx@seqnames), function(x){
+        exonsNI<-multicore::mclapply(levels(exByTx@seqnames), function(x){
                     y<-exByTx[exByTx@seqnames==x,]
                     st<-start(y)
                     en<-end(y)
@@ -80,7 +80,7 @@ generateNOexons<-function(exByTx, startId=1, mc.cores){
     if(mc.cores>1) require(multicore)
     if(mc.cores>1) {
       if ('multicore' %in% loadedNamespaces()) {
-        exkey<-mclapply(exkey, unique, mc.cores=mc.cores)
+        exkey<-multicore::mclapply(exkey, unique, mc.cores=mc.cores)
       } else stop('multicore library has not been loaded!')
     }
     else {
@@ -183,14 +183,16 @@ procGenome<-function(genome, mc.cores=1){
   names(txStrand) <- values(txs)$tx_name
   extxs <- unlist(lapply(newTxs, "[", 1))  
 
-    if(mc.cores>1) {
-    require(multicore)    
-    islands <- mclapply(islands, function(x){
-      y <- IRanges(x$start, x$end);
-      names(y) <- x$id;
-      if(txStrand[names(ex2tx)[ex2tx %in% x$id[1]]]=="-") y <- rev(y)
-      y
-    }, mc.cores=mc.cores)
+  
+  if(mc.cores>1) require(multicore)
+  if(mc.cores>1) {
+    if ('multicore' %in% loadedNamespaces()) {
+      islands <- multicore::mclapply(islands, function(x){
+        y <- IRanges(x$start, x$end);
+        names(y) <- x$id;
+        if(txStrand[names(ex2tx)[ex2tx %in% x$id[1]]]=="-") y <- rev(y)
+        y
+      }, mc.cores=mc.cores) } else stop('multicore library has not been loaded!')
   } else {
     islands <- lapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y})
   }

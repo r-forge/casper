@@ -152,13 +152,15 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
     sel <- !sapply(pc@counts[geneid], is.null)
     all <- geneid
     geneid <- geneid[sel]
+    
     if (mc.cores>1 && length(geneid)>mc.cores) {
+      require(multicore)
       if ('multicore' %in% loadedNamespaces()) {
         #ans <- mclapply(geneid, f, mc.cores=mc.cores)
         #split into smaller jobs
         nsplit <- ceiling(max(length(geneid), mc.cores)/mc.cores)
         geneidList <- lapply(1:min(length(geneid), mc.cores), function(z) geneid[seq(z,length(geneid),by=mc.cores)])
-        ans <- mclapply(geneidList,f,mc.cores=min(length(geneidList), mc.cores))
+        ans <- multicore::mclapply(geneidList,f,mc.cores=min(length(geneidList), mc.cores))
         ans <- do.call(c,ans); names(ans) <- unlist(geneidList); ans <- ans[geneid]
       } else stop('multicore library has not been loaded!')
     } else {

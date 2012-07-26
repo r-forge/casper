@@ -45,12 +45,12 @@ nbReads <- function(bam0) {
 
 procBam<-function(bam, stranded=FALSE, seed=1){
   require(IRanges)
-  proc <- function(bam, strnd){
+  procB <- function(bam, strnd){
     lev <- levels(bam$strand)
     bam$rname<-as.character(bam$rname)
     bam<-uniquifyQname(bam, seed)
     cat("Calculating total number of reads...\n")
-    nreads<-nbReads(bam)    
+    nreads<-nbReads(bam)+1
     cat("done.\nProcessing cigars and building read's object...\n")
     len=vector(mode="integer", length=nreads)
     flag=vector(mode="integer", length=nreads)
@@ -71,13 +71,13 @@ procBam<-function(bam, stranded=FALSE, seed=1){
   if(stranded) {
     minus <- bam$tag$XS=='-'
     minus <- lapply(bam, '[', minus)
-    minus <- proc(minus, "-")
+    minus <- procB(minus, "-")
     plus <- bam$tag$XS=='+'
     plus <- lapply(bam, '[', plus)
-    plus <- proc(plus, "+")
+    plus <- procB(plus, "+")
     ans <- list(plus=plus, minus=minus, stranded=TRUE)
   } else {
-    pbam <- proc(bam, "*")
+    pbam <- procB(bam, "*")
     ans <- list(pbam=pbam, stranded=FALSE)
   }
   ans

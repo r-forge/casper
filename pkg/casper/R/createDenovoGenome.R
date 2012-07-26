@@ -103,10 +103,12 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
   rownames(exon2gene) <- exon2gene$id
   islands <- split(exon2gene, exon2gene$gene)
 
+  if(mc.cores>1) require(multicore)
   if(mc.cores>1) {
-    require(multicore)
-    islands<-mclapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y}, mc.cores=mc.cores)
-  } else {
+    if ('multicore' %in% loadedNamespaces()) {
+      islands<-multicore::mclapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y}, mc.cores=mc.cores)
+    } else stop('multicore library has not been loaded!')
+  }  else {
     islands<-lapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y})
   }
 
@@ -183,12 +185,12 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
   if(mc.cores>1) {
     require(multicore)
     if(unique(islandStrand[!is.na(islandStrand)])=='+') {
-      islands <- mclapply(names(islands), function(x) {ord <- order(islands[[x]]$start); y <- IRanges(islands[[x]]$start[ord], islands[[x]]$end[ord]); names(y) <- islands[[x]]$id[ord]; y}, mc.cores=mc.cores)
-    } else islands <- mclapply(names(islands), function(x) {ord <- order(islands[[x]]$start, decreasing=T); y <- IRanges(islands[[x]]$start[ord], islands[[x]]$end[ord]); names(y) <- islands[[x]]$id[ord]; y}, mc.cores=mc.cores)
+      islands <- multicore::mclapply(names(islands), function(x) {ord <- order(islands[[x]]$start); y <- IRanges(islands[[x]]$start[ord], islands[[x]]$end[ord]); names(y) <- islands[[x]]$id[ord]; y}, mc.cores=mc.cores)
+    } else islands <- multicore::mclapply(names(islands), function(x) {ord <- order(islands[[x]]$start, decreasing=T); y <- IRanges(islands[[x]]$start[ord], islands[[x]]$end[ord]); names(y) <- islands[[x]]$id[ord]; y}, mc.cores=mc.cores)
   } else {
     if(unique(islandStrand[!is.na(islandStrand)])=='+') {
       islands <- lapply(names(islands), function(x) {ord <- order(islands[[x]]$start); y <- IRanges(islands[[x]]$start[ord], islands[[x]]$end[ord]); names(y) <- islands[[x]]$id[ord]; y})
-    } else islands <- mclapply(names(islands), function(x) {ord <- order(islands[[x]]$start, decreasing=T); y <- IRanges(islands[[x]]$start[ord], islands[[x]]$end[ord]); names(y) <- islands[[x]]$id[ord]; y}, mc.cores=mc.cores)
+    } else islands <- lapply(names(islands), function(x) {ord <- order(islands[[x]]$start, decreasing=T); y <- IRanges(islands[[x]]$start[ord], islands[[x]]$end[ord]); names(y) <- islands[[x]]$id[ord]; y}, mc.cores=mc.cores)
   }
 
   ans <- new("annotatedGenome", islands=islands, transcripts=transcripts, exon2island=exon2island, exonsNI=exons, islandStrand=islandStrand, aliases=DB@aliases, genomeVersion=DB@genomeVersion, dateCreated=Sys.Date(), denovo=TRUE)

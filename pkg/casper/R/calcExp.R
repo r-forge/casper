@@ -53,7 +53,7 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
                     #split into smaller jobs
         nsplit <- floor(length(geneid)/mc.cores)
         geneid <- lapply(1:mc.cores, function(z) { geneid[((z-1)*nsplit+1):min((z*nsplit),length(geneid))] })
-        ans <- mclapply(geneid,f,mc.cores=mc.cores)
+        ans <- multicore::mclapply(geneid,f,mc.cores=mc.cores)
         ans <- unlist(ans, recursive=F)
         names(ans) <- unlist(geneid)
       } else stop('multicore library has not been loaded!')
@@ -81,13 +81,26 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
       fdata$ci95.high <- exprsx + 1.96*se; fdata$ci95.high[fdata$ci95.high>1] <- 1
     }
     if (citype==2) {
-      pp <- lapply(ans, '[', 3)
-      p <- lapply(ans, function(x) any(is.na(x[[3]])))
+      browser()
+      #pp <- lapply(ans, '[', 3)
+      #p <- lapply(ans, function(x) any(is.na(x[[3]])))
       q <- lapply(ans,function(z) apply(z[[3]],2,quantile,probs=c(.025,.975)))
       q <- t(do.call(cbind,q))
       q <- rbind(q, matrix(NA, nrow=length(misse), ncol=2))
       fdata$ci95.low <- q[,1]; fdata$ci95.high <- q[,2]
     }
+    if(citype>0){
+      tmp <- cbind(exprsx, fdata[,3:4])
+      tmp <- as.data.frame(t(apply(tmp, 1, function(x){
+        y <- x
+        if(x[2]>x[1]) y[2]=y[1]
+        if(x[3]<x[1]) y[3]=y[1]
+        y
+      })))
+      fdata$ci95.low <- tmp$ci95.low
+      fdata$ci95.high <- tmp$ci95.high
+    }
+      
     rownames(exprsx) <- rownames(fdata) <- fdata$transcript
     fdata <- new("AnnotatedDataFrame",fdata)
     ans <- new("ExpressionSet",exprs=exprsx,featureData=fdata)

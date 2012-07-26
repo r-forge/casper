@@ -59,7 +59,7 @@ setMethod("show", signature(object="pathCounts"), function(object) {
       tmp <- split(sel, isl)
       if(mc.cores>1) {
         require(multicore)
-        tmp1 <- mclapply(names(tmp), function(x){
+        tmp1 <- multicore::mclapply(names(tmp), function(x){
           n <- sapply(tmp[[x]], length)
           nn <- unlist(tmp[[x]])
           names(nn) <- rep(names(splCounts[[x]]), n)
