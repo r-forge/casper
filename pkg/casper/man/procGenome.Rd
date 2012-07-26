@@ -28,9 +28,12 @@ maxLinkDist=1e+05, maxDist=1000, mc.cores=1)
     was performed, e.g. if we know the strand of the transcript that
     generated each read. Set to \code{FALSE} for non-stranded
     experiments.}
-  \item{minLinks}{}
-  \item{maxLinkDist}{}
-  \item{maxDist}{}
+  \item{minLinks}{Minimum number of reads joining two
+    exons to merge their corresponding genes.}
+  \item{maxLinkDist}{Maximum distance between two exons to merge
+    their correspondin genes. A value of \code{0} disables this option.}
+  \item{maxDist}{Maximum distance between two exons with reads joining
+    them to merge their corresponding genes.}
   \item{reads}{Processed reads stored in a \code{RangedData}, as
     returned by \code{procBam}}
 }
