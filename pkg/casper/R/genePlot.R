@@ -16,10 +16,10 @@ genPlot<-function(goi, genomeDB, reads, exp){
 }
 
 
-setGeneric("plotExpr", function(gene, minProbExpr=.5, minExpr=.1, names.arg, xlab='(kb)', ylab='', xlim, cex=1, yaxt='n', ...) standardGeneric("plotExpr"))
+setGeneric("plotExpr", function(gene, minProbExpr=.5, minExpr=.1, xlab='(kb)', ylab='', xlim, cex=1, yaxt='n', ...) standardGeneric("plotExpr"))
 
 setMethod("plotExpr",signature(gene="denovoGeneExpr"),
-  function(gene, minProbExpr, minExpr, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', ...) {
+  function(gene, minProbExpr, minExpr, xlab='', ylab='', xlim, cex=1, yaxt='n', ...) {
     n <- names(variants(gene))
     n[nchar(n)>30] <- paste("Variant ",1:sum(nchar(n)>30),sep="")
     names(n) <- names(variants(gene))

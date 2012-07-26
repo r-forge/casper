@@ -18,6 +18,8 @@ setMethod("show", signature(object="annotatedGenome"), function(object) {
   if(object@denovo) {
     cat("Denovo annotatedGenome object with",length(object@islands),"gene islands,", length(unique(unlist(lapply(object@transcripts, names)))),"transcripts and",nrow(object@exon2island),"exons.\n")
   } else cat("Known annotatedGenome object with",length(object@islands),"gene islands,", length(unique(unlist(lapply(object@transcripts, names)))),"transcripts and",nrow(object@exon2island),"exons.\n")
+  cat("Genome version:",object@genomeVersion,"\n")
+  cat("Date created:", as.character(object@dateCreated),"\n")
 }
           )
 

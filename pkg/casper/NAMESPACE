@@ -4,13 +4,14 @@ import(IRanges, graphics)
 importFrom(VGAM,vglm,betabinomial.ab,Coef)
 importFrom(mgcv,gam,predict.gam,s)
 importFrom(GenomicFeatures, transcripts, exonsBy, makeTranscriptDbFromUCSC)
+importFrom(survival,Surv,survfit)
 
 #export regular functions
-export(procBam, procGenome, createDenovoGenome, pathCounts, getDistrs, calcExp, calcDenovo, relativeExpr, buildGene, rangesPlot, genPlot, plotExpr, rmShortInserts, relIsoformExp, posprob, variants, "variants<-", modelPrior, plotPriorAS)
+export(procBam, procGenome, createDenovoGenome, pathCounts, getDistrs, calcExp, calcDenovo, relativeExpr, buildGene, genPlot, plotExpr, rmShortInserts, posprob, variants, "variants<-", modelPrior, plotPriorAS)
 
 exportClasses(annotatedGenome, pathCounts)
 #export general methods
-#exportMethods("calc")
+exportMethods("plot")
 
 
 

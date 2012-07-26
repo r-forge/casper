@@ -24,9 +24,9 @@ setMethod("show", signature(object="modelPriorAS"), function(object) {
 
 setMethod("[",signature(x='modelPriorAS'),function(x,i) {
   sel <- names(x@nvarPrior$obs) %in% as.character(i)
-  nvarPrior <- list(nbpar=x@nvarPrior$nbpar[i,], obs=x@nvarPrior$obs[sel], pred=x@nvarPrior$pred[sel])
+  nvarPrior <- list(nbpar=x@nvarPrior$nbpar[i,,drop=FALSE], obs=x@nvarPrior$obs[sel], pred=x@nvarPrior$pred[sel])
   sel <- names(x@nexonPrior$obs) %in% as.character(i)
-  nexonPrior <- list(bbpar=x@nexonPrior$bbpar[i,], obs=x@nexonPrior$obs[sel], pred=x@nexonPrior$pred[sel])
+  nexonPrior <- list(bbpar=x@nexonPrior$bbpar[i,,drop=FALSE], obs=x@nexonPrior$obs[sel], pred=x@nexonPrior$pred[sel])
   new("modelPriorAS",nvarPrior=nvarPrior,nexonPrior=nexonPrior)
 }
 )
@@ -258,6 +258,7 @@ nbVariantsDistrib <- function(tab,maxExons=40) {
 #Input x is a vector with counts. names(x) must be specified.
 # e.g. x= c(100,50,10,1); names(x)= c('1','2','3','5')
 getNBinomParams <- function(x,mc.cores=1,components=1) {
+  use <- 1:length(x)
   logit <- function(x) { return(log(x/(1-x))) }
   ilogit <- function(x) { return(1/(1+exp(-x))) }
   myLikelihood <- function(params,x,components) {

@@ -35,9 +35,9 @@ The package \texttt{casper} implements statistical methodology to infer
 gene alternative splicing patterns from paired-end
 high-throughput sequencing data \citep{rossell:2010}.
 
-Currently, we assume that splicing variants are known.
-We plan to implement the case of {\it de novo} variant discovery 
-in the near future.
+The case where splicing variants are known has been tested thoroughly.
+The case of {\it de novo} variant discovery has been implemented more recently,
+so it may still need some adjustments.
 
 \section{Aligning reads and importing data}
 \label{sec:import}
@@ -73,7 +73,13 @@ In our experience, results are usually robust to moderate miss-specifications of
 BAM files can be read into R using the \texttt{Rsamtools} package \citep{rpkg:Rsamtools}.
 For the sake of computational speed,
 in this vignette we will use data that has already been imported in a previous session.
-We indicate the code required to import the file below.
+The data was obtained from the RGASP1 project
+(\url{ftp://ftp.sanger.ac.uk/pub/gencode/rgasp/RGASP1/inputdata/human_fastq}).
+We used reads from replicate 1 and lane 1 in sample K562\_2x75.
+In order for the vignette to compile quickly here we illustrate
+the usage of the package by selecting the reads mapping
+to 6 genes in chromosome 1 (see Section \ref{sec:preprocess}).
+The code required to import the data into Bioconductor is provided below.
 
 \footnotesize
 \begin{verbatim}
@@ -85,58 +91,66 @@ We indicate the code required to import the file below.
 \end{verbatim}
 \normalsize
 
+
 \section{Pre-processing the data for analysis}
 \label{sec:preprocess}
 
 We start by obtaining and processing genome annotation data.
-We included the processed human genome hg19 in the dataset \texttt{hg19DB}.
-The command used to produce \texttt{hg19DB} is
+Here we illustrate our package with a few selected genes obtained
+from the human genome version hg19.
+The command that one would use to store the full annotated genome into \texttt{hg19DB} is
 
 \begin{verbatim}
 > hg19DB <- procGenome('hg19',mc.cores=6)
 \end{verbatim}
 
 We load the imported BAM file and processed human genome annotation.
-\texttt{bam0} is a list containing read-level information such as read identifier,
+\texttt{K562.r1l1} was imported using \texttt{scanBam}
+and is a list containing read-level information such as read identifier,
 chromosome and alignment position, position of the matched paired end etc.
-\texttt{hg19DB} is also a list, containing several kinds of information
-related to annotated genes, transcripts and exons.
+\texttt{hg19DB} is an object of class \texttt{annotatedGenome}
+and contains information regarding genes, transcripts, exons etc.
+It also indicates the genome version that was used to create the genome
+and the creation date.
 
 \footnotesize
 <<process1>>=
 library(casper)
-data(bam0)
-class(bam0)
-names(bam0)
+data(K562.r1l1)
+names(K562.r1l1)
 data(hg19DB)
-class(hg19DB)
-names(hg19DB)
+hg19DB
+head(sapply(hg19DB@transcripts,length))
 @ 
 \normalsize
+
+For instance, gene 4 has 3 annotated transcripts,
+gene 6 has 1 transcript etc.
 
 RNA-seq experiments typically contain some very short RNA sequences,
 which can be due to RNA degradation.
 The function \texttt{rmShortInserts} removes all sequences with insert size
 ({\it i.e.} distance between start of left-end and start of right-end)
-below a user-specified level. We remove reads with insert sizes below 150bp.
+below a user-specified level. We remove reads with insert sizes below 100bp.
 We then use \texttt{getDistrs} to estimate the fragment length distribution
 and the read start distribution.
 
 \footnotesize
 <<process2>>=
-bam0 <- rmShortInserts(bam0, isizeMin=150)
-distrs <- getDistrs(txs=hg19DB$txs,exons=hg19DB$exons,bam=bam0)
+bam0 <- rmShortInserts(K562.r1l1, isizeMin=100)
+distrs <- getDistrs(hg19DB,bam=bam0)
 @ 
 \normalsize
 
 We visualize the fragment length distribution.
 The resulting plot is shown in Figure \ref{fig:plotprocess1}, left panel.
-Notice how fragment lengths below 150bp have been removed.
+Notice there few fragments shorter than 140bp.
+Given the reduced number of reads in our toy data the estimate is not accurate,
+and hence we overlay a smoother estimate (blue line).
 
 \footnotesize
 <<plotprocess1>>=
-n <- as.numeric(names(distrs$lenDis))
-plot(n,distrs$lenDis,type='l',xlab='Fragment length',ylab='Counts')
+plot(distrs, "fragLength")
 @ 
 \normalsize
 
@@ -147,7 +161,7 @@ Rather, there is a bias towards the 3' end.
 
 \footnotesize
 <<plotprocess2>>=
-hist(distrs$stDis,xlab='Read start',main='')
+plot(distrs, "readSt")
 @ 
 \normalsize
 
@@ -176,14 +190,15 @@ consecutively, {\it i.e.} with no gaps.
 \footnotesize
 <<procBam>>=
 pbam0 <- procBam(bam0)
-head(pbam0)
+head(pbam0$pbam)
+pbam0$stranded
 @ 
 \normalsize
 
-The resulting object \texttt{pbam0} is of type \texttt{RangedData}.
-The first four rows share a common \texttt{id}, {\it i.e.} they correspond to the same read pair.
-Rows 1 and 2 correspond to the left end of the read (\texttt{rid}=1),
-and rows 3 and 4 to the right end (\texttt{rid}=2).
+The resulting object \texttt{pbam0} is a list
+with element \texttt{pbam} of type \texttt{RangedData}
+and \texttt{stranded} indicating whether the RNA-seq experiment was stranded or not.
+
 
 \section{Estimating expression for a set of known variants}
 \label{sec:knownvar}
@@ -196,8 +211,9 @@ the same exon path.
 
 \footnotesize
 <<pathCounts>>=
-pc <- pathCounts(pbam0, exons=hg19DB$exonsNI)
-head(pc)
+pc <- pathCounts(pbam0, DB=hg19DB)
+pc
+head(pc@counts[[1]])
 @ 
 \normalsize
 
@@ -207,10 +223,10 @@ The names follow the format ".exon1.exon2-exon3.exon4.", with
 dashes making the split between exons visited by left and
 right-end reads correspondingly.
 For instance, an element in \texttt{pc} named
-\texttt{.12633.12635-12637.12639.}
+\texttt{.1314.1315-1315.1316.}
 indicates the number of reads for which the left end
-visited exons 12633 and 12635 
-and the right end visited exons 12637 and 12639.
+visited exons 1314 and 1315 
+and the right end visited exons 1315 and 1316.
 The precise genomic coordinates of each exon are stored in
 the annotated genome.
 
@@ -219,31 +235,41 @@ read start and  fragment length distributions and genome annotation
 to obtain RPKM expression estimates.
 Expression estimates are returned in an \texttt{ExpressionSet} object,
 with RefSeq transcript identifiers as \texttt{featureNames}
-and Entrez identifiers stored as feature data.
+and the internal gene ids used by \texttt{hg19DB} stored as feature data.
 
 \footnotesize
 <<calcExp>>=
-eset <- calcExp(distrs=distrs, genomeDB=hg19DB, pc=pc, readLength=75)
+eset <- calcExp(distrs=distrs, genomeDB=hg19DB, pc=pc, readLength=75, relativeExpr=TRUE)
 eset
 head(exprs(eset))
-head(featureNames(eset))
 head(fData(eset))
 @ 
 \normalsize
 
-\texttt{calExp} returns absolute expression estimates for each isoform.
-However, in many alternative splicing studies the focus is on {\it relative} expression levels,
-{\it i.e.} the proportion of transcripts originating from each variant.
-These are easily obtained by dividing the expression estimate of each transcript
-by the sum for all transcripts of a given gene.
-The function \texttt{relIsoformExp} performs this simple calculation.
+When setting \texttt{relativeExpr} to \texttt{TRUE}, \texttt{calExp} returns relative
+expression estimates for each isoform.
+That is, the proportion of transcripts originating from each variant,
+so that the estimated expressions add up to 1 for each gene.
+When setting \texttt{relativeExpr} to \texttt{FALSE},
+absolute expression estimates in reads per kilobase per million (RPKM)
+are returned instead.
 
 \footnotesize
 <<relIsoformExpr>>=
-esetRel <- relIsoformExp(eset)
-head(exprs(esetRel))
+eset <- calcExp(distrs=distrs, genomeDB=hg19DB, pc=pc, readLength=75, relativeExpr=FALSE)
+head(exprs(eset))
 @ 
 \normalsize
+
+Let $\hat{\pi}_{gi}$ be the estimated relative expression for transcript $i$ within gene $g$,
+$w_{gi}$ the transcript width in base pairs,
+$n_g$ the number of reads overlapping with gene $g$
+and $\sum_{}^{} n_g$ the total number of reads in the experiment.
+The RPKM for transcript $i$ within gene $i$ is computed as
+\begin{align}
+  r_{gi}= 10^9 \frac{ \hat{\pi}_{gi} n_g}{w_{gi} \sum_{}^{} n_g}
+\label{eq:rpkm}
+\end{align}
 
 
 \bibliographystyle{plainnat}

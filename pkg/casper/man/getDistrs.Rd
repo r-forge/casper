@@ -15,32 +15,25 @@
   left-end read and the end of the right-end read.
 }
 \usage{
-getDistrs(txs, exons, frags, nreads=4*10^6)
+getDistrs(DB, bam, nreads=4*10^6)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{txs}{
-    GRanges object with known transcripts
-}
-  \item{exons}{
-    GRangesList with annotated exons per transcript
-}
-  \item{frags}{
-    List with reads from imported BAM file, as returned by
-    \code{scanBam} or \code{rmShortInserts}.
+  \item{DB}{
+      Annotated genome. Object of class \code{knownGenome} as returned by \code{procGenome}.
+  }
+  \item{bam}{
+      Aligned reads, as returned by \code{scanBam}. It must be a list with
+      elements 'qname', 'rname', 'qwidth', 'pos' and 'mpos'.
   }
   \item{nreads}{
-    To speed up computations, only the first \code{nreads} are used to
-    obtain the estimates. The default value of 4 milions usually gives
-    highly precise estimates.
+      To speed up computations, only the first \code{nreads} are used to
+      obtain the estimates. The default value of 4 milions usually gives
+      highly precise estimates.
   }
 }
-\details{
-%%  ~~ If necessary, more details than the description above ~~
-}
 \value{
-  %%  ~Describe the value returned
-  %%  If it is a LIST, use
+  An object of class readDistrs with slots:
   \item{lenDis}{Table with number of fragments with a given length}
   \item{stDis}{Numeric vector with relative fragment start positions}
 }

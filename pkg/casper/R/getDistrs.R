@@ -1,10 +1,43 @@
+require(methods)
+
+setClass("readDistrs", representation(lenDis = "array", stDis = "function"))
+
+setMethod("show", signature(object="readDistrs"), function(object) {
+  cat("readDistrs object\n\n")
+  cat("Insert size distribution (only first few shown)\n")
+  show(head(object@lenDis,n=6))
+  cat("...\n")
+  cat("Read start cumulative distribution function in slot stDis\n")
+}
+)
+
+setMethod("plot", signature(x="readDistrs"), function(x, y, ...) {
+  if (missing(y)) stop("Specify type of plot: 'fragLength' or 'readSt'")
+  if (y=='fragLength') {
+    n <- as.numeric(names(x@lenDis))
+    ylim <- c(0,max(x@lenDis))
+    x2plot <- double(max(n)-min(n)+1); names(x2plot) <- min(n):max(n)
+    x2plot[names(x@lenDis)] <- x@lenDis
+    plot(as.numeric(names(x2plot)),x2plot,type='l',xlab='Fragment length',ylab='Counts',ylim=ylim)
+  } else if (y=='readSt') {
+    s <- seq(0,1,by=0.02)
+    probs <- diff(x@stDis(s))
+    plot(NA,NA,xlim=c(0,1),ylim=c(0,max(probs)),xlab='Read start (relative to transcript length)',ylab='Density')
+    segments(s[-length(s)],probs,s[-1])
+    segments(s,c(0,probs),s,c(probs,0))
+  } else {
+    stop("Second argument must be either 'fragLength' or 'readSt'")
+  }
+}
+)
+
+
 startDist <- function(st,fragLength,txLength) {
                                         # Estimate relative start distribution under left­truncation (st < 1 ­ fragLength/txLength)
                                         # ­ st: relative start (i.e. start/txLength)
                                         # ­ fragLength: fragment length
                                         # ­ txLength: transcript length
                                         # Output: cumulative probability function (actually, a linear interpolation)
-  require(survival)
   trunc <- 1-fragLength/txLength
   sel <- trunc>st
   trunc <- trunc[sel]
@@ -104,6 +137,7 @@ getDistrs<-function(DB, bam, nreads=4*10^6){
   sel <- str=='-'; stDis[sel] <- (exstnogap[sel]+exen[sel]-readen[sel])/txlength[sel]
   stDis <- startDist(stDis, frlen, txlength)
 
-  list(lenDis=ld, stDis=stDis)
+  ans <- list(lenDis=ld, stDis=stDis)
+  new("readDistrs",lenDis=ans$lenDis,stDis=ans$stDis)
 }
 

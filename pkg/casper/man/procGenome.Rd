@@ -1,57 +1,59 @@
 \name{procGenome}
 \alias{procGenome}
-%- Also NEED an '\alias' for EACH other topic documented here.
+\alias{createDenovoGenome}
 \title{
-  %%  ~~function to do ... ~~
-  Download and format annotations for a given genome
+  Create an annotatedGenome object
 }
 \description{
-  %%  ~~ A concise (1-5 lines) description of what the function does. ~~
-  Download USCS annotations for a given genome
+  \code{procGenome} downloads UCSC annotations for a given genome.
+  \code{createDenovoGenome} creates a de novo annotated genome by
+  combining UCSC annotations and observed RNA-seq data.
 }
 \usage{
-procGenome(genome, mc.cores = mc.cores)
+procGenome(genome, mc.cores = 1)
+
+createDenovoGenome(reads, DB, readLen, stranded=FALSE, minLinks=2,
+maxLinkDist=1e+05, maxDist=1000, mc.cores=1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{genome}{
-    %%     ~~Describe \code{genome} here~~
-    Genome version from UCSC (e.g. "hg19", "dm3")
-}
-  \item{mc.cores}{
-    %%     ~~Describe \code{mc.cores} here~~
-    Number of cores to use in parallel processing (multicore package required)
-}
+  \item{genome}{Character indicating genome version (e.g. "hg19", "dm3")}
+  \item{mc.cores}{Number of cores to use in parallel processing
+    (multicore package required)}
+  \item{DB}{\code{annotatedGenome} object, as returned by
+    \code{procGenome}}
+  \item{readLen}{Read length, e.g. 75 for paired-end experiments where
+    75bp from each end were sequenced}
+  \item{stranded}{Set to \code{TRUE} if a stranded RNA-seq experiment
+    was performed, e.g. if we know the strand of the transcript that
+    generated each read. Set to \code{FALSE} for non-stranded
+    experiments.}
+  \item{minLinks}{}
+  \item{maxLinkDist}{}
+  \item{maxDist}{}
+  \item{reads}{Processed reads stored in a \code{RangedData}, as
+    returned by \code{procBam}}
 }
 \details{
-  %%  ~~ If necessary, more details than the description above ~~
-  This function generates all necessary annotation objects for subsequent
-  functions.
+  These functions create the annotation objects that are needed for subsequent
+  functions. Typically these objects are created only once for a set of
+  samples. For \code{createDenovoGenome} it is convenient to create a
+  single genome by combining information from all samples, as this
+  increases the power to detect new exons and
+  guarantees that the same exons and gene islands are used across samples.
 }
 \value{
-  Object of class \code{knownGenome}.
-}
-\references{
-%% ~put references to the literature/web site here ~
+  Object of class \code{annotatedGenome}.
 }
 \author{
   %%  ~~who you are~~
   Camille Stephan-Otto Attolini
 }
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
 \seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
+\code{\link{createDenovoGenome}} to create a de novo annotated genome
 }
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
-
+## hg19DB <- procGenome("hg19")
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
