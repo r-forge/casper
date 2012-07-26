@@ -80,12 +80,14 @@ In order for the vignette to compile quickly here we illustrate
 the usage of the package by selecting the reads mapping
 to 6 genes in chromosome 1 (see Section \ref{sec:preprocess}).
 The code required to import the data into Bioconductor is provided below.
+It is important to add the option \texttt{tag='XS'},
+so that information on whether the experiment was stranded or not is imported.
 
 \footnotesize
 \begin{verbatim}
 > library(Rsamtools)
 > what <- scanBamWhat(); what <- what[!(what %in% c('seq','qual'))]
-> flag <- scanBamFlag(isPaired=TRUE,hasUnmappedMate=FALSE)
+> flag <- scanBamFlag(isPaired=TRUE,hasUnmappedMate=FALSE,tag='XS')
 > param <- ScanBamParam(flag=flag,what=what)
 > bam0 <- scanBam(file='accepted_hits.bam',param=param)[[1]]
 \end{verbatim}
