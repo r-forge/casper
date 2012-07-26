@@ -96,8 +96,18 @@ void Casper::IPMH(double *pi, double *paccept, double *integralIS, int niter, in
 
   cholS= dmatrix(1,n-1,1,n-1);
   cholSinv= dmatrix(1,n-1,1,n-1);
-  choldc(Sinv,n-1,cholSinv);
-  choldc_inv(Sinv,n-1,cholS); 
+  bool posdef;
+  choldc(Sinv,n-1,cholSinv,&posdef);
+  if (!posdef) {
+    int i; double lmin=0, *vals;
+    vals= dvector(1,n);
+    eigenvals(Sinv,n-1,vals);
+    for (i=1; i<n; i++) if (vals[i]<lmin) lmin= vals[i];
+    lmin = -lmin + .001;
+    for (i=1; i<n; i++) Sinv[i][i] += lmin;
+    free_dvector(vals,1,n);
+  }
+  choldc_inv(Sinv,n-1,cholS,&posdef); 
   det= choldc_det(cholSinv,n-1);
 
   //MCMC
@@ -181,6 +191,7 @@ double Casper::LaplaceApprox(double *mode, int n)
 {
   if (n == 1) { return priorLikelihoodLn(mode); }
 
+  bool posdef;
   double *thmode, ***H, **G, **S;
 
   thmode = new double[n - 1];
@@ -197,7 +208,7 @@ double Casper::LaplaceApprox(double *mode, int n)
 
   double emlk = priorLikelihoodLn(mode);
   double gdet = vtGradLogdet(G, n);
-  double sdet = log(det(S, n - 1));
+  double sdet = log(det(S, n - 1, &posdef));
 
   double integral = emlk + gdet + (double)(n - 1) / 2.0 * log(2 * M_PI) - 0.5 * sdet;
 
@@ -302,7 +313,8 @@ void Casper::asymptoticSE(double *se, double *mode, int n) {
 
   S= dmatrix(1,n-1,1,n-1); Sinv= dmatrix(1,n-1,1,n-1);
   normapprox(Sinv, G, H, mode, thmode, n, Sidx_ini);
-  inv_posdef(Sinv,n-1,S);
+  bool posdef;
+  inv_posdef(Sinv,n-1,S,&posdef);
 
   double **GtS= dmatrix(0,n-1,1,n-1);
   AB(G, 0, n-1, 0, n-2, S, 1, n-1, 1, n-1, GtS);
@@ -419,8 +431,9 @@ void Casper::vtGradG(double **G, double* th, int n)
 }
 double Casper::vtGradLogdet(double** G, int n)
 {
+  bool posdef;
   double** GS = &G[1];
-  double mydet = det(GS, n - 1);
+  double mydet = det(GS, n - 1, &posdef);
   if (mydet < 0) mydet = -mydet;
   double logdet = log(mydet);
   return logdet;
@@ -488,7 +501,7 @@ void Casper::vtHess(double ***H, double* th, int n)
 
 }
 
-double Casper::det(double** a, int n)
+double Casper::det(double** a, int n, bool *posdef)
 {
 	double **aout = dmatrix(0, n - 1, 0, n - 1);
 
@@ -500,11 +513,8 @@ double Casper::det(double** a, int n)
 		for (j=i;j<n;j++) {
 			for (sum=aout[i][j],k=i-1;k>=0;k--) sum -= aout[i][k]*aout[j][k];
 			if (i == j) {
-			  if (sum <= 0.0) {
-                            char proc[]="choldc failed", act[]="", what[]="matrix is not positive definite";
-                            nrerror(proc,act,what); 
-			  }
-				aout[i][i]=sqrt(sum);
+			  if (sum <= 0.0) *posdef= false;
+			  aout[i][i]=sqrt(sum);
 			} else aout[j][i]=sum/aout[i][i];
 		}
 	}

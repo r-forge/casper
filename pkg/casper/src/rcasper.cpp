@@ -214,7 +214,8 @@ extern "C"
     double **Sinv= dmatrix(1,vc,1,vc), **S= dmatrix(1,vc,1,vc);
     if(totC>0){
       casp->normapprox(Sinv, em, vc, 1);
-      inv_posdef(Sinv,vc-1,S);
+      bool posdef;
+      inv_posdef(Sinv,vc-1,S,&posdef);
       for (int i=1; i<vc; i++) Svec[i-1 + (i-1)*(vc-1)]= S[i][i];
       for (int i=1; i<vc; i++) for (int j=i+1; j<vc; j++) Svec[j-1 + (i-1)*(vc-1)]= Svec[i-1 + (j-1)*(vc-1)]= S[i][j];
     }
@@ -326,7 +327,8 @@ extern "C"
 		    if (totC>0) {
 		      double **S= dmatrix(1,vc,1,vc), **Sinv= dmatrix(1,vc,1,vc);
 		      casp->normapprox(Sinv, em, vc, 1);
-		      inv_posdef(Sinv,vc-1,S);
+		      bool posdef;
+		      inv_posdef(Sinv,vc-1,S,&posdef);
 		      int niter= INTEGER(niterR)[0], burnin= INTEGER(burninR)[0];
 		      SET_VECTOR_ELT(ans, 3, allocVector(REALSXP,vc*(niter-burnin))); //stores posterior samples
 		      double *pi = REAL(VECTOR_ELT(ans,3));

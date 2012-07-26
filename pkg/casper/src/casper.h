@@ -66,7 +66,7 @@ class Casper
   void vtGradG(double **G, double* th, int n);
   double vtGradLogdet(double** G, int n);
   void vtHess(double ***H, double* th, int n);
-  double det(double** a, int n);
+  double det(double** a, int n, bool *posdef);
 };
 
 #endif

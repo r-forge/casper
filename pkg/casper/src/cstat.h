@@ -33,6 +33,13 @@ using namespace std;
 #define LOG_M_PI (1.1447298858494)
 #endif
 
+#if !defined(SIGN)
+#define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
+#endif
+
+static double dsqrarg;
+#define DSQR(a) ((dsqrarg=(a)) == 0.0 ? 0.0 : dsqrarg*dsqrarg)
+
 /**************************************************************/
 /* Functions to compute means & variances                     */
 /**************************************************************/
@@ -204,20 +211,25 @@ double min_xy(double x, double y);
 void minvec(double *x, int ini, int fi, double *xmin, int *minpos); //min of a vector and position at which min occurs
 void maxvec(double *x, int ini, int fi, double *xmax, int *maxpos); //max of a vector and position at which max occurs
 
-void choldc(double **a, int n, double **aout);   //Cholesky decomposition
-void choldc_inv(double **a, int n, double **aout); //Inverse of Cholesky decomposition (input is original matrix)
+void choldc(double **a, int n, double **aout, bool *posdef);   //Cholesky decomposition
+void choldc_inv(double **a, int n, double **aout, bool *posdef); //Inverse of Cholesky decomposition (input is original matrix)
 void cholS_inv(double **cholS, int n, double **cholSinv); //Inverse of Cholesky decomposition (input is Cholesky matrix, faster)
 void choldc_inv_internal(double **cholS, int n);
 double choldc_det(double **chols, int n); //Determinant of a symmetric def+ using its Cholesky decomp
-void inv_posdef(double **a, int n, double **aout); //Inverse of a symmetric, positive definite matrix a[1..n][1..n]
-void inv_posdef_upper(double **a, int n, double **aout); //Same but only returns upper triangular elements
-void invdet_posdef(double **a, int n, double **aout, double *det_a); //Inverse and determinant of positive def matrix
+void inv_posdef(double **a, int n, double **aout, bool *posdef); //Inverse of a symmetric, positive definite matrix a[1..n][1..n]
+void inv_posdef_upper(double **a, int n, double **aout, bool *posdef); //Same but only returns upper triangular elements
+void invdet_posdef(double **a, int n, double **aout, double *det_a, bool *posdef); //Inverse and determinant of positive def matrix
 void inv_posdef_chol(double **invchol, int n, double **aout); //Inverse given cholesky decomposition
 
-void ludc(double **a, int n, int *indx, double *d); //LU decomposition (renamed routine ludcmp from NR)
-void lu_solve(double **a, int n, int *indx, double b[]); //Solve A*x=b (renamed routine lubksb from NR)
+void ludc(double **a, int n, int *indx, double *d); //LU decomposition 
+void lu_solve(double **a, int n, int *indx, double b[]); //Solve A*x=b 
 void lu_inverse(double **a, int n, double **aout); //Inverse of A[1..n][1..n]
 double lu_det(double **a, int n); //Determinant of A[1..n][1..n]
+
+void eigenvals(double **a, int n, double *vals);  //eigenvalues of a symmetric matrix
+void tred2(double **a, int n, double d[], double e[], bool getVecs);
+void tqli(double d[], double e[], int n, double **z, bool getVecs);
+double pythag(double a, double b);
 
 int dcompare(const void *a, const void *b);               
 void dvecsort(double *v, int size);                           //sort a vector using qsort from stdlib
