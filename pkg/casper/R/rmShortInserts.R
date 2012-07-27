@@ -1,5 +1,8 @@
 #Remove short inserts
 rmShortInserts <- function(bam, isizeMin=100) {
   sel <- abs(bam$isize)>isizeMin
-  lapply(bam,function(z) z[sel])
+  xs <- bam$tag$XS[sel]
+  ans <- lapply(bam[names(bam)!='tag'],function(z) z[sel])
+  ans$tag <- list(XS=xs)
+  return(ans)
 }
