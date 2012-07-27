@@ -47,7 +47,7 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
     sel <- !sapply(pc[geneid], is.null)
     all <- geneid
     geneid <- geneid[sel]
-    if (verbose) cat("Obtaining expression estimates...\n")
+  if (verbose) cat("Obtaining expression estimates...\n")
     if (mc.cores>1 && length(geneid)>mc.cores) {
       if ('multicore' %in% loadedNamespaces()) {
                     #split into smaller jobs
@@ -81,7 +81,6 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
       fdata$ci95.high <- exprsx + 1.96*se; fdata$ci95.high[fdata$ci95.high>1] <- 1
     }
     if (citype==2) {
-      browser()
       #pp <- lapply(ans, '[', 3)
       #p <- lapply(ans, function(x) any(is.na(x[[3]])))
       q <- lapply(ans,function(z) apply(z[[3]],2,quantile,probs=c(.025,.975)))
@@ -89,9 +88,11 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
       q <- rbind(q, matrix(NA, nrow=length(misse), ncol=2))
       fdata$ci95.low <- q[,1]; fdata$ci95.high <- q[,2]
     }
-    if(citype>0){
+    if(citype>1){
       tmp <- cbind(exprsx, fdata[,3:4])
-      tmp <- as.data.frame(t(apply(tmp, 1, function(x){
+      if(sum(is.na(tmp[,1]))>1) {cat("NA values in fdata");}
+      else{
+        tmp <- as.data.frame(t(apply(tmp, 1, function(x){
         y <- x
         if(x[2]>x[1]) y[2]=y[1]
         if(x[3]<x[1]) y[3]=y[1]
@@ -99,6 +100,7 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
       })))
       fdata$ci95.low <- tmp$ci95.low
       fdata$ci95.high <- tmp$ci95.high
+    }
     }
       
     rownames(exprsx) <- rownames(fdata) <- fdata$transcript
@@ -140,16 +142,24 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
   if (genomeDB@denovo) stop("genomeDB must be a known genome")
   if (pc@denovo) stop("pc must be a pathCounts object from known genome")
   if(pc@stranded){
-    plusDB <- genomeBystrand(genomeDB, "+")
-    plusGI <- geneid[geneid %in% names(plusDB@transcripts)]
-    plus <- procExp(distrs, plusDB, pc=pc@counts$plus, readLength=readLength, geneid=plusGI, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
-    minusDB <- genomeBystrand(genomeDB, "-")
-    minusGI <- geneid[geneid %in% names(minusDB@transcripts)]
-    minus <- procExp(distrs, minusDB, pc=pc@counts$minus, readLength=readLength, geneid=minusGI, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
-    ans <- mergeExp(plus, minus)
+    plusGI <- geneid[genomeDB@islandStrand[geneid]=="+"]
+    plus <- NULL
+    if(length(plusGI)>0) {
+      plusDB <- genomeBystrand(genomeDB, "+")
+      plus <- procExp(distrs, plusDB, pc=pc@counts$plus, readLength=readLength, geneid=plusGI, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
+    }
+    minusGI <- geneid[genomeDB@islandStrand[geneid]=="-"]
+    minus <- NULL
+    if(length(minusGI)>0) {
+      minusDB <- genomeBystrand(genomeDB, "-")
+      minus <- procExp(distrs, minusDB, pc=pc@counts$minus, readLength=readLength, geneid=minusGI, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
+    } 
+    if(!(is.null(plus) | is.null(minus))) { ans <- mergeExp(plus, minus) }
+    else { if(is.null(plus)) {ans <- minus } else ans <- plus }
   } else {
     ans <- procExp(distrs, genomeDB, pc=pc@counts[[1]], readLength=readLength, geneid=geneid, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
   }
+
   ans
 }
     
