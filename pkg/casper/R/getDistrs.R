@@ -22,7 +22,7 @@ setMethod("plot", signature(x="readDistrs"), function(x, y, ...) {
   } else if (y=='readSt') {
     s <- seq(0,1,by=0.02)
     probs <- diff(x@stDis(s))
-    plot(NA,NA,xlim=c(0,1),ylim=c(0,max(probs)),xlab='Read start (relative to transcript length)',ylab='Density')
+    plot(NA,NA,xlim=c(0,1),ylim=c(0,max(probs[!is.na(probs)])),xlab='Read start (relative to transcript length)',ylab='Density')
     segments(s[-length(s)],probs,s[-1])
     segments(s,c(0,probs),s,c(probs,0))
   } else {
@@ -39,10 +39,10 @@ startDist <- function(st,fragLength,txLength) {
                                         # ­ txLength: transcript length
                                         # Output: cumulative probability function (actually, a linear interpolation)
   trunc <- 1-fragLength/txLength
-  sel <- trunc>st
-  trunc <- trunc[sel]
-  st <- st[sel]
-  fit <- summary(survfit(Surv(time=1-trunc,time2=1-st,event=rep( TRUE,length(st))) ~ 1))
+  sel <- trunc>(st+1e-10)
+  trunc <- 1-trunc[sel]
+  st <- 1-st[sel]
+  fit <- summary(survfit(Surv(time=trunc,time2=st,event=rep( TRUE,length(st))) ~ 1))
   s <- 1-fit$time
   pcum <- fit$surv
   f <- approxfun(s,pcum)
@@ -67,8 +67,7 @@ getDistrs<-function(DB, bam, nreads=4*10^6){
   #Format exons as RangedData
   cat("Calculating fragment length distribution\n")
 
-  exonsRD <- DB@exonsNI
-  
+  exonsRD <- DB@exonsNI  
   #Select a sample of reads
   bam <- firstBamReads(bam, nreads=nreads)
 
@@ -121,8 +120,7 @@ getDistrs<-function(DB, bam, nreads=4*10^6){
   oneExons$txlength <- unlist(tapply((oneExons$end - oneExons$start + 1),INDEX=txid,function(z) rep(sum(z),length(z))))
 
   oneExons <- RangedData(oneExons)
-  over <- findOverlaps(frags, oneExons, type="within")
-  
+  over <- findOverlaps(frags, oneExons)#, type="within")
   exstnogap <- oneExons$exstnogap[subjectHits(over)]
   txlength <- oneExons$txlength[subjectHits(over)]
   exst <- start(oneExons)[subjectHits(over)]
@@ -135,7 +133,7 @@ getDistrs<-function(DB, bam, nreads=4*10^6){
   stDis <- double(length(readst))
   sel <- str=='+';  stDis[sel] <- (exstnogap[sel]+readst[sel]-exst[sel])/txlength[sel]
   sel <- str=='-'; stDis[sel] <- (exstnogap[sel]+exen[sel]-readen[sel])/txlength[sel]
-  stDis <- startDist(stDis, frlen, txlength)
+  stDis <- startDist(stDis[stDis>=0], frlen[stDis>=0], txlength[stDis>=0])
 
   ans <- list(lenDis=ld, stDis=stDis)
   new("readDistrs",lenDis=ans$lenDis,stDis=ans$stDis)
