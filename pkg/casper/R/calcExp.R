@@ -43,7 +43,6 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
   }
   
     #Run
-
     sel <- !sapply(pc[geneid], is.null)
     all <- geneid
     geneid <- geneid[sel]
@@ -51,8 +50,7 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
     if (mc.cores>1 && length(geneid)>mc.cores) {
       if ('multicore' %in% loadedNamespaces()) {
                     #split into smaller jobs
-        nsplit <- floor(length(geneid)/mc.cores)
-        geneid <- lapply(1:mc.cores, function(z) { geneid[((z-1)*nsplit+1):min((z*nsplit),length(geneid))] })
+        geneid <- split(geneid, cut(1:length(geneid), mc.cores))
         ans <- multicore::mclapply(geneid,f,mc.cores=mc.cores)
         ans <- unlist(ans, recursive=F)
         names(ans) <- unlist(geneid)
@@ -81,26 +79,23 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
       fdata$ci95.high <- exprsx + 1.96*se; fdata$ci95.high[fdata$ci95.high>1] <- 1
     }
     if (citype==2) {
-      #pp <- lapply(ans, '[', 3)
-      #p <- lapply(ans, function(x) any(is.na(x[[3]])))
-      q <- lapply(ans,function(z) apply(z[[3]],2,quantile,probs=c(.025,.975)))
-      q <- t(do.call(cbind,q))
-      q <- rbind(q, matrix(NA, nrow=length(misse), ncol=2))
-      fdata$ci95.low <- q[,1]; fdata$ci95.high <- q[,2]
-    }
-    if(citype>1){
-      tmp <- cbind(exprsx, fdata[,3:4])
-      if(sum(is.na(tmp[,1]))>1) {cat("NA values in fdata");}
-      else{
+      if(sum(unlist(lapply(ans, function(x) is.na(x[[3]]))))==0){ 
+        q <- lapply(ans,function(z) apply(z[[3]],2,quantile,probs=c(.025,.975)))
+        q <- t(do.call(cbind,q))
+        q <- rbind(q, matrix(NA, nrow=length(misse), ncol=2))
+        fdata$ci95.low <- q[,1]; fdata$ci95.high <- q[,2]
+        tmp <- cbind(exprsx, fdata[,3:4])
         tmp <- as.data.frame(t(apply(tmp, 1, function(x){
-        y <- x
-        if(x[2]>x[1]) y[2]=y[1]
-        if(x[3]<x[1]) y[3]=y[1]
-        y
-      })))
-      fdata$ci95.low <- tmp$ci95.low
-      fdata$ci95.high <- tmp$ci95.high
-    }
+          if(!any(is.na(x))){
+            y <- x
+            if(x[2]>x[1]) y[2]=y[1]
+            if(x[3]<x[1]) y[3]=y[1]
+          } else y <- x
+          y
+          })))
+        fdata$ci95.low <- tmp$ci95.low
+        fdata$ci95.high <- tmp$ci95.high
+      }
     }
       
     rownames(exprsx) <- rownames(fdata) <- fdata$transcript
@@ -110,7 +105,7 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
     #Return absolute expression levels
   if (!relativeExpr) {
     nreads <- sapply(pc[unique(gene)],sum)
-    exprs(ans) <- exprs(ans)*nreads[ans@featureData$gene]
+    exprs(ans) <- exprs(ans)*nreads[as.character(ans@featureData$gene)]
     exprs(ans) <- t(t(exprs(ans))/colSums(exprs(ans), na.rm=T))
   }
   ans
@@ -142,6 +137,7 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
   if (genomeDB@denovo) stop("genomeDB must be a known genome")
   if (pc@denovo) stop("pc must be a pathCounts object from known genome")
   if(pc@stranded){
+    if(missing(geneid)) geneid <- c(names(pc@counts$plus), names(pc@counts$minus))
     plusGI <- geneid[genomeDB@islandStrand[geneid]=="+"]
     plus <- NULL
     if(length(plusGI)>0) {
@@ -154,9 +150,12 @@ calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
       minusDB <- genomeBystrand(genomeDB, "-")
       minus <- procExp(distrs, minusDB, pc=pc@counts$minus, readLength=readLength, geneid=minusGI, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
     } 
+    if(is.null(plus) & is.null(minus)) stop("No counts in geneid genes")
     if(!(is.null(plus) | is.null(minus))) { ans <- mergeExp(plus, minus) }
     else { if(is.null(plus)) {ans <- minus } else ans <- plus }
   } else {
+    if(missing(geneid)) geneid <- names(pc@counts[[1]])
+    if(sum(!unlist(lapply(pc@counts[geneid], is.null)))) stop("No counts in geneid genes")
     ans <- procExp(distrs, genomeDB, pc=pc@counts[[1]], readLength=readLength, geneid=geneid, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
   }
 
