@@ -23,7 +23,7 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
 	frags = malloc((frags_size[0] + 1) * sizeof(read_t));
 	
     	fragsHashPtr = &fragsHash;		
-	hashSize=frags_size[0];
+	hashSize=frags_size[0]+100;
 	hash_init(fragsHashPtr, hashSize);
     
 	PROTECT(qname = coerceVector(qname, STRSXP));
@@ -81,7 +81,7 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
 	      if(frags[tmp].nreads==2) {
 		cigs=procCigar(m_strdup(frags[tmp].cigar_1), cigs);
 		frags[tmp].len_1=frags[tmp].st_1;
-		if(verbose) printf("proc cigs %s %d", frags[tmp].cigar_1, cigs[0]);
+		if(verbose) printf("proc cigs %s %d\n", frags[tmp].cigar_1, cigs[0]);
 		for(j=1; j<cigs[0]+1;j=j+2) {
 		  SET_STRING_ELT(key, counter, mkChar(bucket->key));
 		  SET_STRING_ELT(chrom, counter, mkChar(frags[tmp].chr_1));
@@ -92,7 +92,7 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
 		  p_rstrand[counter] = frags[tmp].strand_1;
 		  frags[tmp].len_1+=cigs[j];
 		  if((cigs[0]>1)&&(j<cigs[0]-1)) frags[tmp].len_1+=cigs[j+1];
-		  if(verbose) printf("1 %d %d %d %d %d\n", p_strs[counter], p_flag[counter], p_len[counter], counter, p_strand[counter]);
+		  if(verbose) printf("1 %d %d %d %d %d %d\n", p_strs[counter], p_flag[counter], p_len[counter], counter, p_strand[counter], counter);
 		  counter++;
 		}
 		cigs=procCigar(m_strdup(frags[tmp].cigar_2), cigs);
@@ -109,11 +109,10 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
 		  if((cigs[0]>1)&&(j<cigs[0]-1)) frags[tmp].len_2+=cigs[j+1];
 		  if(verbose) printf("2 %d %d %d %d\n", p_strs[counter], p_flag[counter], p_len[counter], counter);
 		  counter++;
-                  
 		}
 		free(frags[tmp].chr_2);
-		free(frags[tmp].cigar_2);      
-	      }
+		free(frags[tmp].cigar_2);
+  	      }
 	      if(verbose) printf("%s %d %d %s\n", bucket->key, frags[tmp].st_1, frags[tmp].flag_1, frags[tmp].cigar_1);
 	      free(frags[tmp].qname);
 	      free(frags[tmp].chr_1);
@@ -133,8 +132,7 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
 	SET_VECTOR_ELT(reads, 4, chrom);
 	SET_VECTOR_ELT(reads, 5, rid);
 	SET_VECTOR_ELT(reads, 6, rstrand);
-
-  	free(frags);
+	free(frags);
 	hash_destroy(fragsHashPtr);
 	UNPROTECT(16);
 	return(reads);

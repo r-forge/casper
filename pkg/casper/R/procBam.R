@@ -9,13 +9,13 @@ buildRD<-function(reads){
 }
 
 uniquifyQname<-function(bam, seed=1){   	
-    bam$rname<-as.character(bam$rname)
-    sel<-bam$pos>bam$mpos
-    bam$qname[sel]<-paste(bam$qname[sel], ".", bam$pos[sel], ".",bam$mpos[sel], sep="")
-    sel<-bam$pos<=bam$mpos
-    bam$qname[sel]<-paste(bam$qname[sel], ".", bam$mpos[sel], ".",bam$pos[sel], sep="")
+  bam$rname<-as.character(bam$rname)
+  sel<-bam$pos>bam$mpos
+  bam$qname[sel]<-paste(bam$qname[sel], ".", bam$pos[sel], ".",bam$mpos[sel], sep="")
+  sel<-bam$pos<=bam$mpos
+  bam$qname[sel]<-paste(bam$qname[sel], ".", bam$mpos[sel], ".",bam$pos[sel], sep="")
 # Randomly choose "multihits" with same start position but different cigar                                                                                                                              
-    dups<-duplicated(paste(bam$pos, bam$mpos, sep=""))
+    dups<-duplicated(paste(bam$pos, bam$mpos, sep="."))
     dups<-bam$qname[bam$qname %in% bam$qname[dups]]
     tab<-table(dups)
     if(sum(tab>2)>0){
@@ -31,8 +31,8 @@ uniquifyQname<-function(bam, seed=1){
         res<-bam
     }
     qdup<-bam$qname[bam$qname %in% bam$qname[duplicated(bam$qname)]] 
-	uni<-bam$qname %in% qdup
-	res<-lapply(res, "[", uni)
+    uni<-bam$qname %in% qdup
+    res<-lapply(res, "[", uni)
     names(res)<-names(bam)
     res
 }
@@ -50,7 +50,7 @@ procBam<-function(bam, stranded=FALSE, seed=1){
     bam$rname<-as.character(bam$rname)
     bam<-uniquifyQname(bam, seed)
     cat("Calculating total number of reads...\n")
-    nreads<-nbReads(bam)+1
+    nreads<-nbReads(bam)+10
     cat("done.\nProcessing cigars and building read's object...\n")
     len=vector(mode="integer", length=nreads)
     flag=vector(mode="integer", length=nreads)
@@ -68,13 +68,18 @@ procBam<-function(bam, stranded=FALSE, seed=1){
     ans<-buildRD(data)
     ans
   }
+  
   if(stranded) {
     minus <- bam$tag$XS=='-'
-    minus <- lapply(bam, '[', minus)
-    minus <- procB(minus, "-")
+    if(sum(minus)>0){
+      minus <- lapply(bam, '[', minus)
+      minus <- procB(minus, "-")
+    } else minus <- RangedData(IRanges(0,0), space=NULL)
     plus <- bam$tag$XS=='+'
-    plus <- lapply(bam, '[', plus)
-    plus <- procB(plus, "+")
+    if(sum(plus)>0){
+      plus <- lapply(bam, '[', plus)
+      plus <- procB(plus, "+")
+    } else plus <- RangedData(IRanges(0,0), space=NULL)
     ans <- list(plus=plus, minus=minus, stranded=TRUE)
   } else {
     pbam <- procB(bam, "*")
