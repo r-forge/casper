@@ -72,11 +72,26 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
     exprsx <- matrix(c(unlist(lapply(ans,'[[',1)), misse) ,ncol=1)
     rownames(exprsx) <- c(unlist(lapply(ans, function(z) names(z[[1]]))), names(misse))
     exprsx[exprsx==-1] <- NA
+    exprsx <- round(exprsx)
     if (citype==1) {
       se <- c(unlist(lapply(ans,'[[',2)), misse)
       se[se==-1] <- NA
-      fdata$ci95.low <- exprsx - 1.96*se; fdata$ci95.low[fdata$ci95.low<0] <- 0
-      fdata$ci95.high <- exprsx + 1.96*se; fdata$ci95.high[fdata$ci95.high>1] <- 1
+      alpha <- .05
+      #strategy 1
+      #fdata$ci95.high <- fdata$ci95.low <- rep(NA,nrow(fdata))
+      #sel <- !is.na(se) & se!=0
+      #fdata$ci95.high[sel] <- mapply(function(m,s) qtnorm(1-alpha/2,mean=m,sd=s,lower=0,upper=1), as.list(exprsx[sel,1]), as.list(se[sel]))
+      #fdata$ci95.low[sel] <- mapply(function(m,s) qtnorm(alpha/2,mean=m,sd=s,lower=0,upper=1), as.list(exprsx[sel,1]), as.list(se[sel]))
+      #sel <- !is.na(se) & se==0; fdata$ci95.high[sel] <- fdata$ci95.low[sel] <- exprsx[sel,1]
+      #sel <- fdata$ci95.high < exprsx[,1] & !is.na(fdata$ci95.high); fdata$ci95.high[sel] <- exprsx[sel,1]
+      #sel <- fdata$ci95.low > exprsx[,1] & !is.na(fdata$ci95.low); fdata$ci95.low[sel] <- exprsx[sel,1]
+      #strategy 2
+      fdata$ci95.low <- qnorm(alpha/2,mean=exprsx,sd=se)
+      fdata$ci95.high <- qnorm(1-alpha/2,mean=exprsx,sd=se)
+      sel <- round(fdata$ci95.low,10)<0 & !is.na(se); fdata$ci95.low[sel] <- 0
+      fdata$ci95.high[sel] <- mapply(function(m,s) qtnorm(1-alpha/2,mean=m,sd=s,lower=0,upper=1), as.list(exprsx[sel,1]), as.list(se[sel]))
+      sel <- round(fdata$ci95.high,10)>1 & !is.na(se); fdata$ci95.high[sel] <- 1
+      fdata$ci95.low[sel] <- mapply(function(m,s) qtnorm(alpha/2,mean=m,sd=s,lower=0,upper=1), as.list(exprsx[sel,1]), as.list(se[sel]))
     }
     if (citype==2) {
       if(sum(unlist(lapply(ans, function(x) is.na(x[[3]]))))==0){ 
@@ -184,11 +199,11 @@ lhoodGrid <- function(pc, distrs, genomeDB, readLength, geneid, grid, priorq=2) 
   exons <- as.integer(names(genomeDB@islands[[geneid]]))
   exonwidth <- width(genomeDB@islands[[geneid]])
   strand <- genomeDB@islandStrand[geneid]
-  geneid <- as.integer(geneid)
   transcripts <- genomeDB@transcripts[[geneid]]
   if (length(transcripts)==1) stop("Single transcript specified, estimation not run")
   strand <- as.integer(ifelse(strand=='+', 1, -1))
-  pc <- pc@counts[[geneid]]
+  if (strand==1) pc <- pc@counts[['plus']][[geneid]] else pc <- pc@counts[['minus']][[geneid]]
+  geneid <- as.integer(geneid)
   
   if (missing(grid)) {
     grid <- lapply(1:(length(transcripts)-1), function(z) seq(-10,10,length=10^(5/(length(transcripts)-1))))

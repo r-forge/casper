@@ -163,10 +163,11 @@ extern "C"
     double priorq = REAL(priorqR)[0];
     int totC=0;
     list<Fragment*>::const_iterator fi;
-    for (fi = df->data.begin(); fi != df->data.end(); fi++) {
-      Fragment* f = *fi;
-      totC += f->count;
-    }
+    for (fi = df->data.begin(); fi != df->data.end(); fi++)
+      {
+	Fragment* f = *fi;
+	totC += f->count;
+      }
 
     Model* model = new Model(initvars);
     Casper* casp = new Casper(model, df);
@@ -236,13 +237,38 @@ extern "C"
       }
     }
 
+    SEXP dimnames, rownames;
+    PROTECT(dimnames = allocVector(VECSXP, 2));
+    PROTECT(rownames = allocVector(STRSXP, np));
+    int j=0;
+    for (list<Fragment*>::iterator fi= df->data.begin(); fi != df->data.end(); fi++) {
+      Fragment *f= *fi;
+      std::stringstream sstr;
+      if (INTEGER(strandR)[0]==1) {
+        for (int i=0; i < f->leftc; i++) { sstr << "."; sstr << f->left[i]; }
+        sstr << "-";
+        for (int i=0; i < f->rightc; i++) { sstr << f->right[i]; sstr << "."; }
+      } else {
+        for (int i=(f->rightc-1); i >= 0; i--) { sstr << "."; sstr << f->right[i]; }
+        sstr << "-";
+        for (int i=(f->leftc-1); i >= 0; i--) { sstr << f->left[i]; sstr << "."; }
+      }
+      std::string str1= sstr.str();
+      const char *cname= str1.c_str();
+      SET_STRING_ELT(rownames,j,mkChar(cname));  //path name
+
+      j++;
+    }
+    SET_VECTOR_ELT(dimnames, 1, rownames);
+    setAttrib(VECTOR_ELT(ans,5), R_DimNamesSymbol, dimnames);
+
     //RETURN INTEGRATED LIKELIHOOD
     SET_VECTOR_ELT(ans, 6, allocVector(REALSXP,2));
     Casper::is_runs= 10000;
     REAL(VECTOR_ELT(ans,6))[0]= casp->calculateIntegral(1);
     REAL(VECTOR_ELT(ans,6))[1]= casp->calculateIntegral(2);
 
-    UNPROTECT(1);
+    UNPROTECT(3);
     return ans;
   }
 
