@@ -95,7 +95,6 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
     }
     if (citype==2) {
       if(sum(unlist(lapply(ans, function(x) is.na(x[[3]]))))==0){ 
-        browser()
         q <- lapply(ans,function(z) apply(z[[3]],2,quantile,probs=c(.025,.975)))
         q <- t(do.call(cbind,q))
         q <- rbind(q, matrix(NA, nrow=length(misse), ncol=2))
