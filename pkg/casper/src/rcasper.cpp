@@ -102,7 +102,9 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP 
 			  item = strtok(NULL, ".");
 		  }
 
-		  if (((strand==1) && (f->left[f->leftc -1] <= f->right[0])) || ((strand== -1) && (f->left[f->leftc -1] >= f->right[0]))) {
+		  bool c1= (strand==1) && (f->left[0] <= f->right[0]) && (f->left[f->leftc -1] <= f->right[f->rightc -1]);
+		  bool c2= (strand== -1) && (f->left[0] >= f->right[0]) && (f->left[f->leftc -1] >= f->right[f->rightc -1]);
+		  if (c1 || c2) {
 		    df->addData(f);
 		  } else {
 		    delete f;

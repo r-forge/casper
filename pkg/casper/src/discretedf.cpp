@@ -5,7 +5,7 @@
 DiscreteDF::DiscreteDF(double* data, int* vals, int size)
 {
   //this->size = size;
-        this->size = vals[size-1]-vals[0];
+        this->size = vals[size-1]-vals[0]+1;
         this->values= new int[this->size];
 	this->prob = new double[this->size];
 	this->cumu = new double[this->size];

@@ -72,7 +72,7 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
     exprsx <- matrix(c(unlist(lapply(ans,'[[',1)), misse) ,ncol=1)
     rownames(exprsx) <- c(unlist(lapply(ans, function(z) names(z[[1]]))), names(misse))
     exprsx[exprsx==-1] <- NA
-    exprsx <- round(exprsx)
+    exprsx <- round(exprsx,10)
     if (citype==1) {
       se <- c(unlist(lapply(ans,'[[',2)), misse)
       se[se==-1] <- NA
@@ -89,9 +89,9 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
       fdata$ci95.low <- qnorm(alpha/2,mean=exprsx,sd=se)
       fdata$ci95.high <- qnorm(1-alpha/2,mean=exprsx,sd=se)
       sel <- round(fdata$ci95.low,10)<0 & !is.na(se); fdata$ci95.low[sel] <- 0
-      fdata$ci95.high[sel] <- mapply(function(m,s) qtnorm(1-alpha/2,mean=m,sd=s,lower=0,upper=1), as.list(exprsx[sel,1]), as.list(se[sel]))
+      fdata$ci95.high[sel] <- unlist(mapply(function(m,s) qtnorm(1-alpha/2,mean=m,sd=s,lower=0,upper=1), as.list(exprsx[sel,1]), as.list(se[sel])))
       sel <- round(fdata$ci95.high,10)>1 & !is.na(se); fdata$ci95.high[sel] <- 1
-      fdata$ci95.low[sel] <- mapply(function(m,s) qtnorm(alpha/2,mean=m,sd=s,lower=0,upper=1), as.list(exprsx[sel,1]), as.list(se[sel]))
+      fdata$ci95.low[sel] <- unlist(mapply(function(m,s) qtnorm(alpha/2,mean=m,sd=s,lower=0,upper=1), as.list(exprsx[sel,1]), as.list(se[sel])))
     }
     if (citype==2) {
       if(sum(unlist(lapply(ans, function(x) is.na(x[[3]]))))==0){ 
