@@ -52,7 +52,7 @@ setMethod("show", signature(object="pathCounts"), function(object) {
     isl <- match(sel1, islEx)
     isl <- names(islEx)[isl]
     splCounts <- split(pCounts, isl)
-#    splCounts <- lapply(splCounts, function(x) x[grepl("-", names(x))])
+    splCounts <- lapply(splCounts, function(x) x[grepl("-", names(x))])
     
     if(DB@denovo){
       sel <- sapply(sel, "[", -1)
