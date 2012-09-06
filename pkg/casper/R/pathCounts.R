@@ -13,12 +13,12 @@ setValidity("pathCounts", valid_pathCounts)
 setMethod("show", signature(object="pathCounts"), function(object) {
   if(object@denovo) {
     if(object@stranded) {
-      cat("Stranded denovo pathCounts object with",length(object@counts[[1]])+length(object@counts[[2]]),"islands and", sum(!unlist(lapply(object@counts[[1]], is.null))),"non zero positive islands and ", sum(!unlist(lapply(object@counts[[2]], is.null))),"non zero negative islands\n")
+      cat("Stranded denovo pathCounts object with",length(object@counts[[1]])+length(object@counts[[2]]),"islands and", sum(!unlist(lapply(object@counts[['plus']], is.null))),"non zero positive islands and ", sum(!unlist(lapply(object@counts[['minus']], is.null))),"non zero negative islands\n")
           }
     else cat("Non-stranded denovo pathCounts object with",length(object@counts[[1]]),"islands and",sum(!unlist(lapply(object@counts[[1]], is.null))),"non zero islands.\n") 
   } else {
     if(object@stranded) {
-      cat("Stranded known pathCounts object with",length(object@counts[[1]])+length(object@counts[[2]]),"islands and", sum(!unlist(lapply(object@counts[[1]], is.null))),"non zero positive islands and ", sum(!unlist(lapply(object@counts[[2]], is.null))),"non zero negative islands\n")
+      cat("Stranded known pathCounts object with",length(object@counts[[1]])+length(object@counts[[2]]),"islands and", sum(!unlist(lapply(object@counts[['plus']], is.null))),"non zero positive islands and ", sum(!unlist(lapply(object@counts[['minus']], is.null))),"non zero negative islands\n")
     }
     else cat("Non-stranded known pathCounts object with",length(object@counts[[1]]),"islands and", sum(!unlist(lapply(object@counts[[1]], is.null))),"non zero islands.\n")
   }
@@ -52,7 +52,7 @@ setMethod("show", signature(object="pathCounts"), function(object) {
     isl <- match(sel1, islEx)
     isl <- names(islEx)[isl]
     splCounts <- split(pCounts, isl)
-    splCounts <- lapply(splCounts, function(x) x[grepl("-", names(x))])
+#    splCounts <- lapply(splCounts, function(x) x[grepl("-", names(x))])
     
     if(DB@denovo){
       sel <- sapply(sel, "[", -1)
