@@ -80,7 +80,8 @@ double DataFrame::prob(int fs, int fe, int bs, int be, int* pos, double T)
 	
         for (int i=0; i< fraglen_dist->size; i++) { //stop before T
 	  double l= fraglen_dist->value(i);
-	  double mb = 1.0 - l / T;
+	  double mb= (T-l+1.0)/T; 
+	  //double mb = 1.0 - l / T;
 	  double rb = min(min(b1, b2 - l) / T, mb);
 	  double lb = min((max(a1, a2 - l) - 1.0) / T, mb);
 	  if (lb >= rb) { continue; }
