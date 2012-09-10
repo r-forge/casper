@@ -13,10 +13,10 @@ genPlot<-function(goi, genomeDB, reads, exp){
 }
 
 
-setGeneric("plotExpr", function(gene, minProbExpr=.5, minExpr=.1, xlab='(kb)', ylab='', xlim, cex=1, yaxt='n', ...) standardGeneric("plotExpr"))
+setGeneric("plotExpr", function(gene, minProbExpr=.5, minExpr=.1, xlab='(kb)', ylab='', xlim, cex=1, yaxt='n', col, ...) standardGeneric("plotExpr"))
 
 setMethod("plotExpr",signature(gene="denovoGeneExpr"),
-  function(gene, minProbExpr, minExpr, xlab='', ylab='', xlim, cex=1, yaxt='n', ...) {
+  function(gene, minProbExpr, minExpr, xlab='', ylab='', xlim, cex=1, yaxt='n', col, ...) {
     n <- names(variants(gene))
     n[nchar(n)>30] <- paste("Variant ",1:sum(nchar(n)>30),sep="")
     names(n) <- names(variants(gene))
@@ -31,73 +31,73 @@ setMethod("plotExpr",signature(gene="denovoGeneExpr"),
     start(gene) <- round(start(gene)/1000)
     end(gene) <- round(end(gene)/1000)
     if (missing(xlim)) xlim <- c(min(start(gene)),max(end(gene)))
-    genePlot(gene, names.arg=names.arg, xlab=xlab, ylab=ylab, xlim=xlim, cex=1, yaxt='n', ...)
+    genePlot(gene, names.arg=names.arg, xlab=xlab, ylab=ylab, xlim=xlim, cex=1, yaxt='n', col, ...)
   }
 )
 
 
 setMethod("genePlot",signature(gene='IRanges'),
-  function(gene, genome, refflat, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', ...) {
+  function(gene, genome, refflat, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', col, ...) {
     if (missing(xlim)) xlim <- range(c(start(gene),end(gene)))
     plot(NA,NA,xlim=xlim,ylim=c(0,1),xlab=xlab,ylab=ylab,yaxt=yaxt,...)
     nsplice <- 1
-    y0 <- seq(1/(nsplice+1),1-1/(1+nsplice),by=1/(1+nsplice))
+    y0 <- seq(1/(1+nsplice),1-1/(1+nsplice),by=1/(1+nsplice))
     x0 <- start(gene)
     x1 <- end(gene)
     if (length(x0)>1) segments(x0=x1[-length(x1)],x1=x0[-1],y=y0,y1=y0)
-    segments(x0=x0,x1=x1,y0=y0+.33/(1+nsplice),y1=y0+.33/(1+nsplice))
-    segments(x0=x0,x1=x1,y0=y0-.33/(1+nsplice),y1=y0-.33/(1+nsplice))
-    segments(x0=x0,x1=x0,y0=y0-.33/(1+nsplice),y1=y0+.33/(1+nsplice))
-    segments(x0=x1,x1=x1,y0=y0-.33/(1+nsplice),y1=y0+.33/(1+nsplice))
+    segments(x0=x0,x1=x1,y0=y0+.33/(1+nsplice),y1=y0+.33/(1+nsplice),col=col)
+    segments(x0=x0,x1=x1,y0=y0-.33/(1+nsplice),y1=y0-.33/(1+nsplice),col=col)
+    segments(x0=x0,x1=x0,y0=y0-.33/(1+nsplice),y1=y0+.33/(1+nsplice),col=col)
+    segments(x0=x1,x1=x1,y0=y0-.33/(1+nsplice),y1=y0+.33/(1+nsplice),col=col)
   }
 )
 
 
 setMethod("genePlot",signature(gene='RangedData'),
-  function(gene, genome, refflat, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', ...) {
-    genePlot(ranges(gene), genome=genome, refflat=refflat, names.arg=names.arg, xlab=xlab, ylab=ylab, xlim=xlim, cex=cex, yaxt=yaxt, ...)
+  function(gene, genome, refflat, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', col, ...) {
+    genePlot(ranges(gene), genome=genome, refflat=refflat, names.arg=names.arg, xlab=xlab, ylab=ylab, xlim=xlim, cex=cex, yaxt=yaxt, col=col, ...)
   }
 )
 
 setMethod("genePlot",signature(gene='IRangesList'),
-  function(gene, genome, refflat, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', ...) {
+  function(gene, genome, refflat, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', col, ...) {
     if (missing(xlim)) xlim <- range(c(start(gene),end(gene)))
     if (missing(names.arg)) names.arg <- names(gene)
     plot(NA,NA,xlim=xlim,ylim=c(0,1),xlab=xlab,ylab=ylab,yaxt=yaxt,...)
     nsplice <- length(gene)
-    cols<-rep(rainbow(min(nsplice, 10)), ceiling(nsplice/10))
-    y0 <- seq(1/(nsplice+1),1-1/(1+nsplice),by=1/(1+nsplice))
-    for (i in 1:nsplice) {
+    if (missing(col)) col<-rep(rainbow(min(nsplice, 10)), ceiling(nsplice/10)) else if (length(col)!=nsplice) col <- rep(col[1],nsplice)
+    y0 <- seq(1/(1+nsplice),1-1/(1+nsplice),by=1/(1+nsplice))
+    for (i in nsplice:1) {
       x0 <- start(gene[[i]])
       x1 <- end(gene[[i]])
-      if (length(x0)>1) segments(x0=x1[-length(x1)],x1=x0[-1],y=y0[i],y1=y0[i], col=cols[i])
-      segments(x0=x0,x1=x1,y0=y0[i]+.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=cols[i])
-      segments(x0=x0,x1=x1,y0=y0[i]-.33/(1+nsplice),y1=y0[i]-.33/(1+nsplice), col=cols[i])
-      segments(x0=x0,x1=x0,y0=y0[i]-.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=cols[i])
-      segments(x0=x1,x1=x1,y0=y0[i]-.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=cols[i])
+      if (length(x0)>1) segments(x0=x1[-length(x1)],x1=x0[-1],y=y0[i],y1=y0[i], col=col[i])
+      segments(x0=x0,x1=x1,y0=y0[i]+.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=col[i])
+      segments(x0=x0,x1=x1,y0=y0[i]-.33/(1+nsplice),y1=y0[i]-.33/(1+nsplice), col=col[i])
+      segments(x0=x0,x1=x0,y0=y0[i]-.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=col[i])
+      segments(x0=x1,x1=x1,y0=y0[i]-.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=col[i])
     }
     if (!is.null(names.arg)) text(rep(xlim[1],length(y0)),y0+.5*(y0[2]-y0[1]),names.arg,cex=cex,adj=0)
   }
 )
 
 setMethod("genePlot",signature(gene='CompressedIRangesList'),
-  function(gene, genome, refflat, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', ...) {
+  function(gene, genome, refflat, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', col, ...) {
     if (missing(xlim)) xlim <- range(c(start(unlist(gene)),end(unlist(gene))))
     if (missing(names.arg)) names.arg <- names(gene)
     plot(NA,NA,xlim=xlim,ylim=c(0,1),xlab=xlab,ylab=ylab,yaxt=yaxt,...)
     nsplice <- length(gene)
-    cols<-rep(rainbow(min(nsplice, 10)), ceiling(nsplice/10))
-    y0 <- seq(1/(nsplice+1),1-1/(1+nsplice),by=1/(1+nsplice))
+    if (missing(col)) col<-rep(rainbow(min(nsplice, 10)), ceiling(nsplice/10)) else if (length(col)!=nsplice) col <- rep(col[1],nsplice)
+    y0 <- rev(seq(1/(1+nsplice),1-1/(1+nsplice),by=1/(1+nsplice)))
     for (i in 1:nsplice) {
       x0 <- start(gene[[i]])
       x1 <- end(gene[[i]])
-      if (length(x0)>1) segments(x0=x1[-length(x1)],x1=x0[-1],y=y0[i],y1=y0[i], col=cols[i])
-      segments(x0=x0,x1=x1,y0=y0[i]+.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=cols[i])
-      segments(x0=x0,x1=x1,y0=y0[i]-.33/(1+nsplice),y1=y0[i]-.33/(1+nsplice), col=cols[i])
-      segments(x0=x0,x1=x0,y0=y0[i]-.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=cols[i])
-      segments(x0=x1,x1=x1,y0=y0[i]-.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=cols[i])
+      if (length(x0)>1) segments(x0=x1[-length(x1)],x1=x0[-1],y=y0[i],y1=y0[i], col=col[i])
+      segments(x0=x0,x1=x1,y0=y0[i]+.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=col[i])
+      segments(x0=x0,x1=x1,y0=y0[i]-.33/(1+nsplice),y1=y0[i]-.33/(1+nsplice), col=col[i])
+      segments(x0=x0,x1=x0,y0=y0[i]-.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=col[i])
+      segments(x0=x1,x1=x1,y0=y0[i]-.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=col[i])
     }
-    if (!is.null(names.arg)) text(rep(xlim[1],length(y0)),y0+.5*(y0[2]-y0[1]),names.arg,cex=cex,adj=0)
+    if (!is.null(names.arg)) text(rep(xlim[1],length(y0)),y0+.5*(y0[1]-y0[2]),names.arg,cex=cex,adj=0)
   }
 )
 
@@ -121,7 +121,7 @@ setMethod("genePlot",signature(gene='CompressedIRangesList'),
 #}
 
 setMethod("genePlot",signature(gene='character'),
-  function(gene, genome, refflat, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', ...) {
+  function(gene, genome, refflat, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', col, ...) {
     if (missing(gene)) stop('gene must be specified')
     if (length(gene)>1) stop('If argument gene is of type character, it must have length 1')
     if (missing(refflat) & missing(genome)) stop('Either refflat or genome must be specified')
@@ -135,7 +135,7 @@ setMethod("genePlot",signature(gene='character'),
       if (missing(xlim)) xlim <- range(c(exonStart,exonEnd))
       plot(NA,NA,xlim=xlim,ylim=c(0,1),xlab=xlab,ylab=ylab,yaxt=yaxt,...)
       nsplice <- length(exonStart)
-      y0 <- seq(1/(nsplice+1),1-1/(1+nsplice),by=1/(1+nsplice))
+      y0 <- seq(1/(1+nsplice),1-1/(1+nsplice),by=1/(1+nsplice))
       for (i in 1:nsplice) {
         x0 <- exonStart[[i]]
         x1 <- exonEnd[[i]]

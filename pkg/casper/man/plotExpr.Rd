@@ -12,7 +12,7 @@ expressed along with their (marginal) estimated expression.
 }
 \usage{
 plotExpr(gene, minProbExpr = 0.5, minExpr = 0.1,
-    xlab = "(kb)", ylab = "", xlim, cex = 1, yaxt = "n", ...) 
+    xlab = "(kb)", ylab = "", xlim, cex = 1, yaxt = "n", col, ...) 
 }
 \arguments{
  \item{gene}{\code{denovoGeneExpr} object containing results for a
@@ -28,6 +28,8 @@ plotExpr(gene, minProbExpr = 0.5, minExpr = 0.1,
  \item{xlim}{x-axis limits, passed on to \code{plot}}
  \item{cex}{Character expansion, passed on to \code{plot}}
  \item{yaxt}{Type of y-axis, passed on to \code{plot}}
+ \item{col}{Colors for each variant, defaults to rainbow colors. It is
+   possible to specify a single color.}
  \item{...}{Other arguments to be passed on to \code{plot}}
 }
 \section{Methods}{
