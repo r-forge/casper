@@ -35,7 +35,7 @@ getDistrs(DB, bam, nreads=4*10^6)
 \value{
   An object of class readDistrs with slots:
   \item{lenDis}{Table with number of fragments with a given length}
-  \item{stDis}{Numeric vector with relative fragment start positions}
+  \item{stDis}{Cumulative distribution function (object of type closure) for relative start position}
 }
 \author{
 Camille Stephan-Otto Attolini, David Rossell

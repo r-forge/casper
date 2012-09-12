@@ -87,8 +87,8 @@ so that information on whether the experiment was stranded or not is imported.
 \begin{verbatim}
 > library(Rsamtools)
 > what <- scanBamWhat(); what <- what[!(what %in% c('seq','qual'))]
-> flag <- scanBamFlag(isPaired=TRUE,hasUnmappedMate=FALSE,tag='XS')
-> param <- ScanBamParam(flag=flag,what=what)
+> flag <- scanBamFlag(isPaired=TRUE,hasUnmappedMate=FALSE)
+> param <- ScanBamParam(flag=flag,what=what,tag='XS')
 > bam0 <- scanBam(file='accepted_hits.bam',param=param)[[1]]
 \end{verbatim}
 \normalsize
