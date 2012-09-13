@@ -63,21 +63,25 @@ bool Variant::contains(Exon* e)
 
 bool Variant::contains(Fragment* frag)
 {
-	for (int l = 0; l < frag->leftc; l++)
-	{
-		if (idmap.count(frag->left[l]) == 0)
-		{
-			return false;
-		}
-	}
-	for (int r = 0; r < frag->rightc; r++)
-	{
-		if (idmap.count(frag->right[r]) == 0)
-		{
-			return false;
-		}
-	}
-	return true;
+  if (idmap.count(frag->left[0]) == 0) return false;
+  for (int l = 1; l < frag->leftc; l++) {
+    if ((idmap.count(frag->left[l]) == 0) || (this->indexOf(frag->left[l]) != 1+this->indexOf(frag->left[l-1]))) return false;
+  }
+  if (idmap.count(frag->right[0]) == 0) return false;
+  for (int r = 1; r < frag->rightc; r++) {
+    if ((idmap.count(frag->right[r]) == 0) || (this->indexOf(frag->right[r]) != 1+this->indexOf(frag->right[r-1]))) return false;
+  }
+  /*  for (int l = 0; l < frag->leftc; l++) {
+    if (idmap.count(frag->left[l]) == 0) {
+      return false;
+    }
+  }
+  for (int r = 0; r < frag->rightc; r++) {
+    if (idmap.count(frag->right[r]) == 0) {
+      return false;
+    }
+    }*/
+  return true;
 }
 
 void Variant::toString(char *str)
