@@ -1,3 +1,7 @@
+Changes in version 0.1.2
+- calcExp & calcDenovo now assign 0 probability to all impossible exon paths
+- Fixed minor issues related to offsets when computing exon paths
+
 Changes in version 0.0.3
 - Fixed memory issues in procBam
 - Fixed memory issues in pathCounts
