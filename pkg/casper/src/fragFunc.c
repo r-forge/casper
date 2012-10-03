@@ -22,16 +22,16 @@ void addExon2Frag(int exon, int start, int rid, int pos, path_t *frags, int firs
   }
   else {
   if((frags[pos].nexon % 10)==0) {
-    printf("Reallocating %d %d\n", frags[pos].nexon, frags[pos].nexon+10);
+    Rprintf("Reallocating %d %d\n", frags[pos].nexon, frags[pos].nexon+10);
         newexons = realloc(frags[pos].exons, (frags[pos].nexon + 10) * sizeof(int));
         if(newexons != NULL) frags[pos].exons=newexons;
-	else puts("Error reallocating memory\n");
+	else Rprintf("Error reallocating memory\n");
 	newstarts=realloc(frags[pos].starts, (frags[pos].nexon + 10) * sizeof(int));
         if(newstarts != NULL) frags[pos].starts=newstarts;
-        else puts("Error reallocating memory\n"); 
+        else Rprintf("Error reallocating memory\n"); 
 	newrids=realloc(frags[pos].rids, (frags[pos].nexon + 10) * sizeof(int));
         if( newrids != NULL) frags[pos].rids = newrids;
-	else puts("Error reallocating memory\n");
+	else Rprintf("Error reallocating memory\n");
     }
   }
   frags[pos].exons[frags[pos].nexon]=exon;
@@ -59,7 +59,7 @@ int buildFrags(hash_t *fragsHashPtr, SEXP reid, int *rid, int *start, int *exon,
 	totFnow=totFnow*2;
 	newF= realloc(*frags, totFnow * sizeof(path_t));
 	if(newF != NULL) *frags=newF;
-	else puts("Error reallocating memory frags\n");
+	else Rprintf("Error reallocating memory frags\n");
       } 
     }
   }

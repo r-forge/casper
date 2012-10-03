@@ -44,16 +44,13 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
    	  l=hash_lookup(fragsHashPtr, CHAR(STRING_ELT(qname, i)));
 	  if(l!=HASH_FAIL) {
             addRead2Frag(CHAR(STRING_ELT(qname, i)), p_flags[i], CHAR(STRING_ELT(chr, i)), p_start[i], p_strand[i], CHAR(STRING_ELT(cigar, i)), l, frags, 2);
-	    //if(verbose) printf("qname: %s orig_cig %s st: %d fl: %d cig: %s l: %d\n", qname[i], cigar[i], frags[l].st_2, frags[l].flag_2, frags[l].cigar_2, l);
 	  }
 	  else {
             hash_insert(fragsHashPtr, CHAR(STRING_ELT(qname, i)), totF);
             addRead2Frag(CHAR(STRING_ELT(qname, i)), p_flags[i], CHAR(STRING_ELT(chr, i)), p_start[i], p_strand[i], CHAR(STRING_ELT(cigar, i)), totF, frags, 1);
-//   if(verbose) printf("qname: %s orig_cig: %s st: %d fl: %d cig: %s\n", qname[i], cigar[i], frags[totF].st_1, frags[totF].flag_1, frags[totF].cigar_1);
             totF++;
 	  }
 	}
-	if(verbose) printf("%d %s %d %d %d\n", totF, frags[0].cigar_1, frags[0].st_1, frags[0].flag_1, frags[0].nreads);
 	
 	//SEXP len, strs, flag, key, chrom, rid;	
 	int tmp, *cigs, counter=0;
@@ -71,17 +68,14 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
         PROTECT(rstrand = coerceVector(rstrand, INTSXP));
 	int *p_rstrand = INTEGER(rstrand);
 	for(i=0; i<fragsHash.size; i++) {
-	  if(verbose) printf("%d %d\n", i, fragsHash.size);
 	  if(fragsHash.bucket[i]!=NULL)  {
             bucket=fragsHash.bucket[i];
             while(bucket) {
 	      tmp=bucket->data;
 	      cigs=malloc(50 * sizeof(int));
-	      if(verbose) printf("nreads %d\n", frags[tmp].nreads);
 	      if(frags[tmp].nreads==2) {
 		cigs=procCigar(m_strdup(frags[tmp].cigar_1), cigs);
 		frags[tmp].len_1=frags[tmp].st_1;
-		if(verbose) printf("proc cigs %s %d\n", frags[tmp].cigar_1, cigs[0]);
 		for(j=1; j<cigs[0]+1;j=j+2) {
 		  SET_STRING_ELT(key, counter, mkChar(bucket->key));
 		  SET_STRING_ELT(chrom, counter, mkChar(frags[tmp].chr_1));
@@ -92,7 +86,6 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
 		  p_rstrand[counter] = frags[tmp].strand_1;
 		  frags[tmp].len_1+=cigs[j];
 		  if((cigs[0]>1)&&(j<cigs[0]-1)) frags[tmp].len_1+=cigs[j+1];
-		  if(verbose) printf("1 %d %d %d %d %d %d\n", p_strs[counter], p_flag[counter], p_len[counter], counter, p_strand[counter], counter);
 		  counter++;
 		}
 		cigs=procCigar(m_strdup(frags[tmp].cigar_2), cigs);
@@ -107,13 +100,11 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
 		  p_rstrand[counter] = frags[tmp].strand_2;
 		  frags[tmp].len_2+=cigs[j];
 		  if((cigs[0]>1)&&(j<cigs[0]-1)) frags[tmp].len_2+=cigs[j+1];
-		  if(verbose) printf("2 %d %d %d %d\n", p_strs[counter], p_flag[counter], p_len[counter], counter);
 		  counter++;
 		}
 		free(frags[tmp].chr_2);
 		free(frags[tmp].cigar_2);
   	      }
-	      if(verbose) printf("%s %d %d %s\n", bucket->key, frags[tmp].st_1, frags[tmp].flag_1, frags[tmp].cigar_1);
 	      free(frags[tmp].qname);
 	      free(frags[tmp].chr_1);
 	      free(frags[tmp].cigar_1);

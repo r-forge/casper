@@ -49,7 +49,6 @@ SEXP pathCounts(SEXP reid, SEXP rid, SEXP exst, SEXP exid){
         if(fragsHash.bucket[i]!=NULL)  {
             bucket=fragsHash.bucket[i];
             while(bucket) {
-	      if(verbose) printf("Sorting %d %s %d\n", bucket->data, bucket->key, frags[bucket->data].nexon);
                 countPaths(bucket->data, frags, pathsHashPtr);
 	        free(frags[bucket->data].exons);
                 free(frags[bucket->data].starts);
@@ -108,7 +107,6 @@ void countPaths(int pos, path_t *frags, hash_t *pathsHashPtr){
     for(i=0; i<frags[pos].nexon; i++) standex[i]=malloc(4 * sizeof(int));
     
     for (i=0; i<frags[pos].nexon; i++) {
-      if(verbose) printf("%d %d %d\n", frags[pos].nexon, frags[pos].starts[i], i); 
         standex[i][0]=frags[pos].starts[i];
         standex[i][1]=frags[pos].exons[i];
         standex[i][2]=frags[pos].rids[i];
@@ -119,13 +117,11 @@ void countPaths(int pos, path_t *frags, hash_t *pathsHashPtr){
     totEx=0;
     unex[totEx]=standex[0][1];
     unrid[totEx]=standex[0][2];
-    if(verbose) printf("%d %d %d\n", totEx, unex[totEx], unrid[totEx]);
     totEx++;
     for(i=1; i<frags[pos].nexon; i++){
         if((standex[i][0] != standex[i-1][0])||(standex[i][2] != standex[i-1][2])) {
             unex[totEx]=standex[i][1];
             unrid[totEx]=standex[i][2];
-            if(verbose) printf("%d %d %d\n", totEx, unex[totEx], unrid[totEx]);
             totEx++;
         }
     }
@@ -151,7 +147,6 @@ void addPath(int *unex, int *unrid, hash_t *hash, int totEx){
     rread=malloc(totEx * sizeof(int));
     nrread=malloc(totEx * sizeof(int));
     for(l=0; l<totEx; l++){
-      if(verbose) printf("%d %d\n", unrid[l], unex[l]);
       if(unrid[l]==1) {
 	lread[nleft]=unex[l];
 	nleft++;
@@ -161,33 +156,11 @@ void addPath(int *unex, int *unrid, hash_t *hash, int totEx){
       }
     }
 
-    /*    int m, cnt=0, chk=0, n, skip=0;
-    if((nright>1) && (nleft>1)) {
-      for(m=0; m<nright; m++) {
-	chk=0;
-	for(l=0; l<nleft-1; l++) {
-	  if(rread[m]==lread[l]) chk++;
-	} 
-	if(chk==0) {
-	  nrread[cnt]=rread[m];
-	  cnt++;
-	}
-      }
-      if(cnt==0) {
-	skip=1;
-	if(verbose) {
-	  for(n=0; n<totEx; n++) printf("%d %d %d\n", n, unex[n], unrid[n]);
-	  printf("Error, no right reads left!!!\n") ;
-	}
-      } 
-    }
-    */
-   
+  
     strcpy(pastr, ".");
     sprintf(tmp, "%d", unex[0]);
     strcat(pastr, tmp);
 
-    //    if(skip==0){
     if(totEx>1){
       for(l=1; l<nleft; l++){
 	strcat(pastr, ".");
@@ -195,31 +168,19 @@ void addPath(int *unex, int *unrid, hash_t *hash, int totEx){
 	strcat(pastr, tmp);
       }
       strcat(pastr, "-");
-      /*if(cnt>0){
-	for(l=0; l<cnt; l++){
-	  sprintf(tmp, "%d", nrread[l]);
-	  strcat(pastr, tmp);
-	  strcat(pastr, ".");
-	} 
-	} else{*/
       for(l=0; l<nright; l++){
 	sprintf(tmp, "%d", rread[l]);
 	strcat(pastr, tmp);
 	strcat(pastr, ".");
       } 
     }
-    //}
-    //}
 
-    if(verbose) printf("%s\n", pastr); 
-    
+   
     l=hash_lookup(hash, pastr);
     if(l!=HASH_FAIL) {
         hash_update(hash, pastr, l+1);
-        if(verbose) printf("Found %s in hash: %d\n", pastr, l);
     }
     else {
-        if(verbose) printf("Inserted %s in hash: %d\n", pastr, 1);
         hash_insert(hash, pastr, 1); 
     }
     free(tmp);
@@ -231,8 +192,6 @@ int sort(const void *x, const void *y) {
     int res;
     if((a[2]-b[2])!=0) res = a[2]-b[2];
     else res = a[0]-b[0];
-    //res = (a[0] - b[0]) * (a[2] - b[2]);
-    // printf("%d %d %d %d\n", a[0], b[0], a[2], b[2]);
     return( res );
 }
 
@@ -240,7 +199,6 @@ int sort2(const void *x, const void *y) {
     int *a = *(int**)x, *b= *(int**)y;
     int res;
     res = (a[0] - b[0]) * (a[1] - b[1]);
-    // printf("%d %d\n", a[2], b[2]);
     return( a[2] - b[2] );
 }
 

@@ -1,19 +1,24 @@
 \name{calcDenovo}
 \alias{calcDenovo}
+\alias{relativeExpr}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  %%  ~~function to do ... ~~
   Estimate expression of gene splicing variants de novo. 
 }
 \description{
-  %%  ~~ A concise (1-5 lines) description of what the function does. ~~
-  Estimate expression of gene splicing variants,
-  considering both known variants and variants that have not been previously described.
+  \code{calcDenovo} estimates expression of gene splicing variants,
+  considering both known variants and variants that have not been
+  previously described.
+
+  \code{relativeExpr} computes relative expression estimates from
+  \code{calcDenovo} output via Bayesian model selection or averaging.
 }
 \usage{
 calcDenovo(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprior,
 minpp=0.001, selectBest=FALSE, method="auto", niter, exactMarginal=TRUE,
 verbose=TRUE, mc.cores=1)
+
+relativeExpr(expr, summarize="modelAvg", minProbExpr=0.5, minExpr=0.05)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -58,6 +63,16 @@ verbose=TRUE, mc.cores=1)
   available for your system.
 Warning: using multiple processors substantially increases the memory
 requirements, so set this value carefully.}
+
+\item{expr}{Object of class denovoGenomeExpr, as returned by \code{calcDenovo}.}
+\item{summarize}{Set to \code{"modelAvg"} to average estimates across models
+according to the posterior probability of each model. Set to
+\code{"bestModel"} to report the posterior mode, i.e. the estimate under
+the model with highest posterior probabiliby.}
+\item{minProbExpr}{Variants with marginal posterior probability of being
+expressed below \code{minProbExpr} are not reported.}
+\item{minExpr}{Variants with estimated expression below \code{minExpr}
+are not reported.}
 }
 \details{
   \code{calcDenovo} attempts to consider all possible splicing variant

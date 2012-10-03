@@ -6,9 +6,12 @@
 #define _CPPMEM_TEMPLATE_H
 
 #include <cstddef>
-#define NDEBUG  //disables the assert calls below. Comment this line for debugging double deletion issues
 #include <assert.h>
 //#include <stdio.h> //debug
+
+#if !defined(NDEBUG)
+#define NDEBUG  //disables the assert calls below. Comment this line for debugging double deletion issues
+#endif
 
 // Use zap instead of delete (avoids issues with double deletion)
 template <class T>

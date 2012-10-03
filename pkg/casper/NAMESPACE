@@ -7,7 +7,7 @@ importFrom(GenomicFeatures, transcripts, exonsBy, makeTranscriptDbFromUCSC)
 importFrom(survival,Surv,survfit)
 
 #export regular functions
-export(procBam, procGenome, createDenovoGenome, pathCounts, getDistrs, calcExp, calcDenovo, relativeExpr, buildGene, genPlot, plotExpr, rmShortInserts, posprob, variants, "variants<-", modelPrior, plotPriorAS)
+export(procBam, procGenome, createDenovoGenome, pathCounts, getDistrs, calcExp, calcDenovo, relativeExpr, genPlot, plotExpr, rmShortInserts, posprob, variants, "variants<-", modelPrior, plotPriorAS)
 
 exportClasses(annotatedGenome, pathCounts)
 #export general methods

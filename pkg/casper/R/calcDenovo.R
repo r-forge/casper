@@ -257,10 +257,10 @@ variantMargExpr <- function(x,minProbExpr=0.5, minExpr=0.05) {
   return(ans)
 }
 
-relativeExpr <- function(expr, method='modelAvg', minProbExpr=0.5, minExpr=0.05){
-  if (!(method %in% c("bestModel", "modelAvg"))) stop("method must be one of 'bestModel' or 'modelAvg'")
+relativeExpr <- function(expr, summarize='modelAvg', minProbExpr=0.5, minExpr=0.05){
   if (class(expr)!='denovoGenomeExpr') stop("expr must be of class 'denovoGenomeExpr'")
-  if (method=='bestModel'){
+  if (!(summarize %in% c("bestModel", "modelAvg"))) stop("summarize must be one of 'bestModel' or 'modelAvg'")
+  if (summarize=='bestModel'){
     ans <- lapply(as.list(expr), function(x){
       best <- x@posprob$model[which.max(x@posprob$posprob)]
       exp <- x@expression[x@expression$model==best,]

@@ -76,8 +76,8 @@ modelPrior(genomeDB, maxExons=40, smooth=TRUE, verbose=TRUE)
 David Rossell, Camille Stephan-Otto Attolini
 }
 \examples{
-##data(hg19DB)
-##mprior <- modelPrior(hg19DB, maxExons=40)
+data(hg19DB)
+mprior <- modelPrior(hg19DB, maxExons=10)
 
 ##Prior on number of expressed variants
 ##Genes with 2 exons

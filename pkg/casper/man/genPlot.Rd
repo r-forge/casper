@@ -24,8 +24,6 @@ genPlot(goi, genomeDB, reads, exp)
 }
 }
 \value{
-  \item{gene}{IRangesList object with one IRanges per transcript and
-    its exons}
   \item{exp}{Named integer vector with transcript expression for the
     gene of interest}
 }
@@ -33,7 +31,7 @@ genPlot(goi, genomeDB, reads, exp)
   Camille Stephan-Otto Attolini
 }
 \examples{
-##See examples in procGenome
+##See example in calcExp
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

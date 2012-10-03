@@ -37,8 +37,6 @@ using namespace std;
 #define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
 #endif
 
-static double dsqrarg;
-#define DSQR(a) ((dsqrarg=(a)) == 0.0 ? 0.0 : dsqrarg*dsqrarg)
 
 /**************************************************************/
 /* Functions to compute means & variances                     */

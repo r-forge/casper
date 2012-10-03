@@ -1,4 +1,5 @@
 \name{plot}
+\alias{plot}
 \alias{plot,readDistrs,ANY-method}
 \docType{methods}
 \title{
@@ -22,6 +23,7 @@ plot(x, y, ...)
  \item{y}{Set to \code{"fragLength"} to plot the estimated insert size
    ditribution. Set to \code{"readSt"} to plot a histogram of the
    estimated read start distribution.}
+ \item{...}{Further arguments to be passed on to plot.}
 }
 \section{Methods}{
 \describe{

@@ -9,7 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
+#include <R.h>
+#include <Rinternals.h>
 #include "cstat.h"
 
 static const char interface_c_sccs_id[] = "%W%";
@@ -35,7 +36,7 @@ long Xqanti[32];
 /* Same as calling stop() method in R */
 static void _cstatfatal(void)
 {
-    //Rf_error("internal error occurred in R package 'mombf'");
+    Rf_error("internal error occurred in cstat.cpp");
     /*NOTREACHED*/
 }
 
@@ -45,14 +46,14 @@ static void _cstaterror(const char *proc,
                         const char *act,
                         const char *what)
 {
-    //REprintf("\n ** Error ");
+    REprintf("\n ** Error ");
     if (proc[0]!='\0') /* not empty */
-        //REprintf("in function '%s', ", proc);
+      REprintf("in function '%s', ", proc);
     if (act[0]!='\0') /* not empty */
-        //REprintf("trying to %s ", act);
+      REprintf("trying to %s ", act);
     if (what[0]!='\0') /* not empty */
-        //REprintf("'%s'", what);
-    //REprintf("\n ** (from a function in 'cstat.c').\n");
+        REprintf("'%s'", what);
+    REprintf("\n ** (from a function in 'cstat.c').\n");
     _cstatfatal();
     /*NOTREACHED*/
 }
@@ -882,16 +883,16 @@ void nrerror(char *proc, char *act, char *what)
 
 void errorC(char *module, char *mess, int nr)              
 {
-    //REprintf("\n *** ERROR # %d in %s***\n %s\n", nr, module, mess);
+    REprintf("\n *** ERROR # %d in %s***\n %s\n", nr, module, mess);
     _cstatfatal();
     /*NOTREACHED*/
 }
 
 void err_msg(char *fct, char *txt, int n1, int n2, int n3)
 {
-    //REprintf("\n\n *** Error in %s \n", fct);
-    //REprintf(txt, n1, n2, n3); /* n1,n2 allows to include numbers in txt */
-    //REprintf("\n");
+    REprintf("\n\n *** Error in %s \n", fct);
+    REprintf(txt, n1, n2, n3); /* n1,n2 allows to include numbers in txt */
+    REprintf("\n");
     _cstatfatal();
     /*NOTREACHED*/
 }
@@ -2147,6 +2148,12 @@ void tqli(double d[], double e[], int n, double **z, bool getVecs) {
 }
 
 double pythag(double a, double b) {
+  //Note: DSQR and dsqrarg definition used to be in cstat.h, moved here to avoid compiler warning of dsqrarg being defined but not used
+  #if !defined(DSQR)
+  static double dsqrarg;
+  #define DSQR(a) ((dsqrarg=(a)) == 0.0 ? 0.0 : dsqrarg*dsqrarg)
+  #endif
+
   double absa,absb;
   absa=fabs(a);
   absb=fabs(b);
@@ -2370,7 +2377,7 @@ void rdirichlet(double *w, double *alpha, int *p)
   } 
   w[*p-1] = W; 
   if (W < 0) {
-    printf("RDIRICHLET: negative W generated\n");
+    Rprintf("RDIRICHLET: negative W generated\n");
     /* :TBD: - Should this be considered fatal? */
   }
 } 
@@ -4097,7 +4104,7 @@ double genunf(double low, double high)
 static double genunf;
 
     if (!(low > high)) goto S10;
-    //REprintf("GENUNF: low > high: low=%16.6E, high=%16.6E\n", low, high);
+    REprintf("GENUNF: low > high: low=%16.6E, high=%16.6E\n", low, high);
     _cstatfatal();
     /*NOTREACHED*/
 S10:
@@ -4582,8 +4589,8 @@ static long mltmod,a0,a1,k,p,q,qh,rh;
       machine. On a different machine recompute H
 */
     if(!(a <= 0 || a >= m || s <= 0 || s >= m)) goto S10;
-    //REprintf("MLTMOD: requires (0 < a < m); (0 < s < m): ");
-    //REprintf("a = %12ld, s = %12ld, m = %12ld\n", a, s, m);
+    REprintf("MLTMOD: requires (0 < a < m); (0 < s < m): ");
+    REprintf("a = %12ld, s = %12ld, m = %12ld\n", a, s, m);
     _cstatfatal();
     /*NOTREACHED*/
 S10:
@@ -4698,7 +4705,7 @@ static long curntg = 1;
     if(getset == 0) *g = curntg;
     else  {
         if(*g < 0 || *g > numg) {
-            //REprintf("GSCGN: generator number out of range\n");
+            REprintf("GSCGN: generator number out of range\n");
             _cstatfatal();
             /*NOTREACHED*/
         }
@@ -4826,7 +4833,7 @@ static long qrgnin;
 */
     gsrgs(0L,&qrgnin);
     if (qrgnin) goto S10;
-        //REprintf("INITGN: random number generator not initialized\n");
+        REprintf("INITGN: random number generator not initialized\n");
         _cstatfatal();
         /*NOTREACHED*/
 S10:
@@ -4847,7 +4854,7 @@ S30:
     *(Xlg2+g-1) = mltmod(Xa2w,*(Xlg2+g-1),Xm2);
     goto S50;
 S40:
-    //REprintf("INITGN: isdtyp not in range\n");
+    REprintf("INITGN: isdtyp not in range\n");
     _cstatfatal();
     /*NOTREACHED*/
 S50:
@@ -5152,7 +5159,7 @@ void bspline(double **W, double *x, int *nx, int *degree, double *knots, int *nk
    */
   int i,j;
   if (*nknots<(*degree+2)) {
-    //REprintf("BSPLINE: number of knots must be >= degree+2\n");
+    REprintf("BSPLINE: number of knots must be >= degree+2\n");
     /* :TBD: - Should this be fatal? */ 
   } else {
     for (i=0; i<(*nx); i++) {
@@ -5178,7 +5185,7 @@ void mspline(double **W, double *x, int *nx, int *degree, double *knots, int *nk
   //M-spline basis eval at vector of values x. Normalized to integrate to 1 wrt x
   int i,j;
   if (*nknots<(*degree+2)) {
-    //REprintf("MSPLINE: number of knots must be >= degree+2\n");
+    REprintf("MSPLINE: number of knots must be >= degree+2\n");
     /* :TBD: - Should this be fatal? */ 
   } else {
     for (i=0; i<(*nx); i++) {

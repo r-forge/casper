@@ -274,6 +274,104 @@ The RPKM for transcript $i$ within gene $i$ is computed as
 \end{align}
 
 
+\section{De novo variant discovery}
+\label{sec:denovo}
+
+\texttt{casper} implements a Bayesian model selection strategy to detect novel variants and quantify their expression.
+The basic idea is to first expand the annotated genome by adding new exons (or groups of exons, suggesting a new transcripts) 
+suggested by the data.
+Second, for each gene we consider all the variants that can be formed by including/excluding each exon,
+and report the posterior probability that a given set of variants is expressed.
+Conditional on their being expressed, we also estimate their expression level.
+Denote a set of variants of interest by $\bm{\nu}$ and by $\bm{\pi}$ their relative expression.
+We perform inference on the set of expressed variants using the posterior probability
+$P(\bm{\nu} \mid {\bf y})$ conditional on the observed data ${\bf y}$,
+and estimate their expression from $P(\bm{\pi} \mid \bm{\nu}, {\bf y})$.
+Finally, we use these results to estimate the expression of each variant,
+either by selecting the most probably set of variants or by 
+perform modeling averaging, {\it i.e.} combine the estimated $\bm{\pi}$
+under different sets of variants $\bm{\nu}_1,\bm{\nu}_2,\ldots$ according the their posterior probabilities $P(\bm{\nu}_i \mid {\bf y})$.
+
+We start by
+expanding the annotated genome by detecting new exons and transcripts suggested by the data.
+We then obtain path counts based on the expanded genome.
+
+<<createDenovoGenome>>=
+hg19denovo <- createDenovoGenome(pbam0,DB=hg19DB,readLen=75)
+hg19denovo
+pcnovo <- pathCounts(pbam0,DB=hg19denovo)
+@ 
+
+Second, we must set the prior probability that a set of variants is expressed.
+We recommend setting these probabilities based on the annotated genome,
+so that we assign high prior probability to combinations of variants that
+are consistent with those in the genome.
+For instance, genes with more exons tend to have a larger number of variants,
+but variants missing many exons are typically not expressed.
+
+<<modelPrior>>=
+mprior <- modelPrior(hg19DB)
+mprior
+@ 
+
+We can visualize the prior probabilities with \texttt{plotPriorAS}.
+Setting \texttt{type='nbVariants'} displays the prior probability that
+a gene with $E$ exons has $1,2,\ldots,2^{E}-1$ expressed variants.
+Figure \ref{fig:plotprior1} displays these probabilities for $E=2,\ldots,5$,
+and the corresponding observed proportion in the annotated genome \texttt{hg19DB}.
+
+\footnotesize
+<<plotprior1>>=
+plotPriorAS(mprior, type='nbVariants',exons=2:5)
+@ 
+\normalsize
+
+
+\setkeys{Gin}{width=0.45\textwidth} 
+\begin{figure}
+\begin{center}
+<<label=plotprior1,fig=TRUE,echo=FALSE>>=
+<<plotprior1>>
+@
+\end{center}
+\caption{Prior distribution on the number of variants for genes with 2, 3, 4 and 5 exons}
+\label{fig:plotprior1}
+\end{figure}
+
+We can also display the prior distribution on the number of exons
+contained in an expressed variants by setting \texttt{type='nbExons'}.
+
+\footnotesize
+<<plotprior2>>=
+plotPriorAS(mprior, type='nbExons',exons=2:5)
+@ 
+\normalsize
+
+\setkeys{Gin}{width=0.45\textwidth} 
+\begin{figure}
+\begin{center}
+<<label=plotprior2,fig=TRUE,echo=FALSE>>=
+<<plotprior2>>
+@
+\end{center}
+\caption{Prior distribution on the number of exons in a variant for genes with 2, 3, 4 and 5 exons}
+\label{fig:plotprior2}
+\end{figure}
+
+The function \texttt{calcDenovo} computes posterior probabilities and estimated expression for each set of variants.
+For a gene with $E$ exons, there's $2^E-1$ possible variants and hence $2^{2^E-1}-1$ possible sets of expressed variants.
+It is computationally unfeasible to enumerate such a super-exponential number of models.
+By default, \texttt{calcDenovo} performs this exhaustive enumeration only for genes with up to 5 exons.
+For genes with $\geq 6$ exons its uses an MCMC scheme combined with systematic search strategies
+that attempts to explore the sets of variants wit highest posterior probability.
+
+
+<<calcDenovo>>=
+fit1 <- calcDenovo(distrs=distrs, genomeDB=hg19denovo, pc=pcnovo, readLength=75, geneid="4")
+fit1
+fit1[['4']]
+@ 
+
 \bibliographystyle{plainnat}
 \bibliography{references} 
 

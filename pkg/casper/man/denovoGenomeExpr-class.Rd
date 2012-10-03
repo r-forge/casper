@@ -4,6 +4,7 @@
 \alias{denovoGeneExpr-class}
 \alias{show,denovoGeneExpr-method}
 \alias{[,denovoGeneExpr,ANY,ANY,ANY-method}
+\alias{[[,denovoGeneExpr,ANY,ANY,ANY-method}
 \alias{posprob}
 \alias{variants}
 \alias{variants<-}
@@ -44,6 +45,7 @@
     \item{show}{\code{signature(object = "denovoGeneExpr")}: Displays
       general information about the object. }
     \item{"["}{Selects a subset of genes}
+    \item{"[["}{Selects a single gene}
     \item{posprob}{Accesses the posterior probabilities of each model
       (slot posprob)}
     \item{variants}{Accesses the variants and their respective exons
