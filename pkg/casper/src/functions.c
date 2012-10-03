@@ -16,6 +16,7 @@ int *procCigar(char *cigar, int *cigs){
 		pch=strtok(NULL, tab);
 		cigs[0]++;
 	}
+	free(cigar);
 	return(cigs);
 }
 
