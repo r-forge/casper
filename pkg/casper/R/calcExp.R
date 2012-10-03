@@ -119,7 +119,7 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
 
     #Return absolute expression levels
   if (!relativeExpr) {
-    nreads <- sapply(pc[unique(gene)],sum)
+    nreads <- sapply(pc[unique(as.character(ans@featureData$gene))],sum)
     exprs(ans) <- exprs(ans)*nreads[as.character(ans@featureData$gene)]
     exprs(ans) <- t(t(exprs(ans))/colSums(exprs(ans), na.rm=T))
   }
