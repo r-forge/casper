@@ -69,7 +69,6 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
   exs1 <- exons$id[shits[sel2]]
   len <- length(unique(rea1))
   if(length(unique(exs1))>1)  ans <- .Call("joinExons", exs1, rea1, len)
-  browser()
   junx <- ans[[1]][ans[[2]]>=minLinks]
   junx <- strsplit(junx, split=".", fixed=T)
   names(junx) <- 1:length(junx)
@@ -252,7 +251,7 @@ createDenovoGenome <- function(reads, DB, readLen, stranded=FALSE,  minLinks=2, 
   }
   
   if(!is.null(somex)){
-    reads$id <- cumsum(reads$id == c(reads$id[-1], reads$id[1]))
+    #reads$id <- cumsum(reads$id == c(reads$id[-1], reads$id[1]))
     cat("Done...\nCreating denovo genome for positive strand\n")
     DBplus <- genomeBystrand(DB, "+")
     if(reads$stranded) denovoplus <- assignExons2Gene(newexplus, DBplus, reads$plus, maxDist=maxDist, stranded=stranded, minLinks=minLinks, maxLinkDist=maxLinkDist, mc.cores=mc.cores)
