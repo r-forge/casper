@@ -66,9 +66,13 @@ procBam<-function(bam, stranded=FALSE, seed=1){
     data[[length(data)+1]] <- rep(strnd, length(data[[1]]))
     cat("done.\n")
     ans<-buildRD(data)
+    id <- ans$id
+    idnum <- rep(0,length(id))
+    idnum[which(id[-length(id)] != id[-1])+1] <- 1
+    idnum <- cumsum(idnum)
+    ans$id <- idnum
     ans
   }
-  
   if(stranded) {
     minus <- bam$tag$XS=='-'
     if(sum(minus)>0){
