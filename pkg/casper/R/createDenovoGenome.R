@@ -2,14 +2,14 @@ require(methods)
 
 findNewExons <- function(reads, DB, minReads=1, readLen=NA, stranded=FALSE, pvalFilter=0.05){
   if(is.na(readLen)) stop("No readLen specified")
-  if(stranded){
-  } else {
+#  if(stranded){
+#  } else {
     exons <- DB@exonsNI
     #cat("\tCalculating coverage\n")
     cov<-coverage(reads)
     islands<-slice(cov, lower=1)
     sel<-islands %in% exons
-    if(all(sel)) {
+    if(all(unlist(sel))) {
       cat("No new islands found\n")
       return(NULL)
     }
@@ -24,7 +24,7 @@ findNewExons <- function(reads, DB, minReads=1, readLen=NA, stranded=FALSE, pval
     pvals<-pbinom(newisl$counts - 1, n, p, lower.tail=FALSE )
     newisl[['pvalue']]<-pvals
     newisl <- newisl[newisl[['pvalue']]<=pvalFilter,]
-  }
+#  }
   id<-max(exons$id)+1
   id<-id:(id+nrow(newisl)-1)
   newisl$id<-id
@@ -62,13 +62,12 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
 #Select read ids in these exons
   rea <- reads$id[qhits]
   rea <- rea[sel]
-
   sel1 <- (1:nrow(reads))[reads$id %in% rea]
   sel2 <- qhits %in% sel1
   rea1 <- reads$id[qhits[sel2]]
   exs1 <- exons$id[shits[sel2]]
   len <- length(unique(rea1))
-  if(length(unique(exs1))>1)  ans <- .Call("joinExons", exs1, rea1, len)
+  if(length(unique(exs1))>1)  ans <- .Call("joinExons", exs1, as.character(rea1), len)
   junx <- ans[[1]][ans[[2]]>=minLinks]
   junx <- strsplit(junx, split=".", fixed=T)
   names(junx) <- 1:length(junx)
@@ -113,8 +112,7 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
 
 #Link islands by distance
 
-  if(maxDist>0){
-
+  if(maxDist<0){
     cat("\tJoining islands by distance\n")
     old <- exons[!(exons$id %in% newex),]
     new <- exons[exons$id %in% newex,]
@@ -241,9 +239,11 @@ createDenovoGenome <- function(reads, DB, readLen, stranded=FALSE,  minLinks=2, 
   if (missing(readLen)) stop('readLen must be specified')
   cat("Finding new exons\n")
   somex <- NULL
+  DBplus <- genomeBystrand(DB, "+")
+  DBminus <- genomeBystrand(DB, "-")
   if(reads$stranded){
-    newexplus <- findNewExons(reads$plus, DB, readLen=readLen, pvalFilter=0.05)
-    newexminus <- findNewExons(reads$minus, DB, readLen=readLen, pvalFilter=0.05)
+    newexplus <- findNewExons(reads$plus, DBplus, readLen=readLen, pvalFilter=0.05)
+    newexminus <- findNewExons(reads$minus, DBminus, readLen=readLen, pvalFilter=0.05)
     if(!is.null(newexplus) | !is.null(newexminus)) somex <- 1
   } else {
     newex <- findNewExons(reads$pbam, DB, readLen=readLen, pvalFilter=0.05)
@@ -251,14 +251,11 @@ createDenovoGenome <- function(reads, DB, readLen, stranded=FALSE,  minLinks=2, 
   }
   
   if(!is.null(somex)){
-    #reads$id <- cumsum(reads$id == c(reads$id[-1], reads$id[1]))
     cat("Done...\nCreating denovo genome for positive strand\n")
-    DBplus <- genomeBystrand(DB, "+")
     if(reads$stranded) denovoplus <- assignExons2Gene(newexplus, DBplus, reads$plus, maxDist=maxDist, stranded=stranded, minLinks=minLinks, maxLinkDist=maxLinkDist, mc.cores=mc.cores)
     else denovoplus <- assignExons2Gene(newex, DBplus, reads$pbam, maxDist=maxDist, stranded=stranded, minLinks=minLinks, maxLinkDist=maxLinkDist, mc.cores=mc.cores)
     cat("Done...\nCreating denovo genome for negative strand\n")
-    DBminus <- genomeBystrand(DB, "-")
-    if(reads$stranded) denovominus <- assignExons2Gene(newexminus, DBminus, reads$plus, maxDist=maxDist, stranded=stranded, minLinks=minLinks, maxLinkDist=maxLinkDist, mc.cores=mc.cores)
+    if(reads$stranded) denovominus <- assignExons2Gene(newexminus, DBminus, reads$minus, maxDist=maxDist, stranded=stranded, minLinks=minLinks, maxLinkDist=maxLinkDist, mc.cores=mc.cores)
     else denovominus <- assignExons2Gene(newex, DBminus, reads$pbam, maxDist=maxDist, stranded=stranded, minLinks=minLinks, maxLinkDist=maxLinkDist, mc.cores=mc.cores)
     cat("Done...\nMerging denovo genome\n")
     denovo <- mergeStrDenovo(denovoplus, denovominus)
