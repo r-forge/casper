@@ -42,11 +42,13 @@ setMethod("plotPriorAS",signature(object='modelPriorAS'), function(object,type='
   if (type=='nbVariants') {
     isel <- names(object@nvarPrior$obs)[names(object@nvarPrior$obs) %in% as.character(exons)]
     isel <- isel[isel != '1']
+    if (length(isel)==0) stop('Not enough genes were available to estimate the Negative Binomial parameters')
     mfrow <- ceiling(sqrt(length(isel))); mfcol <- floor(sqrt(length(isel)))
     if (mfrow*mfcol < length(isel)) mfcol <- mfcol+1
     par(mfrow=c(mfrow,mfcol))
     for (i in isel) {
       x2plot <- rbind(object@nvarPrior$obs[[i]],object@nvarPrior$pred[[i]])
+      if (is.null(x2plot)) stop('Not enough genes were available to estimate the Negative Binomial parameters')
       x2plot <- x2plot/rowSums(x2plot)
       rownames(x2plot) <- c('Observed','Predicted')
       if (missing(xlab)) xlab <- 'Number of variants'
@@ -55,6 +57,7 @@ setMethod("plotPriorAS",signature(object='modelPriorAS'), function(object,type='
   } else if (type=='nbExons') {
     isel <- names(object@nexonPrior$obs)[names(object@nexonPrior$obs) %in% as.character(exons)]
     isel <- isel[isel != '1']
+    if (length(isel)==0) stop('Not enough genes were available to estimate the Beta-Binomial parameters')
     mfrow <- ceiling(sqrt(length(isel))); mfcol <- floor(sqrt(length(isel)))
     if (mfrow*mfcol < length(isel)) mfcol <- mfcol+1
     par(mfrow=c(mfrow,mfcol))
@@ -76,7 +79,7 @@ modelPrior <- function(genomeDB, maxExons=40, smooth=TRUE, verbose=TRUE) {
   if(genomeDB@denovo) stop("genomeDB must be a known (not denovo) genome")
   
   if (verbose) cat("Counting number of annotated transcripts per gene... ")
-  # - Compute table txsPerGene, which counts the nb of annotated transcripts per gene with 1,2... exons.
+  # - Compute table txsvPerGene, which counts the nb of annotated transcripts per gene with 1,2... exons.
   #   rows correspond to nb of exons in the gene, columns to nb of annotated transcripts
 
   aliases <- genomeDB@aliases
@@ -125,9 +128,8 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
   # - obs: list. Element i is the empirical distribution of nb variants for genes with i exons
   # - pred: list with predicted distributions
 
-  #require(VGAM)
-
   sel <- as.numeric(rownames(tab))>maxExons
+  if (all(sel)) stop("No genes with exons <= maxExons were found")
   extrapolate <- tab[sel,]
   tab <- tab[!sel,]
 
@@ -140,7 +142,7 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
 
   for (i in nrow(tab):2) {
     y <- tab[n[i],tab[n[i],]>0]
-    names(y) <- rownames(tab)[tab[n[i],]>0]
+    names(y) <- colnames(tab)[tab[n[i],]>0]
     ydf <- rep(as.numeric(names(y))-1,y) #start at 0
     ydf <- data.frame(succ=ydf,fail=as.numeric(n[i])-ydf-1)
     warn <- getOption("warn")
@@ -150,8 +152,13 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
     options(warn=warn)
     
     if (class(fit)=='try-error' | as.numeric(n[i])<=3) {
-      bbpar[n[i],1] <- max(0.1, sum((as.numeric(names(y))-1) * y / sum(y)) * sum(bbpar[n[i+1],]) / (as.numeric(n[i])-1))
-      bbpar[n[i],2] <- max(0.1, sum(bbpar[n[i+1],]) - bbpar[n[i],1])
+      if (i<nrow(tab)) {
+        bbpar[n[i],1] <- max(0.1, sum((as.numeric(names(y))-1) * y / sum(y)) * sum(bbpar[n[i+1],]) / (as.numeric(n[i])-1))
+        bbpar[n[i],2] <- max(0.1, sum(bbpar[n[i+1],]) - bbpar[n[i],1])
+      } else {
+        bbpar[n[i],1] <- max(0.1, sum((as.numeric(names(y))-1) * y / sum(y)) / (as.numeric(n[i])-1))
+        bbpar[n[i],2] <- max(0.1, 1 - bbpar[n[i],1])
+      }
     } else {
       bbpar[n[i],] <- Coef(fit)
     }
@@ -196,7 +203,8 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
   bbparFull <- matrix(NA,nrow=maxExons+1,ncol=2); colnames(bbparFull) <- colnames(bbpar)
   rownames(bbparFull) <- 1:nrow(bbparFull)
   notmis <- rownames(bbparFull) %in% rownames(bbpar)
-  for (i in 1:nrow(bbparFull)) {
+  bbparFull[1,] <- c(1,0)
+  for (i in 2:nrow(bbparFull)) {
     if (notmis[i]) { bbparFull[i,] <- bbpar[as.character(i),] } else { bbparFull[i,] <- bbparFull[i-1,] }
   }
 

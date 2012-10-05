@@ -317,12 +317,13 @@ mprior
 We can visualize the prior probabilities with \texttt{plotPriorAS}.
 Setting \texttt{type='nbVariants'} displays the prior probability that
 a gene with $E$ exons has $1,2,\ldots,2^{E}-1$ expressed variants.
-Figure \ref{fig:plotprior1} displays these probabilities for $E=2,\ldots,5$,
-and the corresponding observed proportion in the annotated genome \texttt{hg19DB}.
+Figure \ref{fig:plotprior1} displays these probabilities for $E=9$
+(there are too few genes in \texttt{hg19DB} to obtain precise estimates for other $E$ values).
+The figure also shows the observed proportion in the annotated genome \texttt{hg19DB}.
 
 \footnotesize
 <<plotprior1>>=
-plotPriorAS(mprior, type='nbVariants',exons=2:5)
+plotPriorAS(mprior, type='nbVariants',exons=9)
 @ 
 \normalsize
 
@@ -343,7 +344,7 @@ contained in an expressed variants by setting \texttt{type='nbExons'}.
 
 \footnotesize
 <<plotprior2>>=
-plotPriorAS(mprior, type='nbExons',exons=2:5)
+plotPriorAS(mprior, type='nbExons',exons=9)
 @ 
 \normalsize
 
