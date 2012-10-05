@@ -169,16 +169,18 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
     #require(mgcv)
     m <- bbpar[2:nrow(tab),1]/rowSums(bbpar)[2:nrow(tab)]
     m <- data.frame(logitm= log(m/(1-m)), E= as.numeric(rownames(bbpar)[2:nrow(tab)]))
-    fit <- gam(logitm ~ s(E, sp= -1), data=m)
-    msmooth <- 1/(1+exp(-predict(fit)))
-    b <- data.frame(b=bbpar[2:nrow(tab),2], E= as.numeric(rownames(bbpar)[2:nrow(tab)]))
-    fit <- gam(b ~ s(E, sp= -1), data=b, family=gaussian(link="log"))
-    bsmooth <- exp(predict(fit))
-    asmooth <- bsmooth*msmooth/(1-msmooth)
-     
-    sel <- as.character(m$E[m$E>=10])
-    bbpar[sel,1] <- asmooth[sel]
-    bbpar[sel,2] <- bsmooth[sel]
+    fit <- try(gam(logitm ~ s(E, sp= -1), data=m), silent=TRUE)
+    if (class(fit)!="try-error") {
+      msmooth <- 1/(1+exp(-predict(fit)))
+      b <- data.frame(b=bbpar[2:nrow(tab),2], E= as.numeric(rownames(bbpar)[2:nrow(tab)]))
+      fit <- gam(b ~ s(E, sp= -1), data=b, family=gaussian(link="log"))
+      bsmooth <- exp(predict(fit))
+      asmooth <- bsmooth*msmooth/(1-msmooth)
+       
+      sel <- as.character(m$E[m$E>=10])
+      bbpar[sel,1] <- asmooth[sel]
+      bbpar[sel,2] <- bsmooth[sel]
+    }
   }
 
   bbpar[(nrow(tab)+1):nrow(bbpar),] <- rep(bbpar[nrow(tab),],each=nrow(bbpar)-nrow(tab))
