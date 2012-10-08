@@ -4,6 +4,7 @@
 \alias{denovoGeneExpr-class}
 \alias{show,denovoGeneExpr-method}
 \alias{[,denovoGeneExpr,ANY,ANY,ANY-method}
+\alias{[[,denovoGeneExpr,ANY,ANY-method}
 \alias{[[,denovoGeneExpr,ANY,ANY,ANY-method}
 \alias{posprob}
 \alias{variants}
