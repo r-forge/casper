@@ -187,7 +187,7 @@ assignExons2Gene <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLink
   } else {
     if(unique(islandStrand[!is.na(islandStrand)])=='+') {
       islands <- lapply(names(islands), function(x) {ord <- order(islands[[x]]$start); y <- IRanges(islands[[x]]$start[ord], islands[[x]]$end[ord]); names(y) <- islands[[x]]$id[ord]; y})
-    } else islands <- lapply(names(islands), function(x) {ord <- order(islands[[x]]$start, decreasing=T); y <- IRanges(islands[[x]]$start[ord], islands[[x]]$end[ord]); names(y) <- islands[[x]]$id[ord]; y}, mc.cores=mc.cores)
+    } else islands <- lapply(names(islands), function(x) {ord <- order(islands[[x]]$start, decreasing=T); y <- IRanges(islands[[x]]$start[ord], islands[[x]]$end[ord]); names(y) <- islands[[x]]$id[ord]; y})
   }
 
   ans <- new("annotatedGenome", islands=islands, transcripts=transcripts, exon2island=exon2island, exonsNI=exons, islandStrand=islandStrand, aliases=DB@aliases, genomeVersion=DB@genomeVersion, dateCreated=Sys.Date(), denovo=TRUE)

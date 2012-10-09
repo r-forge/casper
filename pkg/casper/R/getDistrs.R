@@ -33,15 +33,16 @@ setMethod("plot", signature(x="readDistrs"), function(x, y, ...) {
 
 
 startDist <- function(st,fragLength,txLength) {
-                                        # Estimate relative start distribution under leftÂ­truncation (st < 1 Â­ fragLength/txLength)
-                                        # Â­ st: relative start (i.e. start/txLength)
-                                        # Â­ fragLength: fragment length
-                                        # Â­ txLength: transcript length
+                                        # Estimate relative start distribution under left­truncation (st < 1 ­ fragLength/txLength)
+                                        # ­ st: relative start (i.e. start/txLength)
+                                        # ­ fragLength: fragment length
+                                        # ­ txLength: transcript length
                                         # Output: cumulative probability function (actually, a linear interpolation)
   trunc <- 1-fragLength/txLength
   sel <- trunc>(st+1e-10)
   trunc <- 1-trunc[sel]
   st <- 1-st[sel]
+
   fit <- summary(survfit(Surv(time=trunc,time2=st,event=rep( TRUE,length(st))) ~ 1))
   s <- 1-fit$time
   pcum <- fit$surv
@@ -75,9 +76,17 @@ getDistrs<-function(DB, bam, nreads=4*10^6){
 
   
   if (!all(c('qname','rname','qwidth','pos','mpos') %in% names(bam))) stop('bam must contain elements qname, rname, qwidth, pos, mpos')
+#  tab <- table(bam$qname)
+#  sel <- bam$qname %in% names(tab[tab==2])
+#  bam <- bam[!(names(bam) %in% 'tag')]
+#  bam <- lapply(bam, '[', sel)
+  
   d <- bam$mpos - bam$pos
-  sel <- d<0; n <- bam$qname[sel]; sp <- bam$rname[sel]; en <- bam$pos[sel]+bam$qwidth[sel]-1
-  sel <- d>0; st <- bam$pos[sel]; names(st) <- bam$qname[sel]; st <- st[n]
+  sel <- d<0; n <- bam$qname[sel]; sp <- bam$rname[sel]; names(sp) <- n; en <- bam$pos[sel]+bam$qwidth[sel]-1; names(en) <- n
+  sel <- d>0; st <- bam$pos[sel]; names(st) <- bam$qname[sel];
+  sel <- match(n, names(st))
+  st <- st[sel[!is.na(sel)]]
+  en <- en[names(st)]; sp <- sp[names(st)]
   sel <- st<en; st <- st[sel]; en <- en[sel]; sp <- sp[sel]
 
   if(!any(unique(sp) %in% names(exonsRD))) {
@@ -120,7 +129,9 @@ getDistrs<-function(DB, bam, nreads=4*10^6){
   oneExons$txlength <- unlist(tapply((oneExons$end - oneExons$start + 1),INDEX=txid,function(z) rep(sum(z),length(z))))
 
   oneExons <- RangedData(oneExons)
-  over <- findOverlaps(frags, oneExons)#, type="within")
+  frags <- frags[width(frags)<max(width(oneExons)),]
+  over <- findOverlaps(frags, oneExons, type="within")
+
   exstnogap <- oneExons$exstnogap[subjectHits(over)]
   txlength <- oneExons$txlength[subjectHits(over)]
   exst <- start(oneExons)[subjectHits(over)]
@@ -133,9 +144,10 @@ getDistrs<-function(DB, bam, nreads=4*10^6){
   stDis <- double(length(readst))
   sel <- str=='+';  stDis[sel] <- (exstnogap[sel]+readst[sel]-exst[sel])/txlength[sel]
   sel <- str=='-'; stDis[sel] <- (exstnogap[sel]+exen[sel]-readen[sel])/txlength[sel]
-  stDis <- startDist(stDis[stDis>=0], frlen[stDis>=0], txlength[stDis>=0])
+
+  stDis <- startDist(stDis, frlen, txlength)
 
   ans <- list(lenDis=ld, stDis=stDis)
-  new("readDistrs",lenDis=ans$lenDis,stDis=ans$stDis)
+  ll <- new("readDistrs",lenDis=ans$lenDis,stDis=ans$stDis)
 }
 

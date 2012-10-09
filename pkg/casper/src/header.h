@@ -34,3 +34,19 @@ typedef struct path_t {
 } path_t;
 
 int verbose;
+typedef struct var_t {
+  int nex;
+  double exp;
+  int len;
+  int *exst;
+  int *exen;
+  int *exid;
+} var_t;
+
+typedef struct gene_t {
+  int nvar;
+  double exp;
+  var_t *vars;
+  char *chr;
+  int strand;
+} gene_t;

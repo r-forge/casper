@@ -89,12 +89,12 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   #Format input
   if (verbose) cat("Formatting input...\n")
   sseq <- seq(0,1,.001)
-  startcdf <- as.double(distrs$stDis(sseq))
+  startcdf <- as.double(distrs@stDis(sseq))
 
-  lenvals <- as.integer(names(distrs$lenDis))
+  lenvals <- as.integer(names(distrs@lenDis))
   lenvals <- as.integer(seq(min(lenvals),max(lenvals),1))
   lendis <- rep(0,length(lenvals)); names(lendis) <- as.character(lenvals)
-  lendis[names(distrs$lenDis)] <- as.double(distrs$lenDis/sum(distrs$lenDis))
+  lendis[names(distrs@lenDis)] <- as.double(distrs@lenDis/sum(distrs@lenDis))
 
   readLength <- as.integer(readLength)
   priorq <- as.double(priorq)
@@ -109,7 +109,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   if (missing(geneid)) geneid <- names(genomeDB@islands)[sapply(genomeDB@islands,length)>1]
 
   if (!all(geneid %in% names(genomeDB@islands))) stop('geneid not found in genomeDB@islands')
-  if (!all(geneid %in% names(pc@counts))) stop('geneid not found in pc')
+  if (!all(geneid %in% unlist(lapply(pc@counts, names)))) stop('geneid not found in pc')
   if (!all(geneid %in% names(genomeDB@transcripts))) stop('geneid not found in genomeDB@transcripts')
   
   exons <- lapply(genomeDB@islands[geneid],function(z) as.integer(names(z)))
@@ -127,7 +127,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
     geneid <- as.integer(z)
     transcripts <- genomeDB@transcripts[z]
     strand <- as.list(as.integer(ifelse(strand[z]=='+', 1,-1)))
-    ans <- calcDenovoMultiple(exons=exons[z],exonwidth=exonwidth[z],transcripts=transcripts,geneid=as.list(geneid),pc=pc@counts[z],startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,modelUnifPrior=modelUnifPrior,nvarPrior=nvarPrior,nexonPrior=nexonPrior,priorq=priorq,minpp=minpp,selectBest=selectBest,method=method,niter=niter[z],exactMarginal=exactMarginal,verbose=verbose, strand=strand)
+    ans <- calcDenovoMultiple(exons=exons[z],exonwidth=exonwidth[z],transcripts=transcripts,geneid=as.list(geneid),pc=pc@counts[[1]][z],startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,modelUnifPrior=modelUnifPrior,nvarPrior=nvarPrior,nexonPrior=nexonPrior,priorq=priorq,minpp=minpp,selectBest=selectBest,method=method,niter=niter[z],exactMarginal=exactMarginal,verbose=verbose, strand=strand)
     mapply(function(z1,z2) formatDenovoOut(z1,z2), ans, genomeDB@islands[z], SIMPLIFY=FALSE)
   }
 
@@ -149,7 +149,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   }
     
   runCalc <- function(geneid) {
-    sel <- !sapply(pc@counts[geneid], is.null)
+    sel <- !sapply(pc@counts[[1]][geneid], is.null)
     all <- geneid
     geneid <- geneid[sel]
     
@@ -176,13 +176,13 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
     res
   }
 
-
   #Initialize transcripts for new islands with known orientation
   sel <- names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null) & !is.na(genomeDB@islandStrand)]
   if (length(sel)>0) genomeDB@transcripts[sel] <- lapply(genomeDB@exons[sel],function(z) list(as.numeric(names(z))))
 
   geneidUnknown <- geneid[geneid %in% names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null)]]
   if (length(geneidUnknown)>0) { geneidini <- geneid; geneid <- geneid[!(geneid %in% geneidUnknown)] }
+
 
   #Run
   if (verbose==1) cat("Performing model search (this may take a while)")

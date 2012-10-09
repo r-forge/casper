@@ -139,7 +139,6 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
   rownames(bbpar) <- names(obs) <- names(pred) <- c(rownames(tab),rownames(extrapolate))
   bbpar[1,] <- c(0,0)
   n <- rownames(tab)
-
   for (i in nrow(tab):2) {
     y <- tab[n[i],tab[n[i],]>0]
     names(y) <- colnames(tab)[tab[n[i],]>0]
