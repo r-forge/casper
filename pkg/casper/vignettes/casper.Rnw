@@ -368,7 +368,7 @@ that attempts to explore the sets of variants wit highest posterior probability.
 
 
 <<calcDenovo>>=
-fit1 <- calcDenovo(distrs=distrs, genomeDB=hg19denovo, pc=pcnovo, readLength=75, geneid="4")
+fit1 <- calcDenovo(distrs=distrs, genomeDB=hg19denovo, pc=pcnovo, readLength=75, islandid="4")
 fit1
 fit1[['4']]
 @ 

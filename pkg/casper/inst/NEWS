@@ -1,4 +1,5 @@
 Changes in version 0.99.0
+- Added getIsland and transcript methods for annotatedGenome
 - Adjusted createDenovoGenome to deal with stranded information.
 - Documented functions and adjusted to Bioconductor standars
 

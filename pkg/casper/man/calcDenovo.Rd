@@ -14,7 +14,7 @@
   \code{calcDenovo} output via Bayesian model selection or averaging.
 }
 \usage{
-calcDenovo(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprior,
+calcDenovo(distrs, genomeDB, pc, readLength, islandid, priorq=3, mprior,
 minpp=0.001, selectBest=FALSE, method="auto", niter, exactMarginal=TRUE,
 verbose=TRUE, mc.cores=1)
 
@@ -28,8 +28,8 @@ relativeExpr(expr, summarize="modelAvg", minProbExpr=0.5, minExpr=0.05)
 \item{pc}{Named vector of exon path counts as returned by \code{pathCounts}}
 \item{readLength}{ Read length in bp, e.g. in a paired-end experiment where
   75bp are sequenced on each end one would set \code{readLength=75}.}
-\item{geneid}{Name of the genes to be analyzed. If not specified, all
-  genes are analyzed.}
+\item{islandid}{Name of the gene island to be analyzed. If not specified, all
+  gene islands are analyzed.}
 \item{priorq}{Parameter of the prior distribution on the proportion of reads coming from each variant. The prior is Dirichlet with prior sample size for each variant equal to priorq.
             We recommend \code{priorq=3} as this defines a non-local
 	    prior that penalizes including variants with low estimated

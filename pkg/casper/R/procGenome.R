@@ -9,7 +9,7 @@ valid_annotatedGenome <- function(object) {
   #if (any(!sapply(object@transcripts,is.list))) msg <- "All elements in transcripts must be of class list"
   if (!(all(c('space','start','end','width','id','island') %in% names(object@exon2island)))) msg <- "Incorrect column names in 'exon2island'"
   if(!('id' %in% colnames(object@exonsNI))) msg <- "'exonsNI' must have an 'id' column"
-  if(!(all(c('tx_id','tx_name','gene_id','exid','tx') %in% names(object@aliases)))) msg <- "Incorrect column names in 'aliases'"
+  if(!(all(c('tx_id','tx_name','gene_id','exid','tx','island_id') %in% names(object@aliases)))) msg <- "Incorrect column names in 'aliases'"
   if (is.null(msg)) { TRUE } else { msg }
 }
 
@@ -22,6 +22,34 @@ setMethod("show", signature(object="annotatedGenome"), function(object) {
   cat("Date created:", as.character(object@dateCreated),"\n")
 }
           )
+
+
+## METHODS
+
+setGeneric("getIsland", function(entrezid, txid, genomeDB) standardGeneric("getIsland"))
+setMethod("getIsland",signature(entrezid='character',txid='missing',genomeDB='annotatedGenome'),function(entrezid, txid, genomeDB) {
+  as.character(genomeDB@aliases[genomeDB@aliases$gene_id==entrezid,'island_id'][1])
+}
+)
+setMethod("getIsland",signature(entrezid='missing',txid='character',genomeDB='annotatedGenome'),function(entrezid, txid, genomeDB) {
+  as.character(aliases[txid,'island_id'])
+}
+)
+
+setGeneric("transcripts", function(entrezid, islandid, genomeDB) standardGeneric("transcripts"))
+setMethod("transcripts", signature(entrezid='missing',islandid='character',genomeDB='annotatedGenome'), function(entrezid, islandid, genomeDB) {
+  IRangesList(lapply(genomeDB@transcripts[[islandid]],function(z) genomeDB@islands[[islandid]][as.character(z)]))
+}
+)
+setMethod("transcripts", signature(entrezid='character',islandid='missing',genomeDB='annotatedGenome'), function(entrezid, islandid, genomeDB) {
+  txids <- rownames(genomeDB@aliases)[genomeDB@aliases$gene_id==entrezid]
+  islandid <- getIsland(entrezid=entrezid,genomeDB=genomeDB)
+  IRangesList(lapply(genomeDB@transcripts[[islandid]],function(z) genomeDB@islands[[islandid]][as.character(z)]))[txids]
+}
+)
+
+
+### FUNCTIONS
 
 makeIslands <- function(allexs){
     exons <- allexs
@@ -210,7 +238,11 @@ procGenome<-function(genome, mc.cores=1){
 
   sel <- islandStrand=='-'
   transcripts[sel] <- lapply(transcripts[sel], function(x) lapply(x,rev))
-  
+
+  id2tx <- data.frame(island_id=rep(names(transcripts),sapply(transcripts,length)) , txname=unlist(sapply(transcripts,names)))
+  rownames(id2tx) <- id2tx$txname
+  aliases$island_id <- id2tx[rownames(aliases),'island_id']
+
   ans <- new("annotatedGenome", islands=islands, transcripts=transcripts, exon2island=exon2island, aliases=aliases, exonsNI=exonsNI, islandStrand=islandStrand, dateCreated=Sys.Date(), genomeVersion=genome, denovo=FALSE)
   ans
  } 

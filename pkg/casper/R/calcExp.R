@@ -1,4 +1,4 @@
-procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, priorq=2, citype='none', niter=10^3, burnin=100, mc.cores=1, verbose=FALSE) {
+procExp <- function(distrs, genomeDB, pc, readLength, islandid, relativeExpr=TRUE, priorq=2, citype='none', niter=10^3, burnin=100, mc.cores=1, verbose=FALSE) {
   #Format input
   startcdf <- distrs@stDis(seq(0,1,.001))
   lendis <- as.double(distrs@lenDis/sum(distrs@lenDis))
@@ -11,27 +11,27 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
   burnin <- as.integer(burnin)
   verbose <- as.integer(verbose)
   if ((niter<=burnin) & citype==2) stop("Too many burnin iterations specified. Decrease burnin or increase niter")
-  if (missing(geneid)) geneid <- names(genomeDB@islands)[sapply(genomeDB@islands,length)>1]
+  if (missing(islandid)) islandid <- names(genomeDB@islands)[sapply(genomeDB@islands,length)>1]
   
   exons <- lapply(genomeDB@islands,function(z) as.integer(names(z)))
   exonwidth <- lapply(genomeDB@islands,width)
   strand <- genomeDB@islandStrand
 
-  if (!all(geneid %in% names(exons))) stop('geneid not found in genomeDB@islands')
-  if (!all(geneid %in% names(pc))) stop('geneid not found in pc')
-  if (!all(geneid %in% names(genomeDB@transcripts))) stop('geneid not found in genomeDB@transcripts')
-  if (!all(geneid %in% names(genomeDB@islandStrand))) stop('geneid not found in genomeDB@islandStrand')
+  if (!all(islandid %in% names(exons))) stop('islandid not found in genomeDB@islands')
+  if (!all(islandid %in% names(pc))) stop('islandid not found in pc')
+  if (!all(islandid %in% names(genomeDB@transcripts))) stop('islandid not found in genomeDB@transcripts')
+  if (!all(islandid %in% names(genomeDB@islandStrand))) stop('islandid not found in genomeDB@islandStrand')
   
       #Define basic function
   
   f <- function(z) {
-    geneid <- as.integer(z)
+    islandid <- as.integer(z)
     exons <- exons[z]
     exonwidth <- exonwidth[z]
     transcripts <- genomeDB@transcripts[z]
     strand <- as.list(as.integer(ifelse(strand[z]=='+', 1, -1)))
     pc <- pc[z]
-    ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,geneid=as.list(geneid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq, strand=strand, citype=citype, niter=niter, burnin=burnin, verbose=verbose)
+    ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,islandid=as.list(islandid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq, strand=strand, citype=citype, niter=niter, burnin=burnin, verbose=verbose)
     if (citype==0) {
       ans <- lapply(ans, function(z) { res=vector("list",1); res[[1]]= z[[1]]; names(res[[1]])= z[[2]]; res })
     } else if (citype==1) {
@@ -43,21 +43,21 @@ procExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE,
   }
   
     #Run
-    sel <- !sapply(pc[geneid], is.null)
-    all <- geneid
-    geneid <- geneid[sel]
+    sel <- !sapply(pc[islandid], is.null)
+    all <- islandid
+    islandid <- islandid[sel]
   if (verbose) cat("Obtaining expression estimates...\n")
-    if (mc.cores>1 && length(geneid)>mc.cores) {
+    if (mc.cores>1 && length(islandid)>mc.cores) {
       if ('multicore' %in% loadedNamespaces()) {
                     #split into smaller jobs
-        geneid <- split(geneid, cut(1:length(geneid), mc.cores))
-        ans <- multicore::mclapply(geneid,f,mc.cores=mc.cores)
+        islandid <- split(islandid, cut(1:length(islandid), mc.cores))
+        ans <- multicore::mclapply(islandid,f,mc.cores=mc.cores)
         ans <- unlist(ans, recursive=F)
-        names(ans) <- unlist(geneid)
+        names(ans) <- unlist(islandid)
       } else stop('multicore library has not been loaded!')
     } else {
-      ans <- f(geneid)
-      names(ans) <- geneid
+      ans <- f(islandid)
+      names(ans) <- islandid
     }
 
     miss <- lapply(genomeDB@transcripts[all[!(all %in% names(ans))]], names)  
@@ -146,45 +146,45 @@ mergeExp <- function(minus, plus){
   ans
 }
 
-calcExp <- function(distrs, genomeDB, pc, readLength, geneid, relativeExpr=TRUE, priorq=2, citype='none', niter=10^3, burnin=100, mc.cores=1, verbose=FALSE) {
+calcExp <- function(distrs, genomeDB, pc, readLength, islandid, relativeExpr=TRUE, priorq=2, citype='none', niter=10^3, burnin=100, mc.cores=1, verbose=FALSE) {
 
   if (missing(readLength)) stop("readLength must be specified")
   if (genomeDB@denovo) stop("genomeDB must be a known genome")
   if (pc@denovo) stop("pc must be a pathCounts object from known genome")
   if(pc@stranded){
-    if(missing(geneid)) geneid <- c(names(pc@counts$plus), names(pc@counts$minus))
-    plusGI <- geneid[genomeDB@islandStrand[geneid]=="+"]
+    if(missing(islandid)) islandid <- c(names(pc@counts$plus), names(pc@counts$minus))
+    plusGI <- islandid[genomeDB@islandStrand[islandid]=="+"]
     plus <- NULL
     if(length(plusGI)>0) {
       plusDB <- genomeBystrand(genomeDB, "+")
-      plus <- procExp(distrs, plusDB, pc=pc@counts$plus, readLength=readLength, geneid=plusGI, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
+      plus <- procExp(distrs, plusDB, pc=pc@counts$plus, readLength=readLength, islandid=plusGI, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
     }
-    minusGI <- geneid[genomeDB@islandStrand[geneid]=="-"]
+    minusGI <- islandid[genomeDB@islandStrand[islandid]=="-"]
     minus <- NULL
     if(length(minusGI)>0) {
       minusDB <- genomeBystrand(genomeDB, "-")
-      minus <- procExp(distrs, minusDB, pc=pc@counts$minus, readLength=readLength, geneid=minusGI, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
+      minus <- procExp(distrs, minusDB, pc=pc@counts$minus, readLength=readLength, islandid=minusGI, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
     } 
-    if(is.null(plus) & is.null(minus)) stop("No counts in geneid genes")
+    if(is.null(plus) & is.null(minus)) stop("No counts in islandid genes")
     if(!(is.null(plus) | is.null(minus))) { ans <- mergeExp(plus, minus) }
     else { if(is.null(plus)) {ans <- minus } else ans <- plus }
   } else {
-    if(missing(geneid)) geneid <- names(pc@counts[[1]])
-    if(sum(!unlist(lapply(pc@counts[geneid], is.null)))) stop("No counts in geneid genes")
-    ans <- procExp(distrs, genomeDB, pc=pc@counts[[1]], readLength=readLength, geneid=geneid, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
+    if(missing(islandid)) islandid <- names(pc@counts[[1]])
+    if(sum(!unlist(lapply(pc@counts[islandid], is.null)))) stop("No counts in islandid genes")
+    ans <- procExp(distrs, genomeDB, pc=pc@counts[[1]], readLength=readLength, islandid=islandid, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
   }
 
   ans
 }
     
-calcKnownMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, priorq, strand, citype, niter, burnin, verbose) {
-  ans <- .Call("calcKnownMultiple",exons,exonwidth,transcripts,geneid,pc,startcdf, lendis, lenvals, readLength, priorq, strand, citype, niter, burnin, verbose)
+calcKnownMultiple <- function(exons, exonwidth, transcripts, islandid, pc, startcdf, lendis, lenvals, readLength, priorq, strand, citype, niter, burnin, verbose) {
+  ans <- .Call("calcKnownMultiple",exons,exonwidth,transcripts,islandid,pc,startcdf, lendis, lenvals, readLength, priorq, strand, citype, niter, burnin, verbose)
   return(ans)
 }
 
 
-lhoodGrid <- function(pc, distrs, genomeDB, readLength, geneid, grid, priorq=2) {
-  if (length(geneid)>1) stop("Only 1 gene is allowed, please specify a single gene in argument 'geneid'")
+lhoodGrid <- function(pc, distrs, genomeDB, readLength, islandid, grid, priorq=2) {
+  if (length(islandid)>1) stop("Only 1 gene is allowed, please specify a single gene in argument 'islandid'")
   if (missing(readLength)) stop("readLength must be specified")
   if (genomeDB@denovo) stop("genomeDB must be a known genome")
   if (pc@denovo) stop("pc must be a pathCounts object from known genome")
@@ -196,14 +196,14 @@ lhoodGrid <- function(pc, distrs, genomeDB, readLength, geneid, grid, priorq=2) 
   readLength <- as.integer(readLength)
   priorq <- as.double(priorq)
 
-  exons <- as.integer(names(genomeDB@islands[[geneid]]))
-  exonwidth <- width(genomeDB@islands[[geneid]])
-  strand <- genomeDB@islandStrand[geneid]
-  transcripts <- genomeDB@transcripts[[geneid]]
+  exons <- as.integer(names(genomeDB@islands[[islandid]]))
+  exonwidth <- width(genomeDB@islands[[islandid]])
+  strand <- genomeDB@islandStrand[islandid]
+  transcripts <- genomeDB@transcripts[[islandid]]
   if (length(transcripts)==1) stop("Single transcript specified, estimation not run")
   strand <- as.integer(ifelse(strand=='+', 1, -1))
-  if (strand==1) pc <- pc@counts[['plus']][[geneid]] else pc <- pc@counts[['minus']][[geneid]]
-  geneid <- as.integer(geneid)
+  if (strand==1) pc <- pc@counts[['plus']][[islandid]] else pc <- pc@counts[['minus']][[islandid]]
+  islandid <- as.integer(islandid)
   
   if (missing(grid)) {
     grid <- lapply(1:(length(transcripts)-1), function(z) seq(-10,10,length=10^(5/(length(transcripts)-1))))

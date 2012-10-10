@@ -68,7 +68,7 @@ setMethod("as.list", signature(x="denovoGenomeExpr"), function(x) {x@islands})
 ## Function calcDenovo
 #########################################################################
 
-calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprior, minpp=0.001, selectBest=FALSE, method='auto', niter, exactMarginal=TRUE, verbose=TRUE, mc.cores=1) {
+calcDenovo <- function(distrs, genomeDB, pc, readLength, islandid, priorq=3, mprior, minpp=0.001, selectBest=FALSE, method='auto', niter, exactMarginal=TRUE, verbose=TRUE, mc.cores=1) {
   if (missing(readLength)) stop("readLength must be specified")
   if (class(genomeDB)!='annotatedGenome') stop("genomeDB must be of class 'annotatedGenome'")
   if (!genomeDB@denovo) stop("genomeDB must be a de novo annotated genome. Use createDenovoGenome")
@@ -106,28 +106,28 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   method <- as.integer(method)
   verbose <- as.integer(verbose)
   exactMarginal <- as.integer(exactMarginal)
-  if (missing(geneid)) geneid <- names(genomeDB@islands)[sapply(genomeDB@islands,length)>1]
+  if (missing(islandid)) islandid <- names(genomeDB@islands)[sapply(genomeDB@islands,length)>1]
 
-  if (!all(geneid %in% names(genomeDB@islands))) stop('geneid not found in genomeDB@islands')
-  if (!all(geneid %in% unlist(lapply(pc@counts, names)))) stop('geneid not found in pc')
-  if (!all(geneid %in% names(genomeDB@transcripts))) stop('geneid not found in genomeDB@transcripts')
+  if (!all(islandid %in% names(genomeDB@islands))) stop('islandid not found in genomeDB@islands')
+  if (!all(islandid %in% unlist(lapply(pc@counts, names)))) stop('islandid not found in pc')
+  if (!all(islandid %in% names(genomeDB@transcripts))) stop('islandid not found in genomeDB@transcripts')
   
-  exons <- lapply(genomeDB@islands[geneid],function(z) as.integer(names(z)))
-  exonwidth <- lapply(genomeDB@islands[geneid],width)
+  exons <- lapply(genomeDB@islands[islandid],function(z) as.integer(names(z)))
+  exonwidth <- lapply(genomeDB@islands[islandid],width)
   strand <- genomeDB@islandStrand
   if (missing(niter)) {
      niter <- as.list(as.integer(ifelse(sapply(exons,length)>20,10^3,10^4)))
   } else {
-     niter <- as.list(as.integer(rep(niter[1],length(geneid))))
+     niter <- as.list(as.integer(rep(niter[1],length(islandid))))
   }
-  names(niter) <- geneid
+  names(niter) <- islandid
   
   #Define basic function
   f <- function(z) {
-    geneid <- as.integer(z)
+    islandid <- as.integer(z)
     transcripts <- genomeDB@transcripts[z]
     strand <- as.list(as.integer(ifelse(strand[z]=='+', 1,-1)))
-    ans <- calcDenovoMultiple(exons=exons[z],exonwidth=exonwidth[z],transcripts=transcripts,geneid=as.list(geneid),pc=pc@counts[[1]][z],startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,modelUnifPrior=modelUnifPrior,nvarPrior=nvarPrior,nexonPrior=nexonPrior,priorq=priorq,minpp=minpp,selectBest=selectBest,method=method,niter=niter[z],exactMarginal=exactMarginal,verbose=verbose, strand=strand)
+    ans <- calcDenovoMultiple(exons=exons[z],exonwidth=exonwidth[z],transcripts=transcripts,islandid=as.list(islandid),pc=pc@counts[[1]][z],startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,modelUnifPrior=modelUnifPrior,nvarPrior=nvarPrior,nexonPrior=nexonPrior,priorq=priorq,minpp=minpp,selectBest=selectBest,method=method,niter=niter[z],exactMarginal=exactMarginal,verbose=verbose, strand=strand)
     mapply(function(z1,z2) formatDenovoOut(z1,z2), ans, genomeDB@islands[z], SIMPLIFY=FALSE)
   }
 
@@ -148,25 +148,25 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
     res
   }
     
-  runCalc <- function(geneid) {
-    sel <- !sapply(pc@counts[[1]][geneid], is.null)
-    all <- geneid
-    geneid <- geneid[sel]
+  runCalc <- function(islandid) {
+    sel <- !sapply(pc@counts[[1]][islandid], is.null)
+    all <- islandid
+    islandid <- islandid[sel]
     
-    if (mc.cores>1 && length(geneid)>mc.cores) {
+    if (mc.cores>1 && length(islandid)>mc.cores) {
       require(multicore)
       if ('multicore' %in% loadedNamespaces()) {
-        #ans <- mclapply(geneid, f, mc.cores=mc.cores)
+        #ans <- mclapply(islandid, f, mc.cores=mc.cores)
         #split into smaller jobs
-        nsplit <- ceiling(max(length(geneid), mc.cores)/mc.cores)
-        geneidList <- lapply(1:min(length(geneid), mc.cores), function(z) geneid[seq(z,length(geneid),by=mc.cores)])
-        ans <- multicore::mclapply(geneidList,f,mc.cores=min(length(geneidList), mc.cores))
-        ans <- do.call(c,ans); names(ans) <- unlist(geneidList); ans <- ans[geneid]
+        nsplit <- ceiling(max(length(islandid), mc.cores)/mc.cores)
+        islandidList <- lapply(1:min(length(islandid), mc.cores), function(z) islandid[seq(z,length(islandid),by=mc.cores)])
+        ans <- multicore::mclapply(islandidList,f,mc.cores=min(length(islandidList), mc.cores))
+        ans <- do.call(c,ans); names(ans) <- unlist(islandidList); ans <- ans[islandid]
       } else stop('multicore library has not been loaded!')
     } else {
 
-      ans <- f(geneid)
-      names(ans) <- geneid
+      ans <- f(islandid)
+      names(ans) <- islandid
     }
     res <- vector(mode="list", length=length(all))
     names(res) <- all
@@ -180,34 +180,34 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, geneid, priorq=3, mprio
   sel <- names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null) & !is.na(genomeDB@islandStrand)]
   if (length(sel)>0) genomeDB@transcripts[sel] <- lapply(genomeDB@exons[sel],function(z) list(as.numeric(names(z))))
 
-  geneidUnknown <- geneid[geneid %in% names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null)]]
-  if (length(geneidUnknown)>0) { geneidini <- geneid; geneid <- geneid[!(geneid %in% geneidUnknown)] }
+  islandidUnknown <- islandid[islandid %in% names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null)]]
+  if (length(islandidUnknown)>0) { islandidini <- islandid; islandid <- islandid[!(islandid %in% islandidUnknown)] }
 
 
   #Run
   if (verbose==1) cat("Performing model search (this may take a while)")
-  if (length(geneidUnknown)==0) {
-    ans <- runCalc(geneid)
+  if (length(islandidUnknown)==0) {
+    ans <- runCalc(islandid)
   } else {
     #Islands with known strand
-    ans <- vector("list",length(geneidini)); names(ans) <- geneidini
-    if (length(geneid)>0) ans[geneid] <- runCalc(geneid)
+    ans <- vector("list",length(islandidini)); names(ans) <- islandidini
+    if (length(islandid)>0) ans[islandid] <- runCalc(islandid)
     
     #Islands with unknown strand. Run 2 strands and select the one with largest post prob
-    genomeDB@transcripts[geneidUnknown] <- lapply(genomeDB@islands[geneidUnknown],function(z) list(var1=as.integer(names(z))))
-    strand[geneidUnknown] <- '+'
-    ansforw <- runCalc(geneidUnknown)
-    strand[geneidUnknown] <- '-'
-    genomeDB@transcripts[geneidUnknown] <- lapply(genomeDB@transcripts[geneidUnknown],rev)
-    genomeDB@islands[geneidUnknown] <- lapply(genomeDB@islands[geneidUnknown], rev)
-    exons[geneidUnknown] <- lapply(exons[geneidUnknown], rev)
-    exonwidth[geneidUnknown] <- lapply(exonwidth[geneidUnknown], rev)
-    ansrev <- runCalc(geneidUnknown)
+    genomeDB@transcripts[islandidUnknown] <- lapply(genomeDB@islands[islandidUnknown],function(z) list(var1=as.integer(names(z))))
+    strand[islandidUnknown] <- '+'
+    ansforw <- runCalc(islandidUnknown)
+    strand[islandidUnknown] <- '-'
+    genomeDB@transcripts[islandidUnknown] <- lapply(genomeDB@transcripts[islandidUnknown],rev)
+    genomeDB@islands[islandidUnknown] <- lapply(genomeDB@islands[islandidUnknown], rev)
+    exons[islandidUnknown] <- lapply(exons[islandidUnknown], rev)
+    exonwidth[islandidUnknown] <- lapply(exonwidth[islandidUnknown], rev)
+    ansrev <- runCalc(islandidUnknown)
     difndel <- sapply(ansforw,function(z) z@npathDeleted) - sapply(ansrev,function(z) z@npathDeleted)
     difmax <- sapply(ansforw,function(z) z@integralSum['logmax']) - sapply(ansrev,function(z) z@integralSum['logmax'])
     difsum <- log(sapply(ansforw,function(z) z@integralSum['sum'])) - log(sapply(ansrev,function(z) z@integralSum['sum']))
     sel <- ifelse(difndel<0 || (difndel==0 && (difsum+difmax)>=0), TRUE, FALSE)
-    ans[geneidUnknown[sel]] <- ansforw[sel]; ans[geneidUnknown[!sel]] <- ansrev[!sel]
+    ans[islandidUnknown[sel]] <- ansforw[sel]; ans[islandidUnknown[!sel]] <- ansrev[!sel]
   }
   if (verbose==1) cat("\n")
   new("denovoGenomeExpr", islands=ans)
@@ -231,8 +231,8 @@ formatDenovoOut <- function(ans, genesel) {
   new("denovoGeneExpr",posprob=ans$posprob,expression=ans$expression,variants=ans$variants,integralSum=ans$integralSum,npathDeleted=ans$npathDeleted)
 }
 
-calcDenovoMultiple <- function(exons, exonwidth, transcripts, geneid, pc, startcdf, lendis, lenvals, readLength, modelUnifPrior, nvarPrior, nexonPrior, priorq, minpp, selectBest, method, niter, exactMarginal, verbose, strand) {
-  ans <- .Call("calcDenovoMultiple",exons,exonwidth,transcripts,geneid,pc,startcdf,lendis,lenvals,readLength,modelUnifPrior,nvarPrior,nexonPrior,priorq,minpp,selectBest,method,niter,exactMarginal,verbose, strand)
+calcDenovoMultiple <- function(exons, exonwidth, transcripts, islandid, pc, startcdf, lendis, lenvals, readLength, modelUnifPrior, nvarPrior, nexonPrior, priorq, minpp, selectBest, method, niter, exactMarginal, verbose, strand) {
+  ans <- .Call("calcDenovoMultiple",exons,exonwidth,transcripts,islandid,pc,startcdf,lendis,lenvals,readLength,modelUnifPrior,nvarPrior,nexonPrior,priorq,minpp,selectBest,method,niter,exactMarginal,verbose, strand)
   return(ans)
 }
 
