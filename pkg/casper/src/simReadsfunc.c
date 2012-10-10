@@ -4,6 +4,7 @@
 #include <R.h>
 #include <Rinternals.h>
 #include <Rdefines.h>
+#include <Rmath.h>
 #include "hash.h"
 #include "header.h"
 
@@ -125,17 +126,14 @@ double cumu_fragsta(double x, double *startcdf, double lencdf)
 }
 
 int choose_st(int fraglen, int varlen, double *sdv, double *sdd, int sdlen, int strand){
-  int i, stdlen;
-
+  int stdlen;
+  
   stdlen = varlen - fraglen;
   if(stdlen < 0) return(-1);
   if(stdlen==0) return(1);
-  double ran = (double)rand() / (double) RAND_MAX;
-  double maxp=cumu_fragsta(((double)stdlen/(double)varlen), sdv, sdlen);
-  for(i=0; i<stdlen+1; i++) if((cumu_fragsta((double)i/(double)varlen, sdv, sdlen) <= ran*maxp) && (ran*maxp < cumu_fragsta((double)(i+1)/(double)varlen, sdv, sdlen))) return(i+1);
- 
-  printf("Error: no st chosen %f %f %d %d %d\n", ran, maxp, stdlen, fraglen, varlen);
- return((int)sdd[sdlen-1]);
+  double maxp=cumu_fragsta((double)stdlen/(double)varlen, sdd, sdlen);  
+  double ran = ((double)rand() / (double) RAND_MAX)*maxp;
+  return(((int)(cumu_fragsta(ran, sdv, sdlen)*varlen))+1);
 }
 
 //#############------------
@@ -277,6 +275,8 @@ int *build_path(var_t var, int len, int st, int rl, hash_t *path, int strand, in
     sum+=wis;
   }
   starts[2]=0;
+  
+  //printf("%s %d\n", pa, st);
   
   l=hash_lookup(path, pa);
   if(l!=HASH_FAIL) hash_update(path, pa, l+1); 

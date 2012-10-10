@@ -145,23 +145,14 @@ casperSim <- function(genomeDB, distrs, geneExpr, selIslands, lr_file=NULL, rr_f
   ee=exon_end
   ei=exs
   ngenes=length(sel)
-  #ldv=as.integer(names(distrs@lenDis))
-  #ldd=unname(distrs@lenDis)/sum(distrs@lenDis)
-  #ord <- order(ldd, decreasing=T)
-  #ldd <- ldd[ord]
-  #ldv <- ldv[ord]
   ldv <- sample(as.numeric(names(distrs@lenDis)), p=distrs@lenDis/sum(distrs@lenDis), size=n, replace=T)
   ldd <- as.integer(1)
   th <- seq(0, 1, len=10000)
-  sdv <- c(0,cumsum(distrs@stDis(th[-1]) - distrs@stDis(th[-length(th)])))
-  #th <- seq(0,1,len=100)
-  #sdv <- abs(sdv[-1]-sdv[-length(sdv)]) 
-  #sdv <- rep(0.001, 1000)
-  #ord <- order(sdv, decreasing=T)
-  #sdv <- c(0, cumsum(sdv[ord]))
-  #sdv <- cumsum(sdv)
-  sdd <- th
-  #sdd <- c(0, th)
+  std <- distrs@stDis(th)
+  std[1] <- 0
+  std[length(th)] <- 1
+  sdv <- approxfun(std[!is.na(std)], th[!is.na(std)])(th)
+  sdd <- std
   if(bam) {
     write.sam.header(chrlen[names(chrlen) %in% unique(chroms)], lr_file, max(vn))
     write.sam.header(chrlen[names(chrlen) %in% unique(chroms)], rr_file, max(vn))
