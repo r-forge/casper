@@ -202,7 +202,11 @@ lhoodGrid <- function(pc, distrs, genomeDB, readLength, islandid, grid, priorq=2
   transcripts <- genomeDB@transcripts[[islandid]]
   if (length(transcripts)==1) stop("Single transcript specified, estimation not run")
   strand <- as.integer(ifelse(strand=='+', 1, -1))
-  if (strand==1) pc <- pc@counts[['plus']][[islandid]] else pc <- pc@counts[['minus']][[islandid]]
+  if (pc@stranded) {
+     if (strand==1) pc <- pc@counts[['plus']][[islandid]] else pc <- pc@counts[['minus']][[islandid]]
+  } else {
+     pc <- pc@counts[[1]][[islandid]]
+  }
   islandid <- as.integer(islandid)
   
   if (missing(grid)) {
