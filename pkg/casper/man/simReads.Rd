@@ -1,6 +1,5 @@
 \name{simReads}
 \alias{simReads}
-%- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 Function to simulate paired end reads following given read start and
 fragment length distributions and gene and variant expressions.
@@ -13,7 +12,6 @@ distribution and gene and variant expressions.
 \usage{
 simReads(selIslands, geneExpr, rl, n, seed, writeBam, distrs, genomeDB, chrlen=NULL, repSims=FALSE, bamFile=NULL, stranded=FALSE, samtoolsPath=NULL, mc.cores=1)
 }
-%- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{selIslands}{
     Island ID's from the genomeDB object to simulate reads
@@ -84,29 +82,23 @@ Camille Stephan-Otto Attolini
 }
 
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
-
 data(hg19DB)
 data(K562.r1l1)
-bam0 <- rmShortInserts(K562.r1l1, isizeMin=100)
-distrs <- getDistrs(hg19DB,bam=bam0)
+distrs <- getDistrs(hg19DB,bam=K562.r1l1)
 
-genes <- c('4', '7')
-txs <- unlist(lapply(hg19DB@transcripts[genes], names))
+selIslands <- c('474','18517')
+txs <- unlist(lapply(hg19DB@transcripts[selIslands], names))
 vars <- vector(mode='numeric', length=length(txs))
-vars[1:3] <- c(1/4,1/4,1/2)
-vars[4:7] <- c(0.1, 0.3, 0.5, 0.1)
+nvars <- sapply(hg19DB@transcripts[selIslands],length)
+vars[1:nvars[1]] <- rep(1/nvars[1],nvars[1])
+vars[-1:-nvars[1]] <- rep(1/nvars[2],nvars[2])
 names(vars) <- txs
-geneExpr <- list(genes=c('4'=0.25, '7'=0.75), vars=vars)
+geneExpr <- list(genes=c(0.25,0.75), vars=vars)
+names(geneExpr$genes) <- selIslands
 
-simpc <- simReads(selIslands=genes, repSims=TRUE, geneExpr=geneExpr, rl=75,
-n=10, seed=1, writeBam=FALSE, distrs=distrs, genomeDB=hg19DB)
-
+simpc <- simReads(selIslands=selIslands, repSims=TRUE,
+geneExpr=geneExpr, rl=75, n=10, seed=1, writeBam=FALSE, distrs=distrs,
+genomeDB=hg19DB)
 
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line
+\keyword{ datagen }

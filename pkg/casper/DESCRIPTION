@@ -1,13 +1,13 @@
 Package: casper
 Version: 0.99.0
-Date: 2012-10-8
+Date: 2012-10-26
 Title: Characterization of Alternative Splicing based on Paired-End Reads
 Author: David Rossell, Camille Stephan-Otto, Manuel Kroiss
 Maintainer: David Rossell <rosselldavid@gmail.org>
 Depends: R (>= 2.14.1), Biobase, IRanges, methods, gtools, GenomicRanges
 Imports: VGAM, mgcv, GenomicFeatures, survival
 Enhances: multicore
-Description: Model to infer alternative splicing from paired-end RNA-seq data. Both quantification of known splicing variants and de novo splice variant discovery are considered. The model is based on paths across exons, rather than pairwise exon connections, and estimates the fragment size and start distributions non-parametrically, which improves estimation precision. 
+Description: Infer alternative splicing from paired-end RNA-seq data. The model is based on counting paths across exons, rather than pairwise exon connections, and estimates the fragment size and start distributions non-parametrically, which improves estimation precision. 
 License: GPL (>=2)
 LazyLoad: yes
 biocViews: Bioinformatics, GeneExpression, DifferentialExpression, Transcription, RNASeq, HighThroughputSequencing
