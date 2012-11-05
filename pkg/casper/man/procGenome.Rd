@@ -53,7 +53,9 @@ maxLinkDist=1e+05, maxDist=1000, mc.cores=1)
   Camille Stephan-Otto Attolini
 }
 \seealso{
-\code{\link{createDenovoGenome}} to create a de novo annotated genome
+  annotatedGenome-class for a description of the class.
+  To obtain the island id for an entrez gene id or a transcript id see help(getIsland).
+  To extract the transcripts for a entrez or island id see help(transcripts).
 }
 \examples{
 ## hg19DB <- procGenome("hg19")

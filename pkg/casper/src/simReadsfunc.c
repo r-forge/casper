@@ -68,7 +68,7 @@ int choose_gene(double *exp, int ngenes){
      if((tmp<=ran) && (ran<tmp+exp[i])) return(i);
     tmp+=exp[i];
   }
-  printf("Error: no gene chosen\n");
+  Rprintf("Error: no gene chosen\n");
   return(0);
 }
 
@@ -85,10 +85,10 @@ int choose_var(gene_t gene){
     tmp+=gene.vars[i].exp;
   }
   tmp=0;
-  printf("Error: no variant chosen: %d\n", gene.nvar);
+  Rprintf("Error: no variant chosen: %d\n", gene.nvar);
   for(i=0; i<gene.nvar; i++){
     tmp+=gene.vars[i].exp;    
-    printf("%f %f\n", gene.vars[i].exp, tmp);
+    Rprintf("%f %f\n", gene.vars[i].exp, tmp);
   }
   //  exit(0);
   return(0);
@@ -106,7 +106,7 @@ int choose_len(int *ldv, double *ldd, int ldlen) {
     if((tmp<=ran) && (ran < tmp + ldd[i])) return(ldv[i]);
     tmp += ldd[i];
   }  
-  printf("Error: no length chosen\n");
+  Rprintf("Error: no length chosen\n");
   return(0);
 }
 
@@ -160,11 +160,11 @@ void revCigar(char* str)
   for (i=0; i<end; i++) bricks[i] = malloc(end * sizeof(char));
   strcpy(tmp, str);
   pch=strtok(tmp, tab);
-  printf("%s %d\n", pch, end);
+  Rprintf("%s %d\n", pch, end);
   counter=0;
   while(pch!=NULL){
     strcpy(bricks[counter], pch);
-    if((counter % 2)==0) {strcat(bricks[counter], "M"); printf("inside %s\n", bricks[counter]); }
+    if((counter % 2)==0) {strcat(bricks[counter], "M"); Rprintf("inside %s\n", bricks[counter]); }
     else strcat(bricks[counter], "N");
     pch=strtok(NULL, tab);
     counter++;
@@ -208,7 +208,7 @@ int *build_path(var_t var, int len, int st, int rl, hash_t *path, int strand, in
     rst = st + len - rl; 
     en = st + rl - 1;
     ren = rst + rl - 1;
-    if(st<=0) printf("%d %d %d %d %d %d\n", st, en, rst, ren, var.len, len);    
+    if(st<=0) Rprintf("%d %d %d %d %d %d\n", st, en, rst, ren, var.len, len);    
 }
 
   here=0;

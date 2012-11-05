@@ -12,7 +12,7 @@ pathCounts(reads, DB, mc.cores = 1)
 }
 \arguments{
   \item{reads}{
-    Aligned reads, as returned by \code{procBam}.
+    Object of class \code{procBam} containing aligned reads, as returned by \code{procBam}.
   }
   \item{DB}{
     Object of class \code{annotatedGenome} containing either a known or

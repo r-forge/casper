@@ -1,2 +1,6 @@
-setGeneric("genePlot", function(gene, genome, refflat, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', col, ...) standardGeneric("genePlot"))
-setGeneric("rangesPlot",function(x, gene, genome, refflat, exonProfile=TRUE, maxFragLength=300, xlab='', ylab='', xlim, ...) standardGeneric("rangesPlot"))
+setGeneric("genePlot", function(generanges, islandid, genomeDB, reads, exp, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', col, ...) standardGeneric("genePlot"))
+setGeneric("getIsland", function(entrezid, txid, genomeDB) standardGeneric("getIsland"))
+setGeneric("plotExpr", function(gene, minProbExpr=.5, minExpr=.1, xlab='(kb)', ylab='', xlim, cex=1, yaxt='n', col, ...) standardGeneric("plotExpr"))
+setGeneric("rangesPlot",function(x, gene, exonProfile=TRUE, maxFragLength=300, xlab='', ylab='', xlim, ...) standardGeneric("rangesPlot"))
+setGeneric("getReads", function(x) standardGeneric("getReads"))
+setGeneric("transcripts", function(entrezid, islandid, genomeDB) standardGeneric("transcripts"))

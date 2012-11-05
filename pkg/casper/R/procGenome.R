@@ -1,42 +1,18 @@
 require(methods)
 
-setClass("annotatedGenome", representation(islands = "list", transcripts = "list", exon2island = "data.frame", exonsNI="RangedData", islandStrand="character", aliases="data.frame", genomeVersion="character", dateCreated="Date", denovo="logical"))
-valid_annotatedGenome <- function(object) {
-  msg <- NULL
-  #validity checks go here
-  tab <- table(sapply(object@islands, class))
-  if (any(names(tab) != 'IRanges')) msg <- "All elements in 'islands' must be of class IRanges"
-  #if (any(!sapply(object@transcripts,is.list))) msg <- "All elements in transcripts must be of class list"
-  if (!(all(c('space','start','end','width','id','island') %in% names(object@exon2island)))) msg <- "Incorrect column names in 'exon2island'"
-  if(!('id' %in% colnames(object@exonsNI))) msg <- "'exonsNI' must have an 'id' column"
-  if(!(all(c('tx_id','tx_name','gene_id','exid','tx','island_id') %in% names(object@aliases)))) msg <- "Incorrect column names in 'aliases'"
-  if (is.null(msg)) { TRUE } else { msg }
-}
-
-setValidity("annotatedGenome", valid_annotatedGenome)
-setMethod("show", signature(object="annotatedGenome"), function(object) {
-  if(object@denovo) {
-    cat("Denovo annotatedGenome object with",length(object@islands),"gene islands,", length(unique(unlist(lapply(object@transcripts, names)))),"transcripts and",nrow(object@exon2island),"exons.\n")
-  } else cat("Known annotatedGenome object with",length(object@islands),"gene islands,", length(unique(unlist(lapply(object@transcripts, names)))),"transcripts and",nrow(object@exon2island),"exons.\n")
-  cat("Genome version:",object@genomeVersion,"\n")
-  cat("Date created:", as.character(object@dateCreated),"\n")
-}
-          )
 
 
 ## METHODS
 
-setGeneric("getIsland", function(entrezid, txid, genomeDB) standardGeneric("getIsland"))
 setMethod("getIsland",signature(entrezid='character',txid='missing',genomeDB='annotatedGenome'),function(entrezid, txid, genomeDB) {
   as.character(genomeDB@aliases[genomeDB@aliases$gene_id==entrezid,'island_id'][1])
 }
 )
 setMethod("getIsland",signature(entrezid='missing',txid='character',genomeDB='annotatedGenome'),function(entrezid, txid, genomeDB) {
-  as.character(aliases[txid,'island_id'])
+  as.character(genomeDB@aliases[txid,'island_id'])
 }
 )
 
-setGeneric("transcripts", function(entrezid, islandid, genomeDB) standardGeneric("transcripts"))
 setMethod("transcripts", signature(entrezid='missing',islandid='character',genomeDB='annotatedGenome'), function(entrezid, islandid, genomeDB) {
   IRangesList(lapply(genomeDB@transcripts[[islandid]],function(z) genomeDB@islands[[islandid]][as.character(z)]))
 }

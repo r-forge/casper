@@ -1,3 +1,7 @@
+require(methods)
+
+
+
 buildRD<-function(reads){
     if(sum(grepl("chr", unique(reads[[5]])))>0) {
         reads<-RangedData(IRanges(start=ifelse(reads[[1]]<reads[[2]], reads[[1]], reads[[2]]), end=ifelse(reads[[1]]>reads[[2]], reads[[1]], reads[[2]])), space=reads[[5]], id=reads[[4]], flag=reads[[3]], rid=reads[[6]], strand=reads[[7]], XS=reads[[8]])
@@ -89,5 +93,5 @@ procBam<-function(bam, stranded=FALSE, seed=1){
     pbam <- procB(bam, "*")
     ans <- list(pbam=pbam, stranded=FALSE)
   }
-  ans
+  new("procBam",pbam=ans$pbam,stranded=ans$stranded)
 }

@@ -1,9 +1,6 @@
 \documentclass[a4paper,12pt]{article}
 %\VignetteIndexEntry{Manual for the casper library}
 %\VignettePackage{casper}
-
-
-
 \usepackage{amsmath}    % need for subequations
 \usepackage{amssymb}    %useful mathematical symbols
 \usepackage{bm}         %needed for bold greek letters and math symbols
@@ -35,9 +32,9 @@ The package \texttt{casper} implements statistical methodology to infer
 gene alternative splicing patterns from paired-end
 high-throughput sequencing data \citep{rossell:2010}.
 
-The case where splicing variants are known has been tested thoroughly.
-The case of {\it de novo} variant discovery has been implemented more recently,
-so it may still need some adjustments.
+%The case where splicing variants are known has been tested thoroughly.
+%The case of {\it de novo} variant discovery has been implemented more recently,
+%so it may still need some adjustments.
 
 \section{Aligning reads and importing data}
 \label{sec:import}
@@ -74,7 +71,7 @@ BAM files can be read into R using the \texttt{Rsamtools} package \citep{rpkg:Rs
 For the sake of computational speed,
 in this vignette we will use data that has already been imported in a previous session.
 The data was obtained from the RGASP1 project
-(\url{ftp://ftp.sanger.ac.uk/pub/gencode/rgasp/RGASP1/inputdata/human_fastq}).
+(ftp://ftp.sanger.ac.uk/pub/gencode/rgasp/RGASP1/inputdata/human\_fastq).
 We used reads from replicate 1 and lane 1 in sample K562\_2x75.
 In order for the vignette to compile quickly here we illustrate
 the usage of the package by selecting the reads mapping
@@ -115,19 +112,18 @@ and contains information regarding genes, transcripts, exons etc.
 It also indicates the genome version that was used to create the genome
 and the creation date.
 
-\footnotesize
-<<process1>>=
-library(casper)
-data(K562.r1l1)
-names(K562.r1l1)
-data(hg19DB)
-hg19DB
-head(sapply(hg19DB@transcripts,length))
-@ 
-\normalsize
+%\footnotesize
+%<<process1>>=
+%library(casper)
+%data(K562.r1l1)
+%names(K562.r1l1)
+%data(hg19DB)
+%hg19DB
+%head(sapply(hg19DB@transcripts,length))
+%@ 
+%\normalsize
 
-For instance, gene 4 has 3 annotated transcripts,
-gene 6 has 1 transcript etc.
+The lengths displayed above indicate the number of transcripts per island.
 
 RNA-seq experiments typically contain some very short RNA sequences,
 which can be due to RNA degradation.
@@ -137,241 +133,241 @@ below a user-specified level. We remove reads with insert sizes below 100bp.
 We then use \texttt{getDistrs} to estimate the fragment length distribution
 and the read start distribution.
 
-\footnotesize
-<<process2>>=
-bam0 <- rmShortInserts(K562.r1l1, isizeMin=100)
-distrs <- getDistrs(hg19DB,bam=bam0)
-@ 
-\normalsize
+%\footnotesize
+%<<process2>>=
+%bam0 <- rmShortInserts(K562.r1l1, isizeMin=100)
+%distrs <- getDistrs(hg19DB,bam=bam0)
+%@ 
+%\normalsize
 
-We visualize the fragment length distribution.
-The resulting plot is shown in Figure \ref{fig:plotprocess1}, left panel.
-Notice there few fragments shorter than 140bp.
-Given the reduced number of reads in our toy data the estimate is not accurate,
-and hence we overlay a smoother estimate (blue line).
+%We visualize the fragment length distribution.
+%The resulting plot is shown in Figure \ref{fig:plotprocess1}, left panel.
+%Notice there few fragments shorter than 140bp.
+%Given the reduced number of reads in our toy data the estimate is not accurate,
+%and hence we overlay a smoother estimate (blue line).
 
-\footnotesize
-<<plotprocess1>>=
-plot(distrs, "fragLength")
-@ 
-\normalsize
+%\footnotesize
+%<<plotprocess1>>=
+%plot(distrs, "fragLength")
+%@ 
+%\normalsize
 
-We produce a histogram to inspect the read start distribution.
-The histogram reveals that reads are non-uniformly distributed
-along transcripts (Figure \ref{fig:plotprocess1}, right panel).
-Rather, there is a bias towards the 3' end.
+%We produce a histogram to inspect the read start distribution.
+%The histogram reveals that reads are non-uniformly distributed
+%along transcripts (Figure \ref{fig:plotprocess1}, right panel).
+%Rather, there is a bias towards the 3' end.
 
-\footnotesize
-<<plotprocess2>>=
-plot(distrs, "readSt")
-@ 
-\normalsize
+%\footnotesize
+%<<plotprocess2>>=
+%plot(distrs, "readSt")
+%@ 
+%\normalsize
 
-\setkeys{Gin}{width=0.45\textwidth} 
-\begin{figure}
-\begin{center}
-\begin{tabular}{cc}
-<<label=plotprocess1,fig=TRUE,echo=FALSE>>=
-<<plotprocess1>>
-@ &
-<<label=plotprocess2,fig=TRUE,echo=FALSE>>=
-<<plotprocess2>>
-@ 
-\end{tabular}
-\end{center}
-\caption{Left: fragment length distribution; Right: read start distribution}
-\label{fig:plotprocess1}
-\end{figure}
+%\setkeys{Gin}{width=0.45\textwidth} 
+%\begin{figure}
+%\begin{center}
+%\begin{tabular}{cc}
+%<<label=plotprocess1,fig=TRUE,echo=FALSE>>=
+%<<plotprocess1>>
+%@ &
+%<<label=plotprocess2,fig=TRUE,echo=FALSE>>=
+%<<plotprocess2>>
+%@ 
+%\end{tabular}
+%\end{center}
+%\caption{Left: fragment length distribution; Right: read start distribution}
+%\label{fig:plotprocess1}
+%\end{figure}
 
-As a final pre-processing step, we use the function \texttt{procBam}
-to divide each read pair into a series of disjoint intervals.
-The intervals indicate genomic regions that the read
-aligned to 
-consecutively, {\it i.e.} with no gaps.
+%As a final pre-processing step, we use the function \texttt{procBam}
+%to divide each read pair into a series of disjoint intervals.
+%The intervals indicate genomic regions that the read
+%aligned to 
+%consecutively, {\it i.e.} with no gaps.
 
-\footnotesize
-<<procBam>>=
-pbam0 <- procBam(bam0)
-head(pbam0$pbam)
-pbam0$stranded
-@ 
-\normalsize
+%\footnotesize
+%<<procBam>>=
+%pbam0 <- procBam(bam0)
+%pbam0
+%head(getReads(pbam0))
+%@ 
+%\normalsize
 
-The resulting object \texttt{pbam0} is a list
-with element \texttt{pbam} of type \texttt{RangedData}
-and \texttt{stranded} indicating whether the RNA-seq experiment was stranded or not.
-
-
-\section{Estimating expression for a set of known variants}
-\label{sec:knownvar}
-
-In order to obtain expression estimates,
-we first determine the exons visited by each read,
-which we denominate the {\it exon path},
-and count the number of reads following 
-the same exon path.
-
-\footnotesize
-<<pathCounts>>=
-pc <- pathCounts(pbam0, DB=hg19DB)
-pc
-head(pc@counts[[1]])
-@ 
-\normalsize
-
-The output of \texttt{pathCounts} is a 
-named integer vector counting exon paths. 
-The names follow the format ".exon1.exon2-exon3.exon4.", with
-dashes making the split between exons visited by left and
-right-end reads correspondingly.
-For instance, an element in \texttt{pc} named
-\texttt{.1314.1315-1315.1316.}
-indicates the number of reads for which the left end
-visited exons 1314 and 1315 
-and the right end visited exons 1315 and 1316.
-The precise genomic coordinates of each exon are stored in
-the annotated genome.
-
-The function \texttt{calcExp} uses the exon path counts,
-read start and  fragment length distributions and genome annotation
-to obtain RPKM expression estimates.
-Expression estimates are returned in an \texttt{ExpressionSet} object,
-with RefSeq transcript identifiers as \texttt{featureNames}
-and the internal gene ids used by \texttt{hg19DB} stored as feature data.
-
-\footnotesize
-<<calcExp>>=
-eset <- calcExp(distrs=distrs, genomeDB=hg19DB, pc=pc, readLength=75, relativeExpr=TRUE)
-eset
-head(exprs(eset))
-head(fData(eset))
-@ 
-\normalsize
-
-When setting \texttt{relativeExpr} to \texttt{TRUE}, \texttt{calExp} returns relative
-expression estimates for each isoform.
-That is, the proportion of transcripts originating from each variant,
-so that the estimated expressions add up to 1 for each gene.
-When setting \texttt{relativeExpr} to \texttt{FALSE},
-absolute expression estimates in reads per kilobase per million (RPKM)
-are returned instead.
-
-\footnotesize
-<<relIsoformExpr>>=
-eset <- calcExp(distrs=distrs, genomeDB=hg19DB, pc=pc, readLength=75, relativeExpr=FALSE)
-head(exprs(eset))
-@ 
-\normalsize
-
-Let $\hat{\pi}_{gi}$ be the estimated relative expression for transcript $i$ within gene $g$,
-$w_{gi}$ the transcript width in base pairs,
-$n_g$ the number of reads overlapping with gene $g$
-and $\sum_{}^{} n_g$ the total number of reads in the experiment.
-The RPKM for transcript $i$ within gene $i$ is computed as
-\begin{align}
-  r_{gi}= 10^9 \frac{ \hat{\pi}_{gi} n_g}{w_{gi} \sum_{}^{} n_g}
-\label{eq:rpkm}
-\end{align}
+%The resulting object \texttt{pbam0} is a list
+%with element \texttt{pbam} of type \texttt{RangedData}
+%and \texttt{stranded} indicating whether the RNA-seq experiment was stranded or not.
 
 
-\section{De novo variant discovery}
-\label{sec:denovo}
+%\section{Estimating expression for a set of known variants}
+%\label{sec:knownvar}
+% 
+%In order to obtain expression estimates,
+%we first determine the exons visited by each read,
+%which we denominate the {\it exon path},
+%and count the number of reads following 
+%the same exon path.
 
-\texttt{casper} implements a Bayesian model selection strategy to detect novel variants and quantify their expression.
-The basic idea is to first expand the annotated genome by adding new exons (or groups of exons, suggesting a new transcripts) 
-suggested by the data.
-Second, for each gene we consider all the variants that can be formed by including/excluding each exon,
-and report the posterior probability that a given set of variants is expressed.
-Conditional on their being expressed, we also estimate their expression level.
-Denote a set of variants of interest by $\bm{\nu}$ and by $\bm{\pi}$ their relative expression.
-We perform inference on the set of expressed variants using the posterior probability
-$P(\bm{\nu} \mid {\bf y})$ conditional on the observed data ${\bf y}$,
-and estimate their expression from $P(\bm{\pi} \mid \bm{\nu}, {\bf y})$.
-Finally, we use these results to estimate the expression of each variant,
-either by selecting the most probably set of variants or by 
-perform modeling averaging, {\it i.e.} combine the estimated $\bm{\pi}$
-under different sets of variants $\bm{\nu}_1,\bm{\nu}_2,\ldots$ according the their posterior probabilities $P(\bm{\nu}_i \mid {\bf y})$.
+%\footnotesize
+%<<pathCounts>>=
+%pc <- pathCounts(pbam0, DB=hg19DB)
+%pc
+%head(pc@counts[[1]])
+%@ 
+%\normalsize
 
-We start by
-expanding the annotated genome by detecting new exons and transcripts suggested by the data.
-We then obtain path counts based on the expanded genome.
+%The output of \texttt{pathCounts} is a 
+%named integer vector counting exon paths. 
+%The names follow the format ".exon1.exon2-exon3.exon4.", with
+%dashes making the split between exons visited by left and
+%right-end reads correspondingly.
+%For instance, an element in \texttt{pc} named
+%\texttt{.1314.1315-1315.1316.}
+%indicates the number of reads for which the left end
+%visited exons 1314 and 1315 
+%and the right end visited exons 1315 and 1316.
+%The precise genomic coordinates of each exon are stored in
+%the annotated genome.
+% 
+%The function \texttt{calcExp} uses the exon path counts,
+%read start and  fragment length distributions and genome annotation
+%to obtain RPKM expression estimates.
+%Expression estimates are returned in an \texttt{ExpressionSet} object,
+%with RefSeq transcript identifiers as \texttt{featureNames}
+%and the internal gene ids used by \texttt{hg19DB} stored as feature data.
 
-<<createDenovoGenome>>=
-hg19denovo <- createDenovoGenome(pbam0,DB=hg19DB,readLen=75)
-hg19denovo
-pcnovo <- pathCounts(pbam0,DB=hg19denovo)
-@ 
+%\footnotesize
+%<<calcExp>>=
+%eset <- calcExp(distrs=distrs, genomeDB=hg19DB, pc=pc, readLength=75, relativeExpr=TRUE)
+%eset
+%head(exprs(eset))
+%head(fData(eset))
+%@ 
+%\normalsize
 
-Second, we must set the prior probability that a set of variants is expressed.
-We recommend setting these probabilities based on the annotated genome,
-so that we assign high prior probability to combinations of variants that
-are consistent with those in the genome.
-For instance, genes with more exons tend to have a larger number of variants,
-but variants missing many exons are typically not expressed.
+%When setting \texttt{relativeExpr} to \texttt{TRUE}, \texttt{calExp} returns relative
+%expression estimates for each isoform.
+%That is, the proportion of transcripts originating from each variant,
+%so that the estimated expressions add up to 1 for each gene.
+%When setting \texttt{relativeExpr} to \texttt{FALSE},
+%absolute expression estimates in reads per kilobase per million (RPKM)
+%are returned instead.
 
-<<modelPrior>>=
-mprior <- modelPrior(hg19DB)
-mprior
-@ 
+%\footnotesize
+%<<relIsoformExpr>>=
+%eset <- calcExp(distrs=distrs, genomeDB=hg19DB, pc=pc, readLength=75, relativeExpr=FALSE)
+%head(exprs(eset))
+%@ 
+%\normalsize
 
-We can visualize the prior probabilities with \texttt{plotPriorAS}.
-Setting \texttt{type='nbVariants'} displays the prior probability that
-a gene with $E$ exons has $1,2,\ldots,2^{E}-1$ expressed variants.
-Figure \ref{fig:plotprior1} displays these probabilities for $E=9$
-(there are too few genes in \texttt{hg19DB} to obtain precise estimates for other $E$ values).
-The figure also shows the observed proportion in the annotated genome \texttt{hg19DB}.
-
-\footnotesize
-<<plotprior1>>=
-plotPriorAS(mprior, type='nbVariants',exons=9)
-@ 
-\normalsize
-
-
-\setkeys{Gin}{width=0.45\textwidth} 
-\begin{figure}
-\begin{center}
-<<label=plotprior1,fig=TRUE,echo=FALSE>>=
-<<plotprior1>>
-@
-\end{center}
-\caption{Prior distribution on the number of variants for genes with 2, 3, 4 and 5 exons}
-\label{fig:plotprior1}
-\end{figure}
-
-We can also display the prior distribution on the number of exons
-contained in an expressed variants by setting \texttt{type='nbExons'}.
-
-\footnotesize
-<<plotprior2>>=
-plotPriorAS(mprior, type='nbExons',exons=9)
-@ 
-\normalsize
-
-\setkeys{Gin}{width=0.45\textwidth} 
-\begin{figure}
-\begin{center}
-<<label=plotprior2,fig=TRUE,echo=FALSE>>=
-<<plotprior2>>
-@
-\end{center}
-\caption{Prior distribution on the number of exons in a variant for genes with 2, 3, 4 and 5 exons}
-\label{fig:plotprior2}
-\end{figure}
-
-The function \texttt{calcDenovo} computes posterior probabilities and estimated expression for each set of variants.
-For a gene with $E$ exons, there's $2^E-1$ possible variants and hence $2^{2^E-1}-1$ possible sets of expressed variants.
-It is computationally unfeasible to enumerate such a super-exponential number of models.
-By default, \texttt{calcDenovo} performs this exhaustive enumeration only for genes with up to 5 exons.
-For genes with $\geq 6$ exons its uses an MCMC scheme combined with systematic search strategies
-that attempts to explore the sets of variants wit highest posterior probability.
+%Let $\hat{\pi}_{gi}$ be the estimated relative expression for transcript $i$ within gene $g$,
+%$w_{gi}$ the transcript width in base pairs,
+%$n_g$ the number of reads overlapping with gene $g$
+%and $\sum_{}^{} n_g$ the total number of reads in the experiment.
+%The RPKM for transcript $i$ within gene $i$ is computed as
+%\begin{align}
+%  r_{gi}= 10^9 \frac{ \hat{\pi}_{gi} n_g}{w_{gi} \sum_{}^{} n_g}
+%\label{eq:rpkm}
+%\end{align}
 
 
-<<calcDenovo>>=
-fit1 <- calcDenovo(distrs=distrs, genomeDB=hg19denovo, pc=pcnovo, readLength=75, islandid="4")
-fit1
-fit1[['4']]
-@ 
+%\section{De novo variant discovery}
+%\label{sec:denovo}
+%
+%\texttt{casper} implements a Bayesian model selection strategy to detect novel variants and quantify their expression.
+%The basic idea is to first expand the annotated genome by adding new exons (or groups of exons, suggesting a new transcripts) 
+%suggested by the data.
+%Second, for each gene we consider all the variants that can be formed by including/excluding each exon,
+%and report the posterior probability that a given set of variants is expressed.
+%Conditional on their being expressed, we also estimate their expression level.
+%Denote a set of variants of interest by $\bm{\nu}$ and by $\bm{\pi}$ their relative expression.
+%We perform inference on the set of expressed variants using the posterior probability
+%$P(\bm{\nu} \mid {\bf y})$ conditional on the observed data ${\bf y}$,
+%and estimate their expression from $P(\bm{\pi} \mid \bm{\nu}, {\bf y})$.
+%Finally, we use these results to estimate the expression of each variant,
+%either by selecting the most probably set of variants or by 
+%perform modeling averaging, {\it i.e.} combine the estimated $\bm{\pi}$
+%under different sets of variants $\bm{\nu}_1,\bm{\nu}_2,\ldots$ according the their posterior probabilities $P(\bm{\nu}_i \mid {\bf y})$.
+%
+%We start by
+%expanding the annotated genome by detecting new exons and transcripts suggested by the data.
+%We then obtain path counts based on the expanded genome.
+%
+%<<createDenovoGenome>>=
+%hg19denovo <- createDenovoGenome(pbam0,DB=hg19DB,readLen=75)
+%hg19denovo
+%pcnovo <- pathCounts(pbam0,DB=hg19denovo)
+%@ 
+%
+%Second, we must set the prior probability that a set of variants is expressed.
+%We recommend setting these probabilities based on the annotated genome,
+%so that we assign high prior probability to combinations of variants that
+%are consistent with those in the genome.
+%For instance, genes with more exons tend to have a larger number of variants,
+%but variants missing many exons are typically not expressed.
+%
+%<<modelPrior>>=
+%mprior <- modelPrior(hg19DB)
+%mprior
+%@ 
+%
+%We can visualize the prior probabilities with \texttt{plotPriorAS}.
+%Setting \texttt{type='nbVariants'} displays the prior probability that
+%a gene with $E$ exons has $1,2,\ldots,2^{E}-1$ expressed variants.
+%Figure \ref{fig:plotprior1} displays these probabilities for $E=9$
+%(there are too few genes in \texttt{hg19DB} to obtain precise estimates for other $E$ values).
+%The figure also shows the observed proportion in the annotated genome \texttt{hg19DB}.
+%
+%\footnotesize
+%<<plotprior1>>=
+%plotPriorAS(mprior, type='nbVariants',exons=9)
+%@ 
+%\normalsize
+%
+%
+%\setkeys{Gin}{width=0.45\textwidth} 
+%\begin{figure}
+%\begin{center}
+%<<label=plotprior1,fig=TRUE,echo=FALSE>>=
+%<<plotprior1>>
+%@
+%\end{center}
+%\caption{Prior distribution on the number of variants for genes with 2, 3, 4 and 5 exons}
+%\label{fig:plotprior1}
+%\end{figure}
+%
+%We can also display the prior distribution on the number of exons
+%contained in an expressed variants by setting \texttt{type='nbExons'}.
+%
+%\footnotesize
+%<<plotprior2>>=
+%plotPriorAS(mprior, type='nbExons',exons=9)
+%@ 
+%\normalsize
+%
+%\setkeys{Gin}{width=0.45\textwidth} 
+%\begin{figure}
+%\begin{center}
+%<<label=plotprior2,fig=TRUE,echo=FALSE>>=
+%<<plotprior2>>
+%@
+%\end{center}
+%\caption{Prior distribution on the number of exons in a variant for genes with 2, 3, 4 and 5 exons}
+%\label{fig:plotprior2}
+%\end{figure}
+%
+%The function \texttt{calcDenovo} computes posterior probabilities and estimated expression for each set of variants.
+%For a gene with $E$ exons, there's $2^E-1$ possible variants and hence $2^{2^E-1}-1$ possible sets of expressed variants.
+%It is computationally unfeasible to enumerate such a super-exponential number of models.
+%By default, \texttt{calcDenovo} performs this exhaustive enumeration only for genes with up to 5 exons.
+%For genes with $\geq 6$ exons its uses an MCMC scheme combined with systematic search strategies
+%that attempts to explore the sets of variants wit highest posterior probability.
+%
+%
+%<<calcDenovo>>=
+%fit1 <- calcDenovo(distrs=distrs, genomeDB=hg19denovo, pc=pcnovo, readLength=75, islandid="4")
+%fit1
+%fit1[['4']]
+%@ 
 
 \bibliographystyle{plainnat}
 \bibliography{references} 

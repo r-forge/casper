@@ -27,10 +27,10 @@ procBam(bam, stranded=FALSE, seed)
 One alignment is chosen at random from those multihits with same start position for both reads but different insertions/deletions patterns. 
 }
 \value{
-A RangedData object with reads from fragments with both
-  ends correctly aligned after splitting them
-  by the corresponding CIGAR. Unique identifiers by fragment are
-  stored.}
+  An object of class \code{procBam} containing 
+  reads with both ends
+  correctly aligned and split according to the corresponding CIGAR.
+  Unique identifiers by fragment are stored.}
 \author{
   Camille Stephan-Otto Attolini
 }
@@ -38,8 +38,7 @@ A RangedData object with reads from fragments with both
 \code{scanBam} from package \code{Rsamtools}
 }
 \examples{
-##---- Should be DIRECTLY executable !! ----
-
+##See example in calcExp
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

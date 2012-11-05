@@ -53,6 +53,7 @@ data(hg19DB)
 #Pre-process
 bam0 <- rmShortInserts(K562.r1l1, isizeMin=100)
 pbam0 <- procBam(bam0)
+head(getReads(pbam0))
 
 #Estimate distributions, get path counts
 distrs <- getDistrs(hg19DB,bam=bam0)
@@ -63,8 +64,6 @@ eset <- calcExp(distrs=distrs, genomeDB=hg19DB, pc=pc, readLength=75, relativeEx
 head(exprs(eset))
 head(fData(eset))
 
-#Plot variants, reads & report expression
-genPlot(goi='4',genomeDB=hg19DB,reads=pbam0$pbam,exp=eset)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

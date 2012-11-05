@@ -1,32 +1,5 @@
-require(methods)
 
-setClass("pathCounts", representation(counts = "list", denovo = "logical", stranded="logical"))
-
-valid_pathCounts <- function(object) {
-  msg <- NULL
-#validity checks go here
-  if(object@stranded & length(object@counts)<2) msg <- "Stranded pathCounts must contain plus and minus counts"
-  if(!(is.null(msg))) { TRUE } else { msg }
-}
-
-setValidity("pathCounts", valid_pathCounts)
-setMethod("show", signature(object="pathCounts"), function(object) {
-  if(object@denovo) {
-    if(object@stranded) {
-      cat("Stranded denovo pathCounts object with",length(object@counts[[1]])+length(object@counts[[2]]),"islands and", sum(!unlist(lapply(object@counts[['plus']], is.null))),"non zero positive islands and ", sum(!unlist(lapply(object@counts[['minus']], is.null))),"non zero negative islands\n")
-          }
-    else cat("Non-stranded denovo pathCounts object with",length(object@counts[[1]]),"islands and",sum(!unlist(lapply(object@counts[[1]], is.null))),"non zero islands.\n") 
-  } else {
-    if(object@stranded) {
-      cat("Stranded known pathCounts object with",length(object@counts[[1]])+length(object@counts[[2]]),"islands and", sum(!unlist(lapply(object@counts[['plus']], is.null))),"non zero positive islands and ", sum(!unlist(lapply(object@counts[['minus']], is.null))),"non zero negative islands\n")
-    }
-    else cat("Non-stranded known pathCounts object with",length(object@counts[[1]]),"islands and", sum(!unlist(lapply(object@counts[[1]], is.null))),"non zero islands.\n")
-  }
-})
-
-
-
-  procPaths <- function(reads, DB, mc.cores){
+procPaths <- function(reads, DB, mc.cores){
     cat("Finding overlaps between reads and exons\n")
     over<-findOverlaps(reads, DB@exonsNI)    
     readid<-as.character(reads$id)[queryHits(over)]
@@ -101,16 +74,17 @@ genomeBystrand <- function(DB, strand){
 }
 
 pathCounts<-function(reads, DB, mc.cores=1) {
-  if(!reads$stranded) {
-    counts <- procPaths(reads$pbam, DB, mc.cores)
-    ans <- new("pathCounts", counts=list(counts), denovo=DB@denovo, stranded=reads$stranded)
+  if (class(reads) != 'procBam') stop('reads must be an object of class procBam')
+  if(!reads@stranded) {
+    counts <- procPaths(reads@pbam, DB, mc.cores)
+    ans <- new("pathCounts", counts=list(counts), denovo=DB@denovo, stranded=reads@stranded)
   }
   else {
     plusDB <- genomeBystrand(DB, strand="+")
     plus <- procPaths(reads$plus, plusDB, mc.cores)
     minusDB <- genomeBystrand(DB, strand="-")
     minus <- procPaths(reads$minus, minusDB, mc.cores)
-    ans <- new("pathCounts", counts=list(plus=plus, minus=minus), denovo=DB@denovo, stranded=reads$stranded)
+    ans <- new("pathCounts", counts=list(plus=plus, minus=minus), denovo=DB@denovo, stranded=reads@stranded)
   }
   ans
 }
