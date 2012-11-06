@@ -1,3 +1,17 @@
+require(methods)
+
+## METHODS
+
+setMethod("getNreads",signature(pc='pathCounts'),function(pc) {
+  if(pc@stranded) {
+    ans <- c(sapply(pc@counts[['plus']], sum), sapply(pc@counts[['minus']], sum))
+  } else {
+    ans <- sapply(pc@counts[[1]], sum)
+  }
+  ans
+}
+)
+
 
 procPaths <- function(reads, DB, mc.cores){
     cat("Finding overlaps between reads and exons\n")

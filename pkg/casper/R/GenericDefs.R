@@ -4,3 +4,4 @@ setGeneric("plotExpr", function(gene, minProbExpr=.5, minExpr=.1, xlab='(kb)', y
 setGeneric("rangesPlot",function(x, gene, exonProfile=TRUE, maxFragLength=300, xlab='', ylab='', xlim, ...) standardGeneric("rangesPlot"))
 setGeneric("getReads", function(x) standardGeneric("getReads"))
 setGeneric("transcripts", function(entrezid, islandid, genomeDB) standardGeneric("transcripts"))
+setGeneric("getNreads", function(pc) standardGeneric("getNreads"))

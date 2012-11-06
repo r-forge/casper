@@ -35,6 +35,7 @@ pathCounts(reads, DB, mc.cores = 1)
 \seealso{
   \code{\link{procGenome}} to create an annotated genome object,
   \code{\link{createDenovoGenome}} to create a de novo annotated genome.
+  See help(getNreads) to get number of fragments mapping to each island. 
 }
 \examples{
 ##---- Should be DIRECTLY executable !! ----

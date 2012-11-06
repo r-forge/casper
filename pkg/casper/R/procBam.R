@@ -1,7 +1,5 @@
 require(methods)
 
-
-
 buildRD<-function(reads){
     if(sum(grepl("chr", unique(reads[[5]])))>0) {
         reads<-RangedData(IRanges(start=ifelse(reads[[1]]<reads[[2]], reads[[1]], reads[[2]]), end=ifelse(reads[[1]]>reads[[2]], reads[[1]], reads[[2]])), space=reads[[5]], id=reads[[4]], flag=reads[[3]], rid=reads[[6]], strand=reads[[7]], XS=reads[[8]])
@@ -13,32 +11,26 @@ buildRD<-function(reads){
 }
 
 uniquifyQname<-function(bam, seed=1){   	
-  bam$rname<-as.character(bam$rname)
-  sel<-bam$pos>bam$mpos
-  bam$qname[sel]<-paste(bam$qname[sel], ".", bam$pos[sel], ".",bam$mpos[sel], sep="")
-  sel<-bam$pos<=bam$mpos
-  bam$qname[sel]<-paste(bam$qname[sel], ".", bam$mpos[sel], ".",bam$pos[sel], sep="")
-# Randomly choose "multihits" with same start position but different cigar                                                                                                                              
-    dups<-duplicated(paste(bam$pos, bam$mpos, sep="."))
-    dups<-bam$qname[bam$qname %in% bam$qname[dups]]
-    tab<-table(dups)
-    if(sum(tab>2)>0){
-        probPos<-bam$qname %in% names(tab)[tab>2]
-        probID<-paste(bam$qname[probPos], bam$pos[probPos])
-        set.seed(seed)
-        sel<-unlist(tapply(1:sum(probPos), probID, function(x) x[sample(1:length(x), 1)]))
-        fixed<-lapply(lapply(bam, "[", probPos), "[", sel)
-        bam1<-lapply(bam, function(x) x[!probPos])    
-        res<-lapply(names(bam), function(x) c(bam1[[x]], fixed[[x]]))
-        names(res)<-names(bam)
-    } else {
-        res<-bam
-    }
-    qdup<-bam$qname[bam$qname %in% bam$qname[duplicated(bam$qname)]] 
-    uni<-bam$qname %in% qdup
-    res<-lapply(res, "[", uni)
+  qname <- vector(mode='character', length=length(bam$qname))
+  dups <- .Call("uniqQname", bam$qname, length(bam$qname), bam$pos, bam$mpos, qname)
+  bam$qname <- dups[[1]]
+  if(length(dups)>0){
+    probPos<-bam$qname %in% dups[[2]]
+    probID<-paste(bam$qname[probPos], bam$pos[probPos])
+    set.seed(seed)
+    sel<-unlist(tapply(1:sum(probPos), probID, function(x) x[sample(1:length(x), 1)]))
+    fixed<-lapply(lapply(bam, "[", probPos), "[", sel)
+    bam1<-lapply(bam, function(x) x[!probPos])    
+    res<-lapply(names(bam), function(x) c(bam1[[x]], fixed[[x]]))
     names(res)<-names(bam)
-    res
+  } else {
+    res<-bam
+  }
+  qdup<-bam$qname[bam$qname %in% bam$qname[duplicated(bam$qname)]] 
+  uni<-bam$qname %in% qdup
+  res<-lapply(res, "[", uni)
+  names(res)<-names(bam)
+  res
 }
 
 nbReads <- function(bam0) {
@@ -53,6 +45,7 @@ procBam<-function(bam, stranded=FALSE, seed=1){
     lev <- levels(bam$strand)
     bam$rname<-as.character(bam$rname)
     bam<-uniquifyQname(bam, seed)
+    cat(date())
     cat("Calculating total number of reads...\n")
     nreads<-nbReads(bam)+10
     cat("done.\nProcessing cigars and building read's object...\n")

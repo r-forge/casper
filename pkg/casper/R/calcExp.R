@@ -1,4 +1,4 @@
-procExp <- function(distrs, genomeDB, pc, readLength, islandid, relativeExpr=TRUE, priorq=2, citype='none', niter=10^3, burnin=100, mc.cores=1, verbose=FALSE) {
+procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=FALSE, priorq=2, citype='none', niter=10^3, burnin=100, mc.cores=1, verbose=FALSE, totReads) {
   #Format input
   startcdf <- distrs@stDis(seq(0,1,.001))
   lendis <- as.double(distrs@lenDis/sum(distrs@lenDis))
@@ -118,10 +118,11 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, relativeExpr=TRU
     ans <- new("ExpressionSet",exprs=exprsx,featureData=fdata)
 
     #Return absolute expression levels
-  if (!relativeExpr) {
+  if (rpkm) {
     nreads <- sapply(pc[unique(as.character(ans@featureData$gene))],sum)
+    geneLength <- sapply(genomeDB@islands[unique(as.character(ans@featureData$gene))], function(x) sum(width(x))) 
+    nreads <- (nreads/totReads)/(geneLength/10^9)
     exprs(ans) <- exprs(ans)*nreads[as.character(ans@featureData$gene)]
-    exprs(ans) <- t(t(exprs(ans))/colSums(exprs(ans), na.rm=T))
   }
   ans
 }
@@ -146,8 +147,9 @@ mergeExp <- function(minus, plus){
   ans
 }
 
-calcExp <- function(distrs, genomeDB, pc, readLength, islandid, relativeExpr=TRUE, priorq=2, citype='none', niter=10^3, burnin=100, mc.cores=1, verbose=FALSE) {
+calcExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=FALSE, priorq=2, citype='none', niter=10^3, burnin=100, mc.cores=1, verbose=FALSE) {
 
+  totReads <- sum(getNreads(pc))
   if (missing(readLength)) stop("readLength must be specified")
   if (genomeDB@denovo) stop("genomeDB must be a known genome")
   if (pc@denovo) stop("pc must be a pathCounts object from known genome")
@@ -157,13 +159,13 @@ calcExp <- function(distrs, genomeDB, pc, readLength, islandid, relativeExpr=TRU
     plus <- NULL
     if(length(plusGI)>0) {
       plusDB <- genomeBystrand(genomeDB, "+")
-      plus <- procExp(distrs, plusDB, pc=pc@counts$plus, readLength=readLength, islandid=plusGI, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
+      plus <- procExp(distrs, plusDB, pc=pc@counts$plus, readLength=readLength, islandid=plusGI, rpkm=rpkm, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype, totReads=totReads)
     }
     minusGI <- islandid[genomeDB@islandStrand[islandid]=="-"]
     minus <- NULL
     if(length(minusGI)>0) {
       minusDB <- genomeBystrand(genomeDB, "-")
-      minus <- procExp(distrs, minusDB, pc=pc@counts$minus, readLength=readLength, islandid=minusGI, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
+      minus <- procExp(distrs, minusDB, pc=pc@counts$minus, readLength=readLength, islandid=minusGI, rpkm=rpkm, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype, totReads=totReads)
     } 
     if(is.null(plus) & is.null(minus)) stop("No counts in islandid genes")
     if(!(is.null(plus) | is.null(minus))) { ans <- mergeExp(plus, minus) }
@@ -171,7 +173,7 @@ calcExp <- function(distrs, genomeDB, pc, readLength, islandid, relativeExpr=TRU
   } else {
     if(missing(islandid)) islandid <- names(pc@counts[[1]])
     if(sum(!unlist(lapply(pc@counts[islandid], is.null)))) stop("No counts in islandid genes")
-    ans <- procExp(distrs, genomeDB, pc=pc@counts[[1]], readLength=readLength, islandid=islandid, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
+    ans <- procExp(distrs, genomeDB, pc=pc@counts[[1]], readLength=readLength, islandid=islandid, rpkm=rpkm, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype, totReads=totReads)
   }
 
   ans

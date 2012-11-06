@@ -104,7 +104,7 @@ procGenome<-function(genome, mc.cores=1){
 
   genDB<-makeTranscriptDbFromUCSC(genome=genome, tablename="refGene")
   cat("Processing Exons and Transcrips\n")
-  txs<-transcripts(genDB,columns=c("tx_id","tx_name","gene_id","exon_id","cds_id"))
+  txs<-GenomicFeatures::transcripts(genDB,columns=c("tx_id","tx_name","gene_id","exon_id","cds_id"))
   txs<-txs[match(unique(unlist(txs@elementMetadata$tx_name)), unlist(txs@elementMetadata$tx_name)),]
   exid <- sapply(txs@elementMetadata$exon_id, function(x) paste(unlist(x), collapse="."))
   names(exid) <- values(txs)$tx_name

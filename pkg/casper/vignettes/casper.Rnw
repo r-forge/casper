@@ -237,24 +237,24 @@ and the read start distribution.
 
 %\footnotesize
 %<<calcExp>>=
-%eset <- calcExp(distrs=distrs, genomeDB=hg19DB, pc=pc, readLength=75, relativeExpr=TRUE)
+%eset <- calcExp(distrs=distrs, genomeDB=hg19DB, pc=pc, readLength=75, rpkm=FALSE)
 %eset
 %head(exprs(eset))
 %head(fData(eset))
 %@ 
 %\normalsize
 
-%When setting \texttt{relativeExpr} to \texttt{TRUE}, \texttt{calExp} returns relative
+%When setting \texttt{rpkm} to \texttt{FALSE}, \texttt{calExp} returns relative
 %expression estimates for each isoform.
 %That is, the proportion of transcripts originating from each variant,
 %so that the estimated expressions add up to 1 for each gene.
-%When setting \texttt{relativeExpr} to \texttt{FALSE},
+%When setting \texttt{rpkm} to \texttt{TRUE},
 %absolute expression estimates in reads per kilobase per million (RPKM)
 %are returned instead.
 
 %\footnotesize
 %<<relIsoformExpr>>=
-%eset <- calcExp(distrs=distrs, genomeDB=hg19DB, pc=pc, readLength=75, relativeExpr=FALSE)
+%eset <- calcExp(distrs=distrs, genomeDB=hg19DB, pc=pc, readLength=75, rpkm=TRUE)
 %head(exprs(eset))
 %@ 
 %\normalsize
