@@ -1,5 +1,6 @@
 #include "dataframe.h"
 #include "cppmemory.h"
+using namespace std;
 
 
 DataFrame::DataFrame(DiscreteDF* fraglen_dist, double (*fragsta_cumu)(double))

@@ -1,9 +1,7 @@
 #include "seppel.h"
-
 #include <iostream>
-
 #include "cppmemory.h"
-
+using namespace std;
 
 
 Seppel::Seppel(DataFrame* frame)

@@ -59,7 +59,7 @@ setMethod("genePlot",signature(generanges='IRanges'),
     y0 <- seq(1/(1+nsplice),1-1/(1+nsplice),by=1/(1+nsplice))
     x0 <- start(generanges)
     x1 <- end(generanges)
-    if (length(x0)>1) segments(x0=x1[-length(x1)],x1=x0[-1],y=y0,y1=y0)
+    if (length(x0)>1) segments(x0=x1[-length(x1)],x1=x0[-1],y0=y0,y1=y0)
     segments(x0=x0,x1=x1,y0=y0+.33/(1+nsplice),y1=y0+.33/(1+nsplice),col=col)
     segments(x0=x0,x1=x1,y0=y0-.33/(1+nsplice),y1=y0-.33/(1+nsplice),col=col)
     segments(x0=x0,x1=x0,y0=y0-.33/(1+nsplice),y1=y0+.33/(1+nsplice),col=col)
@@ -85,7 +85,7 @@ setMethod("genePlot",signature(generanges='IRangesList'),
     for (i in nsplice:1) {
       x0 <- start(generanges[[i]])
       x1 <- end(generanges[[i]])
-      if (length(x0)>1) segments(x0=x1[-length(x1)],x1=x0[-1],y=y0[i],y1=y0[i], col=col[i])
+      if (length(x0)>1) segments(x0=x1[-length(x1)],x1=x0[-1],y0=y0[i],y1=y0[i], col=col[i])
       segments(x0=x0,x1=x1,y0=y0[i]+.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=col[i])
       segments(x0=x0,x1=x1,y0=y0[i]-.33/(1+nsplice),y1=y0[i]-.33/(1+nsplice), col=col[i])
       segments(x0=x0,x1=x0,y0=y0[i]-.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=col[i])
@@ -106,7 +106,7 @@ setMethod("genePlot",signature(generanges='CompressedIRangesList'),
     for (i in 1:nsplice) {
       x0 <- start(generanges[[i]])
       x1 <- end(generanges[[i]])
-      if (length(x0)>1) segments(x0=x1[-length(x1)],x1=x0[-1],y=y0[i],y1=y0[i], col=col[i])
+      if (length(x0)>1) segments(x0=x1[-length(x1)],x1=x0[-1],y0=y0[i],y1=y0[i], col=col[i])
       segments(x0=x0,x1=x1,y0=y0[i]+.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=col[i])
       segments(x0=x0,x1=x1,y0=y0[i]-.33/(1+nsplice),y1=y0[i]-.33/(1+nsplice), col=col[i])
       segments(x0=x0,x1=x0,y0=y0[i]-.33/(1+nsplice),y1=y0[i]+.33/(1+nsplice), col=col[i])

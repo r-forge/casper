@@ -1034,7 +1034,7 @@ extern "C"
 
 		//Report posterior probabilities
 
-		int i;
+		int i=0;
 
 		int nrowpi=0, nx;
 

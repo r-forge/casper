@@ -14,7 +14,7 @@ SEXP casperSimC(SEXP gene_exp, SEXP var_exp, SEXP var_num, SEXP var_len, SEXP ex
 
   int i=0, *ge, *vn, *vl, *en, *es, *ee, *ei, *gs, ngenes, *ldv, rl, ldlen, sdlen, n, bam, insideBam;
   double *ve, *ldd, *sdv, *sdd;
-  FILE *LRFILE, *RRFILE;
+  FILE *LRFILE=NULL, *RRFILE=NULL;
   SEXP startsTmp;
 
   PROTECT(gene_exp = coerceVector(gene_exp, INTSXP));
@@ -102,7 +102,7 @@ SEXP casperSimC(SEXP gene_exp, SEXP var_exp, SEXP var_num, SEXP var_len, SEXP ex
   }
 
   int j, *starts, gap, totp=0;
-  char ***cigars, seqstr[rl+1], seqnuc[2]="C", tmpchar[100];
+  char ***cigars=NULL, seqstr[rl+1], seqnuc[2]="C", tmpchar[100];
   hash_t *paths, paths_pted;
   PROTECT(startsTmp=allocVector(INTSXP, 3));
   starts = INTEGER(startsTmp);

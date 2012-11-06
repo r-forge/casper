@@ -366,7 +366,7 @@ double Casper::calculateIntegral(double *mode, int n, int method) {
 
   } else if (method==2) {
 
-    double *pi, paccept;
+    double *pi=NULL, paccept;
 
     IPMH(pi, &paccept, &ans, is_runs, is_runs, mode);  //no samples stored, simply reports average joint / proposal ratio
 
