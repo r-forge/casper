@@ -45,7 +45,6 @@ procBam<-function(bam, stranded=FALSE, seed=1){
     lev <- levels(bam$strand)
     bam$rname<-as.character(bam$rname)
     bam<-uniquifyQname(bam, seed)
-    cat(date())
     cat("Calculating total number of reads...\n")
     nreads<-nbReads(bam)+10
     cat("done.\nProcessing cigars and building read's object...\n")

@@ -178,18 +178,3 @@ write.sam.header <- function(chrlen, file, nvars){
   for(i in 1:nvars) cat("@RG\tID:", i, "\tSM:", i, "\n", file=file, append=T)
 }
 
-
-startDist <- function(st,fragLength,txLength) {
- # Estimate relative start distribution under runcation (st < fragLength/st: relative start (i.e. start/fragLength: fragment txLength: transcript length
- # Output: cumulative probability function (actually, a linear interpolation)
-      require(survival)
-        trunc <- 1-fragLength/txLength
-        sel <- trunc>st
-        trunc <- trunc[sel]
-        st <- st[sel]
-        fit <- summary(survfit(Surv(time=1-trunc,time2=1-st,event=rep( TRUE,length(st))) ~ 1))
-        s <- 1-fit$time
-        pcum <- fit$surv
-        f <- approxfun(s,pcum)
-        return(f)
-}

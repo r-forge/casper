@@ -114,8 +114,6 @@ getDistrs<-function(DB, bam, nreads=4*10^6){
   sel <- str=='-'; stDis[sel] <- (exstnogap[sel]+exen[sel]-readen[sel])/txlength[sel]
 
   stDis <- startDist(stDis, frlen, txlength)
-
-  ans <- list(lenDis=ld, stDis=stDis)
-  ll <- new("readDistrs",lenDis=ans$lenDis,stDis=ans$stDis)
+  new("readDistrs",lenDis=ld,stDis=stDis)
 }
 
