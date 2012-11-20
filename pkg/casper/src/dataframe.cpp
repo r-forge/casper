@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "dataframe.h"
 #include "cppmemory.h"
 using namespace std;

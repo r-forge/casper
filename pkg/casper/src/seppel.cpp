@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "seppel.h"
 #include <iostream>
 #include "cppmemory.h"
