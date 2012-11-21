@@ -1,5 +1,5 @@
+#include <stdio.h>
 #include "variant.h"
-
 #include "cppmemory.h"
 
 
