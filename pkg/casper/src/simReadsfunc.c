@@ -204,6 +204,7 @@ int *build_path(var_t var, int len, int st, int rl, hash_t *path, int strand, in
     ren = rst + rl - 1;
   }
   else {
+    if((var.len - st - len + 2)<=0) Rprintf("%d %d %d %d %d %d\n", st, en, rst, ren, var.len, len);    
     st = var.len - st - len + 2;
     rst = st + len - rl; 
     en = st + rl - 1;

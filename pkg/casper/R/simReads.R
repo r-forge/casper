@@ -1,4 +1,4 @@
-simReads <- function(selIslands, geneExpr, rl, n, seed, writeBam, distrs, genomeDB, chrlen=NULL, repSims=FALSE, bamFile=NULL, stranded=FALSE, samtoolsPath=NULL, mc.cores=1){
+simReads <- function(selIslands, nSimReads, pis, rl, seed, writeBam, distrs, genomeDB, chrlen=NULL, repSims=FALSE, bamFile=NULL, stranded=FALSE, samtoolsPath=NULL, mc.cores=1){
   ##### Simulate reads
   if(writeBam==1) {
     if(is.null(chrlen)){
@@ -22,7 +22,7 @@ simReads <- function(selIslands, geneExpr, rl, n, seed, writeBam, distrs, genome
   tmp <- sub(" ", ".", Sys.time())
   lr_file <- paste(bamFile, ".lr.", tmp, ".sam", sep="")
   rr_file <- paste(bamFile, ".rr.", tmp, ".sam", sep="")
-  sims <- casperSim(genomeDB=genomeDB, distrs=distrs, geneExpr=geneExpr, selIslands=selIslands, lr_file=lr_file, rr_file=rr_file, rl=rl, n=n, chrlen, seed, bam=writeBam)
+  sims <- casperSim(genomeDB=genomeDB, distrs=distrs, nSimReads=nSimReads, pis=pis, selIslands=selIslands, lr_file=lr_file, rr_file=rr_file, rl=rl, chrlen, seed, bam=writeBam)
   if(writeBam==1){
     finalBamFile=paste(rr_file, ".fin.bam", sep="")
     finalBamSorted=sub(".bam", "", bamFile)
@@ -34,12 +34,11 @@ simReads <- function(selIslands, geneExpr, rl, n, seed, writeBam, distrs, genome
   counts <- splitPaths(sims$pc, genomeDB, mc.cores=mc.cores, stranded=stranded, geneid=selIslands)
   pc <- new("pathCounts", counts=counts, denovo=FALSE, stranded=stranded)
   if(repSims==1) {
-    Nsim <- sims$Nsim
     sims$pc <- NULL
     sims$Nsim <- NULL
-    ans <- list(sims=sims, pc=pc, Nsim=Nsim)
+    ans <- list(sims=sims, pc=pc)
   }
-  else ans <- list(Nsim=sims$Nsim, pc=pc)
+  else ans <- pc
   ans
 }
 
@@ -95,7 +94,7 @@ splitPaths <- function(paths, DB, mc.cores, stranded, geneid){
   ans
 }
 
-casperSim <- function(genomeDB, distrs, geneExpr, selIslands, lr_file=NULL, rr_file=NULL, rl, n, chrlen, seed, bam){
+casperSim <- function(genomeDB, distrs, nSimReads, pis, selIslands, lr_file=NULL, rr_file=NULL, rl, chrlen, seed, bam){
   cat("Formatting input\n")
   sel <- selIslands
   txs <- genomeDB@transcripts[sel]
@@ -124,19 +123,13 @@ casperSim <- function(genomeDB, distrs, geneExpr, selIslands, lr_file=NULL, rr_f
   tmps <- rep(1:length(exon_num), exon_num)
   widths <- exon_end-exon_st+1
   variant_len <- tapply(widths, tmps, sum)
-  if(!all(names(geneExpr) %in% c("genes", "vars"))) stop("Wrong geneExpr format");
-  sel <- geneExpr$genes>0
-  prob <- geneExpr$genes[sel]
-  prob <- prob[selIslands]
-  if(length(prob)==0) stop("all genes have zero expression")
-  prob <- prob/sum(prob)
-  Nsim <- rmultinom(n=1, size=n, prob=prob)
-  names(Nsim) <- names(prob)
-  ge <- Nsim
-  rownames(ge)=0:(nrow(ge)-1)
-  ge <- ge[ge[,1]!=0,]
-  ge <- as.integer(rep(names(ge), ge))
-  ve=geneExpr$vars[unlist(lapply(txs, names))]
+  txs <- unlist(lapply(txs,names)) 
+  if(!all(txs %in% names(pis))) stop("Wrong pis vector, some transcripts missing")
+  if(!all(names(nSimReads) %in% selIslands)) stop("Wrong nSimReads vector, some islands missing")
+  if(!all(nSimReads>0)) stop("nSimReads with zero entries")
+  ge <- nSimReads[selIslands]
+  ge <- as.integer(rep(0:(length(ge)-1), ge))
+  ve=pis[txs]
   gs = island_strand
   vn=variant_num
   vl=variant_len
@@ -145,7 +138,7 @@ casperSim <- function(genomeDB, distrs, geneExpr, selIslands, lr_file=NULL, rr_f
   ee=exon_end
   ei=exs
   ngenes=length(sel)
-  ldv <- sample(as.numeric(names(distrs@lenDis)), p=distrs@lenDis/sum(distrs@lenDis), size=n, replace=T)
+  ldv <- sample(as.numeric(names(distrs@lenDis)), p=distrs@lenDis/sum(distrs@lenDis), size=sum(nSimReads), replace=T)
   ldd <- as.integer(1)
   th <- seq(0, 1, len=10000)
   std <- distrs@stDis(th)
@@ -160,13 +153,11 @@ casperSim <- function(genomeDB, distrs, geneExpr, selIslands, lr_file=NULL, rr_f
   cat("Simulating fragments\n")
 # insideBam deprecated, only in case it is useful in simulations, return from C all information written to the bam file
   insideBam=integer(0)
-  ans <- .Call("casperSimC", ge, ve, vn, vl, en, es, ee, ei, ldv, ldd, sdv, sdd, rl, n, gs, lr_file, rr_file, chroms, as.integer(seed), as.integer(bam), as.integer(insideBam))
+  ans <- .Call("casperSimC", ge, ve, vn, vl, en, es, ee, ei, ldv, ldd, sdv, sdd, rl, length(ge), gs, lr_file, rr_file, chroms, as.integer(seed), as.integer(bam), as.integer(insideBam))
   ans <- ans[1:7]
   names(ans[[7]]) <- ans[[6]]
   ans[[6]] <- NULL
   names(ans) <- c("varl", "st", "len", "abst", "strand", "pc")
-  ans$abst <- NULL
-  ans$Nsim <- Nsim
   ans
 }
 
