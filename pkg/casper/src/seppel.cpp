@@ -2,6 +2,7 @@
 #include "seppel.h"
 #include <iostream>
 #include "cppmemory.h"
+#include <limits>
 using namespace std;
 
 
@@ -723,41 +724,23 @@ void Seppel::normalizeIntegrals(double *probs, double *values, int n)
 
 double Seppel::calculatePrior(Model* model) {
 
-
-
   if (priorprobs.count(model) > 0) return priorprobs[model];
-
-
 
   if (modelUnifPrior==1) {
 
-
-
     return 0.0;
-
-
 
   } else {
 
     int E= frame->exons.size(), nbVars= model->count();
 
-
-
     if (nbVars > (int) priorpNbVars.size()) {  //nb variants > min(2^E -1, 1000) has 0 prob
-
-
 
       return -std::numeric_limits<double>::infinity();
 
-
-
     } else {
 
-
-
       double ans;
-
-
 
       //Prior on nb variants in the model
 
