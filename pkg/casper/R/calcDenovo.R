@@ -271,7 +271,7 @@ relativeExpr <- function(expr, summarize='modelAvg', minProbExpr=0.5, minExpr=0.
     ans <- do.call(c, unname(ans))
   } else {
     ans <- lapply(as.list(expr), variantMargExpr, minProbExpr=minProbExpr, minExpr=minExpr)
-    ans <- do.call("c", unname(ans))
+    ans <- do.call("rbind", unname(ans))
   }
   ans
 }

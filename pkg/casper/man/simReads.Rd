@@ -10,7 +10,7 @@ end reads according to given read start distribution, fragment length
 distribution and gene and variant expressions.
 }
 \usage{
-simReads(selIslands, geneExpr, rl, n, seed, writeBam, distrs, genomeDB, chrlen=NULL, repSims=FALSE, bamFile=NULL, stranded=FALSE, samtoolsPath=NULL, mc.cores=1)
+simReads(selIslands, geneExpr, rl, n, seed, writeBam, distrs, genomeDB, chrlen=NULL, repSims=FALSE, bamFile=NULL, stranded=FALSE, samtoolsPath=NULL, verbose=TRUE, mc.cores=1)
 }
 \arguments{
   \item{selIslands}{
@@ -58,6 +58,7 @@ simReads(selIslands, geneExpr, rl, n, seed, writeBam, distrs, genomeDB, chrlen=N
   \item{samtoolsPath}{
     Path to the binary file 'samtools'
   }
+  \item{verbose}{Set to \code{TRUE} to print progress}
   \item{mc.cores}{Number of cores to use in function}
   \item{chrlen}{Numeric vector with lengths of chromosomes for reference
     genome. Names must coincide with chromosomes in genomeDB}

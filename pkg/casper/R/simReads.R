@@ -1,10 +1,10 @@
-simReads <- function(selIslands, nSimReads, pis, rl, seed, writeBam, distrs, genomeDB, chrlen=NULL, repSims=FALSE, bamFile=NULL, stranded=FALSE, samtoolsPath=NULL, mc.cores=1){
+simReads <- function(selIslands, nSimReads, pis, rl, seed, writeBam, distrs, genomeDB, chrlen=NULL, repSims=FALSE, bamFile=NULL, stranded=FALSE, samtoolsPath=NULL, verbose=TRUE, mc.cores=1){
   ##### Simulate reads
   if(writeBam==1) {
     if(is.null(chrlen)){
       fn <- paste("http://hgdownload.cse.ucsc.edu/goldenPath/",genomeDB@genomeVersion,"/database/chromInfo.txt.gz", sep="")
       dfile="tmp.gz"
-      cat(paste("Downloading chromosome lengths from UCSC for genome ", genomeDB@genomeVersion, " (file: ",fn,"\nUsing ", dfile, " as destination file (deleted afterwards)\n", sep=""))
+      if (verbose) cat(paste("Downloading chromosome lengths from UCSC for genome ", genomeDB@genomeVersion, " (file: ",fn,"\nUsing ", dfile, " as destination file (deleted afterwards)\n", sep=""))
       dn <- try(download.file(fn,destfile=dfile, quiet=T), silent=T)
       if(class(dn)=="try-error") stop("No chromInfo file found at htt://hgdownload.cse.ucsc.edu/goldenPath/ for required genome. Please provide chrlen vector with reference sequence chromosomes lengths")
       chrlen <- readLines(gzfile(dfile))
@@ -22,15 +22,15 @@ simReads <- function(selIslands, nSimReads, pis, rl, seed, writeBam, distrs, gen
   tmp <- sub(" ", ".", Sys.time())
   lr_file <- paste(bamFile, ".lr.", tmp, ".sam", sep="")
   rr_file <- paste(bamFile, ".rr.", tmp, ".sam", sep="")
-  sims <- casperSim(genomeDB=genomeDB, distrs=distrs, nSimReads=nSimReads, pis=pis, selIslands=selIslands, lr_file=lr_file, rr_file=rr_file, rl=rl, chrlen, seed, bam=writeBam)
+  sims <- casperSim(genomeDB=genomeDB, distrs=distrs, nSimReads=nSimReads, pis=pis, selIslands=selIslands, lr_file=lr_file, rr_file=rr_file, rl=rl, chrlen, seed, bam=writeBam, verbose=verbose)
   if(writeBam==1){
     finalBamFile=paste(rr_file, ".fin.bam", sep="")
     finalBamSorted=sub(".bam", "", bamFile)
-    cat(paste("generating bam ", bamFile,"\n"))
+    if (verbose) cat(paste("generating bam ", bamFile,"\n"))
     system(paste("grep -v '@' ", lr_file, "  >> ", rr_file, " && ", samtoolsPath," view -Sb ", rr_file, "  > ", finalBamFile, " && ", samtoolsPath," sort ", finalBamFile, " ", finalBamSorted," && ", samtoolsPath, " index ", bamFile, sep=""))
     system(paste("rm ", lr_file, " && rm ", rr_file, " && rm ", finalBamFile, sep=""))
   }
-  cat("Splitting counts\n")
+  if (verbose) cat("Splitting counts\n")
   counts <- splitPaths(sims$pc, genomeDB, mc.cores=mc.cores, stranded=stranded, geneid=selIslands)
   pc <- new("pathCounts", counts=counts, denovo=FALSE, stranded=stranded)
   if(repSims==1) {
@@ -94,8 +94,8 @@ splitPaths <- function(paths, DB, mc.cores, stranded, geneid){
   ans
 }
 
-casperSim <- function(genomeDB, distrs, nSimReads, pis, selIslands, lr_file=NULL, rr_file=NULL, rl, chrlen, seed, bam){
-  cat("Formatting input\n")
+casperSim <- function(genomeDB, distrs, nSimReads, pis, selIslands, lr_file=NULL, rr_file=NULL, rl, chrlen, seed, bam, verbose=TRUE){
+  if (verbose) cat("Formatting input\n")
   sel <- selIslands
   txs <- genomeDB@transcripts[sel]
   sel1 <- unlist(lapply(txs, is.null))
@@ -150,7 +150,7 @@ casperSim <- function(genomeDB, distrs, nSimReads, pis, selIslands, lr_file=NULL
     write.sam.header(chrlen[names(chrlen) %in% unique(chroms)], lr_file, max(vn))
     write.sam.header(chrlen[names(chrlen) %in% unique(chroms)], rr_file, max(vn))
   }
-  cat("Simulating fragments\n")
+  if (verbose) cat("Simulating fragments\n")
 # insideBam deprecated, only in case it is useful in simulations, return from C all information written to the bam file
   insideBam=integer(0)
   ans <- .Call("casperSimC", ge, ve, vn, vl, en, es, ee, ei, ldv, ldd, sdv, sdd, rl, length(ge), gs, lr_file, rr_file, chroms, as.integer(seed), as.integer(bam), as.integer(insideBam))
