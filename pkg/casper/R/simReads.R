@@ -33,6 +33,7 @@ simReads <- function(selIslands, nSimReads, pis, rl, seed, writeBam, distrs, gen
   if (verbose) cat("Splitting counts\n")
   counts <- splitPaths(sims$pc, genomeDB, mc.cores=mc.cores, stranded=stranded, geneid=selIslands)
   pc <- new("pathCounts", counts=counts, denovo=FALSE, stranded=stranded)
+   
   if(repSims==1) {
     sims$pc <- NULL
     sims$Nsim <- NULL
@@ -57,7 +58,7 @@ splitPaths <- function(paths, DB, mc.cores, stranded, geneid){
   splCounts <- split(paths, isl)
   splCounts <- lapply(splCounts, function(x) x[grepl("-", names(x))])
   if(DB@denovo){
-    sel <- sapply(sel, "[", -1)
+    sel <- lapply(sel, "[", -1)
     tmp <- split(sel, isl)
     if(mc.cores>1) {
       require(multicore)
