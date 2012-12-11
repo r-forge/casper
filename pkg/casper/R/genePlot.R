@@ -70,7 +70,7 @@ setMethod("genePlot",signature(generanges='IRanges'),
 
 setMethod("genePlot",signature(generanges='RangedData'),
   function(generanges, islandid, genomeDB, reads, exp, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', col, ...) {
-    genePlot(ranges(gene), names.arg=names.arg, xlab=xlab, ylab=ylab, xlim=xlim, cex=cex, yaxt=yaxt, col=col, ...)
+    genePlot(ranges(generanges), names.arg=names.arg, xlab=xlab, ylab=ylab, xlim=xlim, cex=cex, yaxt=yaxt, col=col, ...)
   }
 )
 
