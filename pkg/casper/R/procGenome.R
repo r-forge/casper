@@ -8,19 +8,39 @@ setMethod("getIsland",signature(entrezid='character',txid='missing',genomeDB='an
   as.character(genomeDB@aliases[genomeDB@aliases$gene_id==entrezid,'island_id'][1])
 }
 )
+
 setMethod("getIsland",signature(entrezid='missing',txid='character',genomeDB='annotatedGenome'),function(entrezid, txid, genomeDB) {
   as.character(genomeDB@aliases[txid,'island_id'])
 }
 )
 
-setMethod("transcripts", signature(entrezid='missing',islandid='character',genomeDB='annotatedGenome'), function(entrezid, islandid, genomeDB) {
-  IRangesList(lapply(genomeDB@transcripts[[islandid]],function(z) genomeDB@islands[[islandid]][as.character(z)]))
+setMethod("getChr",signature(entrezid='missing',txid='missing',islandid='character'), function(entrezid, txid, islandid, genomeDB) {
+  as.character(genomeDB@exon2island$space[match(TRUE,genomeDB@exon2island$island == islandid)])
 }
 )
+
+setMethod("getChr",signature(entrezid='character',txid='missing',islandid='missing'), function(entrezid, txid, islandid, genomeDB) {
+  islandid <- getIsland(entrezid=entrezid, genomeDB=genomeDB)
+  getChr(islandid=islandid, genomeDB=genomeDB)
+}
+)
+
+setMethod("getChr",signature(entrezid='missing',txid='character',islandid='missing'), function(entrezid, txid, islandid, genomeDB) {
+  islandid <- getIsland(txid=txid, genomeDB=genomeDB)
+  getChr(islandid=islandid, genomeDB=genomeDB)
+}
+)
+
+
+setMethod("transcripts", signature(entrezid='missing',islandid='character',genomeDB='annotatedGenome'), function(entrezid, islandid, genomeDB) {
+  IRangesList(lapply(genomeDB@transcripts[[islandid]],function(z) ranges(genomeDB@islands[[islandid]][as.character(z)])))
+}
+)
+
 setMethod("transcripts", signature(entrezid='character',islandid='missing',genomeDB='annotatedGenome'), function(entrezid, islandid, genomeDB) {
   txids <- rownames(genomeDB@aliases)[genomeDB@aliases$gene_id==entrezid]
   islandid <- getIsland(entrezid=entrezid,genomeDB=genomeDB)
-  IRangesList(lapply(genomeDB@transcripts[[islandid]],function(z) genomeDB@islands[[islandid]][as.character(z)]))[txids]
+  IRangesList(lapply(genomeDB@transcripts[[islandid]],function(z) ranges(genomeDB@islands[[islandid]][as.character(z)])))[txids]
 }
 )
 
@@ -28,34 +48,34 @@ setMethod("transcripts", signature(entrezid='character',islandid='missing',genom
 ### FUNCTIONS
 
 makeIslands <- function(allexs){
-    exons <- allexs
-      txs <- as.integer(as.factor(names(exons)))
-      totEx <- length(exons)
-      uniex <- unique(exons)
-      nexR <- length(uniex)
-      islands <- rep(0, nexR)
-      ans<-.Call("makeGeneIslands", exons, islands, uniex, txs, totEx, nexR)
-      names(ans) <- uniex
-      ans
-  }
+  exons <- allexs
+  txs <- as.integer(as.factor(names(exons)))
+  totEx <- length(exons)
+  uniex <- unique(exons)
+  nexR <- length(uniex)
+  islands <- rep(0, nexR)
+  ans<-.Call("makeGeneIslands", exons, islands, uniex, txs, totEx, nexR)
+  names(ans) <- uniex
+  ans
+}
 
-generateNOexons<-function(exByTx, startId=1, mc.cores){    
+generateNOexons<-function(exByTx, startId=1, mc.cores){
   exByTx<-unlist(exByTx)
-    if(mc.cores>1) require(multicore)
+  if(mc.cores>1) require(multicore)
     if(mc.cores>1) {
       if ('multicore' %in% loadedNamespaces()) {
         exonsNI<-multicore::mclapply(levels(exByTx@seqnames), function(x){
-                    y<-exByTx[exByTx@seqnames==x,]
-                    st<-start(y)
-                    en<-end(y)
-                    both<-sort(unique(c(st,en)))
-                    rd<-IRanges(start=both[-length(both)], end=both[-1])
-                    strd<-start(rd)
-                    enrd<-end(rd)
-                    strd[strd %in% en]<-strd[strd %in% en]+1
-                    enrd[enrd %in% st]<-enrd[enrd %in% st]-1
-                    allRD<-IRanges(start=strd, end=enrd)
-                  }, mc.cores=mc.cores
+          y<-exByTx[exByTx@seqnames==x,]
+          st<-start(y)
+          en<-end(y)
+          both<-sort(unique(c(st,en)))
+          rd<-IRanges(start=both[-length(both)], end=both[-1])
+          strd<-start(rd)
+          enrd<-end(rd)
+          strd[strd %in% en]<-strd[strd %in% en]+1
+          enrd[enrd %in% st]<-enrd[enrd %in% st]-1
+          allRD<-IRanges(start=strd, end=enrd)
+        }, mc.cores=mc.cores
                  )
       } else stop('multicore library has not been loaded!')
     }
@@ -73,45 +93,44 @@ generateNOexons<-function(exByTx, startId=1, mc.cores){
         allRD<-IRanges(start=strd, end=enrd)
       })
        }
-    names(exonsNI)<-levels(exByTx@seqnames)
-    exonsNI<-IRangesList(exonsNI)
-    exonsNI<-RangedData(exonsNI)
-    exonsNI <- subsetByOverlaps(exonsNI, exByTx) 
-    exonsNI$id<-startId:(nrow(exonsNI)+startId-1)
-    overEx<-findOverlaps(exonsNI, exByTx)
-    exid<-exonsNI$id[queryHits(overEx)]
-    exkey<-split(exid, values(exByTx)$exon_id[subjectHits(overEx)])
-    if(mc.cores>1) require(multicore)
-    if(mc.cores>1) {
-      if ('multicore' %in% loadedNamespaces()) {
-        exkey<-multicore::mclapply(exkey, unique, mc.cores=mc.cores)
-      } else stop('multicore library has not been loaded!')
-    }
-    else {
-      exkey<-lapply(exkey, unique, mc.cores=mc.cores)
-    }
-    res<-list(exkey=exkey, exons=exonsNI)
-    res 
+  names(exonsNI)<-levels(exByTx@seqnames)
+  exonsNI <- IRangesList(exonsNI)
+  exonsNI <- exonsNI[sapply(exonsNI, length)>0]
+  exonsNI <- GRanges(ranges=unlist(exonsNI), seqnames=rep(names(exonsNI), sapply(exonsNI, length)))
+  exonsNI <- subsetByOverlaps(exonsNI, exByTx) 
+  names(exonsNI) <- startId:(length(exonsNI)+startId-1)
+  overEx <- findOverlaps(exonsNI, exByTx)
+  exid <- names(exonsNI)[queryHits(overEx)]
+  exkey <- split(exid, values(exByTx)$exon_id[subjectHits(overEx)])
+  if(mc.cores>1) require(multicore)
+  if(mc.cores>1) {
+    if ('multicore' %in% loadedNamespaces()) {
+      exkey<-multicore::mclapply(exkey, unique, mc.cores=mc.cores)
+    } else stop('multicore library has not been loaded!')
+  }
+  else {
+    exkey<-lapply(exkey, unique, mc.cores=mc.cores)
+  }
+  res<-list(exkey=exkey, exons=exonsNI)
+  res 
   }
 
 mapEx<-function(exs, exkey){
   nxs<-unname(unlist(exkey[as.character(sprintf("%d", exs))]))
-  nxs
+  as.integer(nxs)
 }
 
 
-procGenome<-function(genome, mc.cores=1){
+procGenome<-function(genDB, genome, mc.cores=1){
 
-  genDB<-makeTranscriptDbFromUCSC(genome=genome, tablename="refGene")
+#  genDB<-makeTranscriptDbFromUCSC(genome=genome, tablename="refGene")
   cat("Processing Exons and Transcrips\n")
   txs<-GenomicFeatures::transcripts(genDB,columns=c("tx_id","tx_name","gene_id","exon_id","cds_id"))
   txs<-txs[match(unique(unlist(txs@elementMetadata$tx_name)), unlist(txs@elementMetadata$tx_name)),]
   exid <- sapply(txs@elementMetadata$exon_id, function(x) paste(unlist(x), collapse="."))
   names(exid) <- values(txs)$tx_name
-  
-  #aliases <- txs[exid %in% names(table(exid))[table(exid)>1],]
+
   txs <- txs[match(unique(exid), exid),]
-  
   aliases <- values(txs)[1:3]
   aliases[,3] <- unlist(aliases[,3])
   aliases <- as.data.frame(aliases, stringsAsFactors=F)
@@ -127,26 +146,18 @@ procGenome<-function(genome, mc.cores=1){
   Exons<-Exons[names(Exons) %in% txs@elementMetadata$tx_id,]
   txnames<-match(names(Exons), txs@elementMetadata$tx_id)
   names(Exons)<-txs@elementMetadata$tx_name[txnames]
-  txsRD<-RangedData(txs)
-  ExonsDF<-as.data.frame(Exons)
-  ExonsRD<-RangedData(ranges=IRanges(start=ExonsDF$start, end=ExonsDF$end), space=ExonsDF$seqnames, element=ExonsDF$element, exon_id=ExonsDF$exon_id, strand=ExonsDF$strand)
-  #Find Non-overlapping exons
 
   cat("Finding non-overlapping exons\n")
-
-  txStrand <- as.character(txs@strand)
+  txStrand <- as.character(strand(txs))
   names(txStrand) <- values(txs)$tx_name
   sel <- names(txStrand)[txStrand=="+"]; plusExons <- Exons[sel]
   sel <- names(txStrand)[txStrand=="-"]; minusExons <- Exons[sel]
 
   fixExonsP <- generateNOexons(plusExons, startId=1, mc.cores)
-  fixExonsM <- generateNOexons(minusExons, startId=max(fixExonsP$exons$id)+1, mc.cores)
-  
+  fixExonsM <- generateNOexons(minusExons, startId=max(as.numeric(names(fixExonsP$exons)))+1, mc.cores)
   exkey <- fixExonsP$exkey
   exkey <- c(exkey, fixExonsM$exkey)
-  exonsNI <- as.data.frame(fixExonsP$exons)
-  exonsNI <- rbind(exonsNI, as.data.frame(fixExonsM$exons))
-  exonsNI <- RangedData(exonsNI)
+  exonsNI <- suppressWarnings(c(fixExonsP$exons, fixExonsM$exons))
   
   #Find transcript structure for new exons
 
@@ -159,7 +170,6 @@ procGenome<-function(genome, mc.cores=1){
   exon_ids <- tapply(exids, idx, function(x) if(any(x<0)) {rev(-x)} else x)
   names(exon_ids) <- names(Exons)
   
-  
   if(mc.cores>1) require(multicore)
   if(mc.cores>1) {
     if ('multicore' %in% loadedNamespaces()) {
@@ -169,57 +179,41 @@ procGenome<-function(genome, mc.cores=1){
     newTxs<-lapply(exon_ids, function(x) mapEx(x, exkey))
   }
   names(newTxs)<-names(Exons)
-
-  geneids<-txs@elementMetadata$gene_id
+  geneids<-values(txs)$gene_id
   geneids<-unlist(geneids)
-  names(geneids)<- unlist(txs@elementMetadata$tx_id)
+  names(geneids)<- unlist(values(txs)$tx_id)
+  
   # Make islands
-
   ex2tx <- unlist(newTxs)
   names(ex2tx) <- rep(names(newTxs), unlist(lapply(newTxs, length)))
   islands <- makeIslands(ex2tx)
+  tmp <- split(exonsNI, islands[names(exonsNI)])
+  extxs <- unlist(lapply(newTxs, "[", 1))    
   
-  exon2island <- as.data.frame(exonsNI)
-  exon2island$island <- islands[as.character(exon2island$id)]
-  rownames(exon2island) <- exon2island$id
-  islands <- split(exon2island, exon2island$island)
-  txStrand <- as.character(strand(txs))
-  names(txStrand) <- values(txs)$tx_name
-  extxs <- unlist(lapply(newTxs, "[", 1))  
-
-  
-  if(mc.cores>1) require(multicore)
-  if(mc.cores>1) {
-    if ('multicore' %in% loadedNamespaces()) {
-      islands <- multicore::mclapply(islands, function(x){
-        y <- IRanges(x$start, x$end);
-        names(y) <- x$id;
-        if(txStrand[names(ex2tx)[ex2tx %in% x$id[1]]]=="-") y <- rev(y)
-        y
-      }, mc.cores=mc.cores) } else stop('multicore library has not been loaded!')
-  } else {
-    islands <- lapply(islands, function(x){ y <- IRanges(x$start, x$end); names(y) <- x$id; y})
-  }
-
   cat("Splitting transcripts\n")
-
-  sel <- match(extxs, exon2island$id)
-  tx2island <- exon2island$island[sel]
+  sel <- match(extxs, names(exonsNI))
+  tx2island <- islands[as.character(sel)]
   names(tx2island) <- names(newTxs)
   transcripts <- newTxs[names(tx2island)]
   transcripts <- split(transcripts, tx2island)
-  sel <- unlist(lapply(transcripts, function(x) names(x)[1]))
-  islandStrand <- txStrand[sel]
-  names(islandStrand) <- names(islands)
-
+  islandStrand <- tapply(txStrand, tx2island[names(txStrand)], unique)
+  
   sel <- islandStrand=='-'
   transcripts[sel] <- lapply(transcripts[sel], function(x) lapply(x,rev))
 
   id2tx <- data.frame(island_id=rep(names(transcripts),sapply(transcripts,length)) , txname=unlist(sapply(transcripts,names)))
   rownames(id2tx) <- id2tx$txname
   aliases$island_id <- id2tx[rownames(aliases),'island_id']
-
-  ans <- new("annotatedGenome", islands=islands, transcripts=transcripts, exon2island=exon2island, aliases=aliases, exonsNI=exonsNI, islandStrand=islandStrand, dateCreated=Sys.Date(), genomeVersion=genome, denovo=FALSE)
+  exon2island <- as.data.frame(ranges(exonsNI))
+  exon2island <- exon2island[,-4]
+  exon2island$space <- as.character(seqnames(exonsNI))
+  exon2island$id <- names(exonsNI)
+  exon2island$island <- islands[as.character(exon2island$id)]
+  isln <- names(islandStrand)
+  islandStrand <- as.character(islandStrand)
+  names(islandStrand) <- isln
+  
+  ans <- new("annotatedGenome", islands=tmp, transcripts=transcripts, exon2island=exon2island, aliases=aliases, exonsNI=exonsNI, islandStrand=islandStrand, dateCreated=Sys.Date(), genomeVersion=genome, denovo=FALSE)
   ans
  } 
 

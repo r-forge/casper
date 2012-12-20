@@ -5,18 +5,21 @@
   Create an annotatedGenome object
 }
 \description{
-  \code{procGenome} downloads UCSC annotations for a given genome.
+  \code{procGenome} process annotations for a given genome
+  (e.g. from UCSC).
   \code{createDenovoGenome} creates a de novo annotated genome by
   combining UCSC annotations and observed RNA-seq data.
 }
 \usage{
-procGenome(genome, mc.cores = 1)
+procGenome(genDB, genome, mc.cores = 1)
 
 createDenovoGenome(reads, DB, readLen, stranded=FALSE, minLinks=2,
 maxLinkDist=1e+05, maxDist=1000, mc.cores=1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
+  \item{genDB}{Annotations downloaded from UCSC
+    (e.g. genDB<-makeTranscriptDbFromUCSC(genome="hg19", tablename="refGene"))}
   \item{genome}{Character indicating genome version (e.g. "hg19", "dm3")}
   \item{mc.cores}{Number of cores to use in parallel processing
     (multicore package required)}
@@ -58,7 +61,8 @@ maxLinkDist=1e+05, maxDist=1000, mc.cores=1)
   To extract the transcripts for a entrez or island id see help(transcripts).
 }
 \examples{
-## hg19DB <- procGenome("hg19")
+## genDB<-makeTranscriptDbFromUCSC(genome="hg19", tablename="refGene")
+## hg19DB <- procGenome(genDB, "hg19")
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

@@ -9,7 +9,7 @@
 #include "functions.h"
 
 
-SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP strand, SEXP totFrags, SEXP totReads, SEXP len, SEXP strs, SEXP flag, SEXP key, SEXP chrom, SEXP rid, SEXP rstrand){
+SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP strand, SEXP totFrags, SEXP totReads, SEXP totJunx, SEXP len, SEXP strs, SEXP flag, SEXP key, SEXP chrom, SEXP rid, SEXP rstrand, SEXP jchrom, SEXP jstrs, SEXP jlen){
 	read_t *frags;
 	int totF, j, l, hashSize, i, *frags_size, *reads_size;
 	hash_t *fragsHashPtr, fragsHash;
@@ -53,15 +53,24 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
 	}
 	
 	//SEXP len, strs, flag, key, chrom, rid;	
-	int tmp, *cigs, counter=0;
+	int tmp, *cigs, counter=0, jcounter=0;
 	
 	PROTECT(len = coerceVector(len, INTSXP));
 	int *p_len=INTEGER(len);
+	PROTECT(jlen = coerceVector(jlen, INTSXP));
+        int *p_jlen=INTEGER(jlen);
+
 	PROTECT(flag = coerceVector(flag, INTSXP));
 	int *p_flag=INTEGER(flag);
+
 	PROTECT(chrom = coerceVector(chrom, STRSXP));
+	PROTECT(jchrom = coerceVector(jchrom, STRSXP));
+
 	PROTECT(strs = coerceVector(strs, INTSXP));
 	int *p_strs=INTEGER(strs);
+        PROTECT(jstrs = coerceVector(jstrs, INTSXP));
+        int *p_jstrs=INTEGER(jstrs);
+
 	PROTECT(key = coerceVector(key, STRSXP));
 	PROTECT(rid = coerceVector(rid, INTSXP));
 	int *p_rid=INTEGER(rid);
@@ -85,7 +94,13 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
 		  p_rid[counter] = 1;
 		  p_rstrand[counter] = frags[tmp].strand_1;
 		  frags[tmp].len_1+=cigs[j];
-		  if((cigs[0]>1)&&(j<cigs[0]-1)) frags[tmp].len_1+=cigs[j+1];
+		  if((cigs[0]>1)&&(j<cigs[0]-1)) {
+		    SET_STRING_ELT(jchrom, jcounter, mkChar(frags[tmp].chr_1));
+		    p_jstrs[jcounter] = p_len[counter];
+		    frags[tmp].len_1 += cigs[j+1];		    
+		    p_jlen[jcounter] = frags[tmp].len_1;
+		    jcounter++;
+		  }
 		  counter++;
 		}
 		cigs=procCigar(m_strdup(frags[tmp].cigar_2), cigs);
@@ -99,7 +114,13 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
 		  p_rid[counter] = 2;
 		  p_rstrand[counter] = frags[tmp].strand_2;
 		  frags[tmp].len_2+=cigs[j];
-		  if((cigs[0]>1)&&(j<cigs[0]-1)) frags[tmp].len_2+=cigs[j+1];
+		  if((cigs[0]>1)&&(j<cigs[0]-1)) {
+		    SET_STRING_ELT(jchrom, jcounter, mkChar(frags[tmp].chr_2));
+                    p_jstrs[jcounter] = p_len[counter];
+                    frags[tmp].len_2 += cigs[j+1];
+                    p_jlen[jcounter] = frags[tmp].len_2;
+                    jcounter++;
+		  }
 		  counter++;
 		}
 		free(frags[tmp].chr_2);
@@ -113,9 +134,8 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
             }
 	  }
 	}
-    
 	SEXP reads;
-	PROTECT(reads = allocVector(VECSXP, 7));
+	PROTECT(reads = allocVector(VECSXP, 10));
 	SET_VECTOR_ELT(reads, 0, len);
 	SET_VECTOR_ELT(reads, 1, strs);
 	SET_VECTOR_ELT(reads, 2, flag);
@@ -123,8 +143,11 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
 	SET_VECTOR_ELT(reads, 4, chrom);
 	SET_VECTOR_ELT(reads, 5, rid);
 	SET_VECTOR_ELT(reads, 6, rstrand);
+	SET_VECTOR_ELT(reads, 7, jchrom);
+        SET_VECTOR_ELT(reads, 8, jstrs);
+        SET_VECTOR_ELT(reads, 9, jlen);
 	free(frags);
 	hash_destroy(fragsHashPtr);
-	UNPROTECT(16);
+	UNPROTECT(19);
 	return(reads);
 }

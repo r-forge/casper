@@ -4,8 +4,8 @@
 \alias{genePlot,CompressedIRangesList,ANY,ANY,ANY,ANY-method}
 \alias{genePlot,IRanges,ANY,ANY,ANY,ANY-method}
 \alias{genePlot,IRangesList,ANY,ANY,ANY,ANY-method}
-\alias{genePlot,RangedData,ANY,ANY,ANY,ANY-method}
-\alias{genePlot,missing,character,annotatedGenome,RangedData,ExpressionSet-method}
+\alias{genePlot,GRanges,ANY,ANY,ANY,ANY-method}
+\alias{genePlot,missing,character,annotatedGenome,GRanges,ExpressionSet-method}
 \alias{genePlot,missing,character,annotatedGenome,missing,missing-method}
 \alias{genePlot,missing,character,annotatedGenome,procBam,ExpressionSet-method}
 \title{
@@ -52,11 +52,11 @@ genePlot(generanges, islandid, genomeDB, reads, exp, names.arg, xlab='', ylab=''
     Plots a set of transcripts. Each element in the \code{generanges} corresponds to a
     transcript. Each transcript should contain exon start/end positions.
   }
-  \item{\code{signature(generanges="RangedData", islandid="ANY", genomeDB="ANY", reads="ANY", exp="ANY")}}{
+  \item{\code{signature(generanges="GRanges", islandid="ANY", genomeDB="ANY", reads="ANY", exp="ANY")}}{
     Plots a set of transcripts. Each space in \code{generanges} corresponds to a
     transcript. Each transcript should contain exon start/end positions.
   }
-  \item{\code{signature(generanges="missing", islandid="character", genomeDB="annotatedGenome", reads="RangedData", exp="ExpressionSet")}}{
+  \item{\code{signature(generanges="missing", islandid="character", genomeDB="annotatedGenome", reads="GRanges", exp="ExpressionSet")}}{
     Plots all transcripts stored in \code{genomeDB} for island with
     identifier \code{islandid}. Individual reads are added to the plot
     (\code{reads} contains start/end of individual read fragments).

@@ -1,5 +1,3 @@
-require(methods)
-
 ## METHODS
 
 setMethod("getNreads",signature(pc='pathCounts'),function(pc) {
@@ -10,17 +8,15 @@ setMethod("getNreads",signature(pc='pathCounts'),function(pc) {
   }
   ans
 }
-)
-
+          )
 
 procPaths <- function(reads, DB, mc.cores){
     cat("Finding overlaps between reads and exons\n")
     over<-findOverlaps(reads, DB@exonsNI)    
-    readid<-as.character(reads$id)[queryHits(over)]
-    readside<-reads$rid[queryHits(over)]
-    exid<-DB@exonsNI$id[subjectHits(over)]
+    readid<-as.character(values(reads)$id)[queryHits(over)]
+    readside<-values(reads)$rid[queryHits(over)]
+    exid <- names(DB@exonsNI)[subjectHits(over)]
     exst<-start(DB@exonsNI)[subjectHits(over)]
-    
     cat("Counting paths\n")
     pCounts<-.Call("pathCounts", readid, readside, exst, exid)
     pCounts<-lapply(pCounts[1:2], function(x) x[1:pCounts[[3]]])
@@ -32,9 +28,10 @@ procPaths <- function(reads, DB, mc.cores){
     sel1 <- lapply(sel, "[", 2)
     sel1 <- unlist(sel1)
     
-    nislEx <- lapply(DB@islands, length)
+    nislEx <- elementLengths(DB@islands)
     nislEx <- rep(names(DB@islands), unlist(nislEx))
-    islEx <- unlist(lapply(DB@islands, names))
+    islEx <- names(unlist(DB@islands))
+    islEx <- sub(".*\\.","", islEx)
     names(islEx) <- nislEx
     isl <- match(sel1, islEx)
     isl <- names(islEx)[isl]
@@ -78,7 +75,7 @@ genomeBystrand <- function(DB, strand){
   sel <- DB@islandStrand==strand
   islands <- DB@islands[sel]
   transcripts <- DB@transcripts[sel]
-  exonsNI <- DB@exonsNI[DB@exonsNI$id %in% unlist(transcripts),]
+  exonsNI <- DB@exonsNI[names(DB@exonsNI) %in% unlist(transcripts),]
   exon2island <- DB@exon2island[DB@exon2island$id %in%unlist(transcripts),]
   islandStrand <- DB@islandStrand[sel]
   txid <- unlist(lapply(transcripts, names))
@@ -95,9 +92,9 @@ pathCounts<-function(reads, DB, mc.cores=1) {
   }
   else {
     plusDB <- genomeBystrand(DB, strand="+")
-    plus <- procPaths(reads$plus, plusDB, mc.cores)
+    plus <- procPaths(reads@plus, plusDB, mc.cores)
     minusDB <- genomeBystrand(DB, strand="-")
-    minus <- procPaths(reads$minus, minusDB, mc.cores)
+    minus <- procPaths(reads@minus, minusDB, mc.cores)
     ans <- new("pathCounts", counts=list(plus=plus, minus=minus), denovo=DB@denovo, stranded=reads@stranded)
   }
   ans

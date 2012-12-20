@@ -1,13 +1,18 @@
 require(methods)
 
 
-setClass("procBam", representation(pbam = "RangedData", stranded = "logical"))
+
+setClass("procBam", representation(pbam = "GRanges", junx="GRanges", stranded = "logical", plus="GRanges", minus="GRanges", pjunx="GRanges", mjunx="GRanges"))
 
 setMethod("show", signature(object="procBam"), function(object) {
   cat("procBam object created from",ifelse(object@stranded,"stranded","non-stranded"),"reads\n")
-  cat("Contains",nrow(object@pbam),"ranges corresponding to",length(unique(object@pbam$id)),"unique read pairs\n")
+  if(object@stranded) {
+    cat("Contains",length(object@plus),"ranges in the positive strand corresponding to",length(unique(values(object@plus)$id)),"unique read pairs\n")
+    cat("and",length(object@minus),"ranges in the negative strand corresponding to",length(unique(values(object@minus)$id)),"unique read pairs\n")
+  } else cat("Contains",length(object@pbam),"ranges corresponding to",length(unique(values(object@pbam)$id)),"unique read pairs\n")
 }
-)
+          )
+
 
 setMethod("getReads", signature(x="procBam"), function(x) x@pbam)
 
@@ -63,13 +68,11 @@ setMethod("show", signature(object="pathCounts"), function(object) {
   if(object@denovo) {
     if(object@stranded) {
       cat("Stranded denovo pathCounts object with",length(object@counts[[1]])+length(object@counts[[2]]),"islands and", sum(!unlist(lapply(object@counts[['plus']], is.null))),"non zero positive islands and ", sum(!unlist(lapply(object@counts[['minus']], is.null))),"non zero negative islands\n")
-          }
-    else cat("Non-stranded denovo pathCounts object with",length(object@counts[[1]]),"islands and",sum(!unlist(lapply(object@counts[[1]], is.null))),"non zero islands.\n") 
+          } else cat("Non-stranded denovo pathCounts object with",length(object@counts[[1]]),"islands and",sum(!unlist(lapply(object@counts[[1]], is.null))),"non zero islands.\n") 
   } else {
     if(object@stranded) {
       cat("Stranded known pathCounts object with",length(object@counts[[1]])+length(object@counts[[2]]),"islands and", sum(!unlist(lapply(object@counts[['plus']], is.null))),"non zero positive islands and ", sum(!unlist(lapply(object@counts[['minus']], is.null))),"non zero negative islands\n")
-    }
-    else cat("Non-stranded known pathCounts object with",length(object@counts[[1]]),"islands and", sum(!unlist(lapply(object@counts[[1]], is.null))),"non zero islands.\n")
+    } else cat("Non-stranded known pathCounts object with",length(object@counts[[1]]),"islands and", sum(!unlist(lapply(object@counts[[1]], is.null))),"non zero islands.\n")
   }
 })
 
@@ -78,18 +81,14 @@ setMethod("show", signature(object="pathCounts"), function(object) {
 ###############################################################
 
 
-setClass("annotatedGenome", representation(islands = "list", transcripts = "list", exon2island = "data.frame", exonsNI="RangedData", islandStrand="character", aliases="data.frame", genomeVersion="character", dateCreated="Date", denovo="logical"))
+setClass("annotatedGenome", representation(islands = "GRangesList", transcripts = "list", exon2island = "data.frame", exonsNI="GRanges", islandStrand="character", aliases="data.frame", genomeVersion="character", dateCreated="Date", denovo="logical"))
 valid_annotatedGenome <- function(object) {
   msg <- NULL
-  #validity checks go here
-  tab <- table(sapply(object@islands, class))
-  if (any(names(tab) != 'IRanges')) msg <- "All elements in 'islands' must be of class IRanges"
-  #if (any(!sapply(object@transcripts,is.list))) msg <- "All elements in transcripts must be of class list"
   if (!(all(c('space','start','end','width','id','island') %in% names(object@exon2island)))) msg <- "Incorrect column names in 'exon2island'"
-  if(!('id' %in% colnames(object@exonsNI))) msg <- "'exonsNI' must have an 'id' column"
   if(!(all(c('tx_id','tx_name','gene_id','exid','tx','island_id') %in% names(object@aliases)))) msg <- "Incorrect column names in 'aliases'"
   if (is.null(msg)) { TRUE } else { msg }
 }
+
 
 setValidity("annotatedGenome", valid_annotatedGenome)
 setMethod("show", signature(object="annotatedGenome"), function(object) {
@@ -99,4 +98,4 @@ setMethod("show", signature(object="annotatedGenome"), function(object) {
   cat("Genome version:",object@genomeVersion,"\n")
   cat("Date created:", as.character(object@dateCreated),"\n")
 }
-)
+          )

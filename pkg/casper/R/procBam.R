@@ -1,13 +1,13 @@
 require(methods)
 
 buildRD<-function(reads){
-    if(sum(grepl("chr", unique(reads[[5]])))>0) {
-        reads<-RangedData(IRanges(start=ifelse(reads[[1]]<reads[[2]], reads[[1]], reads[[2]]), end=ifelse(reads[[1]]>reads[[2]], reads[[1]], reads[[2]])), space=reads[[5]], id=reads[[4]], flag=reads[[3]], rid=reads[[6]], strand=reads[[7]], XS=reads[[8]])
-    } else {
-        reads<-RangedData(IRanges(start=ifelse(reads[[1]]<reads[[2]], reads[[1]], reads[[2]]), end=ifelse(reads[[1]]>reads[[2]], reads[[1]], reads[[2]])), space=paste("chr", reads[[5]], sep=""), id=reads[[4]], flag=reads[[3]], rid=reads[[6]], strand=reads[[7]], XS=reads[[8]])
-    }
-    res<-reads
-    res
+  if(sum(grepl("chr", unique(reads$chrom)))>0) {
+    reads<-GRanges(ranges=IRanges(start=ifelse(reads$end<reads$start, reads$end, reads$start), end=ifelse(reads$end>reads$start, reads$end, reads$start)), seqnames=reads$chrom, id=reads$key, flag=reads$flag, rid=reads$rid, strand=reads$rstrand, XS=reads$strand)
+  } else {
+    reads<-GRanges(ranges=IRanges(start=ifelse(reads$end<reads$start, reads$end, reads$start), end=ifelse(reads$end>reads$start, reads$end, reads$start)), seqnames=paste("chr", reads$chrom, sep=""), id=reads$key, flag=reads$flag, rid=reads$rid, strand=reads$rstrand, XS=reads$strand)
+  }
+  res<-reads
+  res
 }
 
 uniquifyQname<-function(bam, seed=1){   	
@@ -35,16 +35,23 @@ uniquifyQname<-function(bam, seed=1){
 
 nbReads <- function(bam0) {
     tab <- table(bam0$cigar)
-    count <- sapply(gregexpr("M",names(tab)),length)
-    sum(tab*count)
-}
+      count <- sapply(gregexpr("M",names(tab)),length)
+      tjunx <- sum(tab*(count-1))
+      treads <- sum(tab*count)
+      c(tjunx=tjunx, treads=treads)
+  }
 
 procB <- function(bam, strnd, seed=1){
+  
   lev <- levels(bam$strand)
   bam$rname<-as.character(bam$rname)
   bam<-uniquifyQname(bam, seed)
   cat("Calculating total number of reads...\n")
-  nreads<-nbReads(bam)+10
+  
+  nreads <- nbReads(bam)
+  njunx <- nreads['tjunx']
+  nreads <- nreads['treads']+10
+
   cat("done.\nProcessing cigars and building read's object...\n")
   len=vector(mode="integer", length=nreads)
   flag=vector(mode="integer", length=nreads)
@@ -53,38 +60,51 @@ procB <- function(bam, strnd, seed=1){
   key=vector(mode="character", length=nreads)
   chrom=vector(mode="character", length=nreads)
   strand=vector(mode="integer", length=nreads)
-  data<-.Call("procBam", bam$qname, bam$flag,  bam$rname, bam$pos, bam$cigar, as.numeric(bam$strand), length(bam$pos), nreads, len, strs, flag, key, chrom, rid, strand)
+  jchrom=vector(mode="character", length=njunx)
+  jstrs=vector(mode="integer", length=njunx)
+  jlen=vector(mode="integer", length=njunx)
+  data<-.Call("procBam", bam$qname, bam$flag,  bam$rname, bam$pos, bam$cigar, as.numeric(bam$strand), length(bam$pos), nreads, njunx, len, strs, flag, key, chrom, rid, strand, jchrom, jstrs, jlen)
+  names(data) <- c('end', 'start', 'flag', 'key', 'chrom', 'rid', 'rstrand', 'jchrom', 'jstart', 'jend')
+  junx <- GRanges(ranges=IRanges(start=data$jstart[data$jstart!=0], end=data$jend[data$jstart!=0]), seqnames=data$jchrom[data$jstart!=0], XS=rep(strnd, sum(data$jstart!=0)))
   data[[7]] <- lev[data[[7]]]
   sel<-data[[1]]!=0 & !is.na(data[[3]])
   data<-lapply(data, "[", sel)
   data[[length(data)+1]] <- rep(strnd, length(data[[1]]))
+  names(data)[length(data)] <- 'strand'
   cat("done.\n")
   ans<-buildRD(data)
-  id <- ans$id
+  id <- values(ans)$id
   idnum <- rep(0,length(id))
   idnum[which(id[-length(id)] != id[-1])+1] <- 1
   idnum <- cumsum(idnum)
-  ans$id <- idnum
-  ans
+  values(ans)$id <- idnum
+  list(pbam=ans, junx=junx)
 }
 
 procBam<-function(bam, stranded=FALSE, seed=1){
   require(IRanges)
   if(stranded) {
     minus <- bam$tag$XS=='-'
+    mjunx <- GRanges(IRanges(0,0), space=NULL)
     if(sum(minus)>0){
       minus <- lapply(bam, '[', minus)
       minus <- procB(minus, "-", seed=seed)
-    } else minus <- RangedData(IRanges(0,0), space=NULL)
+      mjunx <- minus$junx
+      minus <- minus$pbam
+    } else minus <- GRanges(IRanges(0,0), space=NULL)
     plus <- bam$tag$XS=='+'
+    mplus <- GRanges(IRanges(0,0), space=NULL)
     if(sum(plus)>0){
       plus <- lapply(bam, '[', plus)
       plus <- procB(plus, "+", seed=seed)
-    } else plus <- RangedData(IRanges(0,0), space=NULL)
-    ans <- list(plus=plus, minus=minus, stranded=TRUE)
+      pjunx <- plus$junx
+      plus <- plus$pbam
+    } else plus <- GRanges(IRanges(0,0), space=NULL)
+    ans <- list(plus=plus, pjunx=pjunx, minus=minus, mjunx=mjunx, stranded=TRUE)
   } else {
     pbam <- procB(bam, "*", seed=seed)
-    ans <- list(pbam=pbam, stranded=FALSE)
+    ans <- list(pbam=pbam$pbam, junx=pbam$junx, stranded=FALSE)
   }
-  new("procBam",pbam=ans$pbam,stranded=ans$stranded)
+  if(!ans$stranded) ans <- new("procBam",pbam=ans$pbam, junx=ans$junx,stranded=ans$stranded)
+  else ans <- new("procBam",pbam=list(plus=ans$plus, minus=ans$minus),junx=list(plus=ans$pjunx, minus=ans$mjunx), stranded=ans$stranded)
 }

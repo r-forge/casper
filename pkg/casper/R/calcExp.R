@@ -11,10 +11,15 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=FALSE, prio
   burnin <- as.integer(burnin)
   verbose <- as.integer(verbose)
   if ((niter<=burnin) & citype==2) stop("Too many burnin iterations specified. Decrease burnin or increase niter")
-  if (missing(islandid)) islandid <- names(genomeDB@islands)[sapply(genomeDB@islands,length)>1]
-  
-  exons <- lapply(genomeDB@islands,function(z) as.integer(names(z)))
-  exonwidth <- lapply(genomeDB@islands,width)
+  if (missing(islandid)) islandid <- names(genomeDB@islands)[elementLengths(genomeDB@islands)>1]
+
+  exons <- names(unlist(genomeDB@islands))
+  exons <- as.integer(sub(".*\\.", "", exons))
+  names(exons) <- rep(names(genomeDB@islands), elementLengths(genomeDB@islands))
+  exons <- split(unname(exons), names(exons))
+  exonwidth <- unlist(width(genomeDB@islands))
+  names(exonwidth) <- rep(names(genomeDB@islands), elementLengths(genomeDB@islands))
+  exonwidth <- split(unname(exonwidth), names(exonwidth))
   strand <- genomeDB@islandStrand
 
   if (!all(islandid %in% names(exons))) stop('islandid not found in genomeDB@islands')
@@ -41,8 +46,8 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=FALSE, prio
     }
     ans
   }
-  
-    #Run
+
+      #Run
     sel <- !sapply(pc[islandid], is.null)
     all <- islandid
     islandid <- islandid[sel]
@@ -120,7 +125,7 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=FALSE, prio
     #Return absolute expression levels
   if (rpkm) {
     nreads <- sapply(pc[unique(as.character(ans@featureData$gene))],sum)
-    geneLength <- sapply(genomeDB@islands[unique(as.character(ans@featureData$gene))], function(x) sum(width(x))) 
+    geneLength <- sapply(genomeDB@islands[unique(as.character(ans@featureData$gene))], function(x) sum(width(x)))
     nreads <- (nreads/totReads)/(geneLength/10^9)
     exprs(ans) <- exprs(ans)*nreads[as.character(ans@featureData$gene)]
   }
@@ -131,7 +136,7 @@ genomeBystrand <- function(DB, strand){
   sel <- DB@islandStrand==strand
   islands <- DB@islands[sel]
   transcripts <- DB@transcripts[sel]
-  exonsNI <- DB@exonsNI[DB@exonsNI$id %in% unlist(transcripts),]
+  exonsNI <- DB@exonsNI[names(DB@exonsNI) %in% unlist(transcripts),]
   exon2island <- DB@exon2island[DB@exon2island$id %in%unlist(transcripts),]
   islandStrand <- DB@islandStrand[sel]
   txid <- unlist(lapply(transcripts, names))
@@ -148,8 +153,8 @@ mergeExp <- function(minus, plus){
 }
 
 calcExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=FALSE, priorq=2, citype='none', niter=10^3, burnin=100, mc.cores=1, verbose=FALSE) {
-
-  totReads <- sum(getNreads(pc))
+ totReads <- sum(getNreads(pc))
+  
   if (missing(readLength)) stop("readLength must be specified")
   if (genomeDB@denovo) stop("genomeDB must be a known genome")
   if (pc@denovo) stop("pc must be a pathCounts object from known genome")

@@ -14,14 +14,33 @@
 }
 \section{Slots}{
   \describe{
-    \item{pbam}{\code{RangedData} indicating chromosome, start and end
+    \item{pbam}{\code{GRanges} indicating chromosome, start and end
       of each disjoint range. The pair id and read id within the pair
       are also stored.
-
+    }
+    \item{junx}{\code{GRanges} indicating chromosome, start and end
+    of junctions spanned by reads.
     }
     \item{stranded}{Logical variable. \code{TRUE} indicates that the
       reads were obtained from and RNA-seq experiment where strand
       information was preserved.
+    }
+    In the case of stranded experiments:
+    \item{plus}{\code{GRanges} indicating chromosome, start and end of
+      each disjoint range for fragments originated from the positive
+      strand. The pair id and read id within the pair are also stored.
+    }
+    \item{minus}{\code{GRanges} indicating chromosome, start and end
+      of each disjoint range for fragments originated from the
+      negative strand. The pair id and read id within the pair are
+      also stored.
+    }
+    \item{pjunx}{\code{GRanges} indicating chromosome, start and end
+      of junctions spanned by reads originated from the positive strand.
+    }
+    \item{mjunx}{\code{GRanges} indicating chromosome, start and end
+      of junctions spanned by reads originated from the negative
+      strand.
     }
   }
 }
