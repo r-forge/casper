@@ -1,5 +1,3 @@
-require(methods)
-
 findNewExons <- function(reads, DB, minReads=1, readLen=NA, stranded=FALSE, pvalFilter=0.05){
   if(is.na(readLen)) stop("No readLen specified")
 #  if(stranded){

@@ -1,5 +1,5 @@
 buildGene<-function(genomeDB, islandid, txs){
-    rd<-lapply(txs, function(x) ranges(genomeDB@islands[[islandid]][names(genomeDB@islands[[islandid]]) %in% names(x),]))
+    rd<-lapply(txs, function(x) genomeDB@islands[[islandid]][names(genomeDB@islands[[islandid]]) %in% names(x),])
     rdl<-IRangesList(rd)
     rdl
 }
@@ -17,17 +17,17 @@ setMethod("genePlot", signature(generanges='missing',islandid='character',genome
   gene<-buildGene(txs=txs, genomeDB=genomeDB, islandid=islandid)
   names(gene) <- paste(names(gene),' (expr=',round(txexp[names(gene)],3),')',sep='')
   chr <- getChr(islandid=islandid, genomeDB=genomeDB)
-  reads@pbam <- reads@pbam[seqnames(reads@pbam) %in% chr]
+  reads@pbam <- reads@pbam[chr]
   rangesPlot(x=reads, gene, exonProfile=FALSE)
 }
 )
 
-setMethod("genePlot", signature(generanges='missing',islandid='character',genomeDB='annotatedGenome',reads='GRanges',exp='ExpressionSet') , function(generanges, islandid, genomeDB, reads, exp, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', col, ...) {
+setMethod("genePlot", signature(generanges='missing',islandid='character',genomeDB='annotatedGenome',reads='RangedData',exp='ExpressionSet') , function(generanges, islandid, genomeDB, reads, exp, names.arg, xlab='', ylab='', xlim, cex=1, yaxt='n', col, ...) {
   txs <- transcripts(islandid=islandid, genomeDB=genomeDB)
   txexp<-exprs(exp)[names(txs),]
   #if(sum(txexp)>0) txexp<-(txexp/sum(txexp))*100
   gene<-buildGene(txs=txs, genomeDB=genomeDB, islandid=islandid)
-  rangesPlot(x=reads[seqnames(reads) %in% as.character(genomeDB@exon2island[genomeDB@exon2island$id==names(gene[[1]])[1],]$space)], gene, exonProfile=FALSE)
+  rangesPlot(x=reads[as.character(genomeDB@exon2island[genomeDB@exon2island$id==names(gene[[1]])[1],]$space)], gene, exonProfile=FALSE)
   #txexp
 }
 )
@@ -203,14 +203,14 @@ setMethod("rangesPlot",signature(x='IRanges'),
 )
 
 
-setMethod("rangesPlot",signature(x='GRanges',gene='IRanges'),
+setMethod("rangesPlot",signature(x='RangedData',gene='IRanges'),
   function(x, gene, exonProfile=TRUE, maxFragLength=500, xlab='', ylab='', xlim, heights=c(2,1), ...) {
     if (missing(xlim)) xlim <- c(min(start(gene)),max(end(gene)))
     rangesPlot(unlist(ranges(x)),gene=gene,exonProfile=exonProfile,maxFragLength=maxFragLength,xlab=xlab,ylab=ylab,xlim=xlim,heights=heights,...) 
   }
 )
 
-setMethod("rangesPlot",signature(x='GRanges',gene='IRangesList'),
+setMethod("rangesPlot",signature(x='RangedData',gene='IRangesList'),
 function(x, gene, exonProfile=TRUE, maxFragLength=500, xlab='', ylab='', xlim, heights=c(2,1), ...) {
   if (missing(xlim)) xlim <- c(min(unlist(start(gene))),max(unlist(end(gene))))
   rangesPlot(unlist(ranges(x)),gene=gene,exonProfile=exonProfile,maxFragLength=maxFragLength,xlab=xlab,ylab=ylab,xlim=xlim,heights=heights,...)  
@@ -230,8 +230,8 @@ setMethod("rangesPlot",signature(x='procBam'),
       layout(c(2,1),heights=heights)
       par(oma=c(1,0,0,0),mar=c(2.1,.1,.1,.1))
       genePlot(gene=gene, xlab='', ylab='', xlim=xlim, ...)
-      tab <- table(values(x)$id)
-      sel <- values(x)$id %in% c(names(tab[tab>2]), findLongInserts(x, minsize=maxFragLength))
+      tab <- table(x[['id']])
+      sel <- x[['id']] %in% c(names(tab[tab>2]), findLongInserts(x, minsize=maxFragLength))
       notsel <- !sel
       if (exonProfile) {
         st <- c(start(x)[sel],start(x)[!sel],end(x)[!sel]); en <- c(end(x)[sel],start(x)[!sel],end(x)[!sel])
@@ -249,9 +249,9 @@ setMethod("rangesPlot",signature(x='procBam'),
       }
       #Long reads
       if (any(sel)) {
-        longst <- tapply(x0[sel],INDEX=values(x)$id[sel],FUN=min)
-        longend <- tapply(x1[sel],INDEX=values(x)$id[sel],FUN=max)
-        longy0 <- tapply(y0[sel],INDEX=values(x)$id[sel],FUN=function(z) z[1])
+        longst <- tapply(x0[sel],INDEX=x$id[sel],FUN=min)
+        longend <- tapply(x1[sel],INDEX=x$id[sel],FUN=max)
+        longy0 <- tapply(y0[sel],INDEX=x$id[sel],FUN=function(z) z[1])
         segments(x0=longst,x1=longend,y0=longy0,col=4,lty=3)
         segments(x0=x0[sel],x1=x1[sel],y0=y0[sel],col='red',lwd=3)
       }
