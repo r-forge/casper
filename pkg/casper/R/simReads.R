@@ -1,35 +1,28 @@
-simReads <- function(selIslands, nSimReads, pis, rl, seed, writeBam, distrs, genomeDB, chrlen=NULL, repSims=FALSE, bamFile=NULL, stranded=FALSE, samtoolsPath=NULL, verbose=TRUE, mc.cores=1){
+simReads <- function(selIslands, nSimReads, pis, rl, seed, writeBam, distrs, genomeDB, repSims=FALSE, bamFile=NULL, stranded=FALSE, samtoolsPath=NULL, verbose=TRUE, chr=NULL, mc.cores=1){
   ##### Simulate reads
   if(writeBam==1) {
-    if(is.null(chrlen)){
-      fn <- paste("http://hgdownload.cse.ucsc.edu/goldenPath/",genomeDB@genomeVersion,"/database/chromInfo.txt.gz", sep="")
-      dfile="tmp.gz"
-      if (verbose) cat(paste("Downloading chromosome lengths from UCSC for genome ", genomeDB@genomeVersion, " (file: ",fn,"\nUsing ", dfile, " as destination file (deleted afterwards)\n", sep=""))
-      dn <- try(download.file(fn,destfile=dfile, quiet=T), silent=T)
-      if(class(dn)=="try-error") stop("No chromInfo file found at htt://hgdownload.cse.ucsc.edu/goldenPath/ for required genome. Please provide chrlen vector with reference sequence chromosomes lengths")
-      chrlen <- readLines(gzfile(dfile))
-      chrlen <- strsplit(chrlen, split="\t")
-      chrlen <- lapply(chrlen, '[', 1:2)
-      chrlen <- do.call(rbind, chrlen)
-      namchr <- chrlen[,1]
-      chrlen <- as.numeric(chrlen[,2])
-      names(chrlen) <- namchr
-      system(paste("rm ", dfile))
-    }
+    chrlen <- seqlengths(genomeDB@exonsNI)
     if(!grepl(".bam$", bamFile)) stop("bamFile must be a valid bam file name (end with .bam)")
     if(is.null(samtoolsPath)) stop("samtoolsPath must be specified when writeBam=TRUE")
+    tmp <- sub(" ", ".", Sys.time())
+    if(is.null(chr)){
+      lr_file <- paste(bamFile, ".lr.", tmp, ".sam", sep="")
+      rr_file <- paste(bamFile, ".rr.", tmp, ".sam", sep="")
+    } 
   }
-  tmp <- sub(" ", ".", Sys.time())
-  lr_file <- paste(bamFile, ".lr.", tmp, ".sam", sep="")
-  rr_file <- paste(bamFile, ".rr.", tmp, ".sam", sep="")
-  sims <- casperSim(genomeDB=genomeDB, distrs=distrs, nSimReads=nSimReads, pis=pis, selIslands=selIslands, lr_file=lr_file, rr_file=rr_file, rl=rl, chrlen, seed, bam=writeBam, verbose=verbose)
-  if(writeBam==1){
-    finalBamFile=paste(rr_file, ".fin.bam", sep="")
-    finalBamSorted=sub(".bam", "", bamFile)
-    if (verbose) cat(paste("generating bam ", bamFile,"\n"))
-    system(paste("grep -v '@' ", lr_file, "  >> ", rr_file, " && ", samtoolsPath," view -Sb ", rr_file, "  > ", finalBamFile, " && ", samtoolsPath," sort ", finalBamFile, " ", finalBamSorted," && ", samtoolsPath, " index ", bamFile, sep=""))
-    system(paste("rm ", lr_file, " && rm ", rr_file, " && rm ", finalBamFile, sep=""))
-  }
+  if(!is.null(chr)){
+    isl2chr <- genomeDB@exon2island$space
+    names(isl2chr) <- genomeDB@exon2island$island
+    sims <- lapply(chr, function(x){
+      if(verbose) cat("Simulating ", x, "\n")
+      if(writeBam==1){
+        lr_file <- paste(bamFile, ".lr.", tmp, ".", x, ".sam", sep="")
+        rr_file <- paste(bamFile, ".rr.", tmp, ".", x, ".sam", sep="")
+      }
+      selIslands <- selIslands[selIslands %in% names(isl2chr)[isl2chr %in% x]]
+      sims <- casperSim(genomeDB=genomeDB, distrs=distrs, nSimReads=nSimReads, pis=pis, selIslands=selIslands, lr_file=lr_file, rr_file=rr_file, rl=rl, chrlen, seed, bam=writeBam, chr=x, verbose=verbose)})
+    sims <- do.call('c', sims)
+  } else sims <- casperSim(genomeDB=genomeDB, distrs=distrs, nSimReads=nSimReads, pis=pis, selIslands=selIslands, lr_file=lr_file, rr_file=rr_file, rl=rl, chrlen, seed, bam=writeBam, chr=chr, verbose=verbose)
   if (verbose) cat("Splitting counts\n")
   counts <- splitPaths(sims$pc, genomeDB, mc.cores=mc.cores, stranded=stranded, geneid=selIslands)
   pc <- new("pathCounts", counts=counts, denovo=FALSE, stranded=stranded)
@@ -49,9 +42,9 @@ splitPaths <- function(paths, DB, mc.cores, stranded, geneid){
   sel1 <- lapply(sel, "[", 2)
   sel1 <- unlist(sel1)
   islands <- DB@islands[geneid]
-  nislEx <- lapply(islands, length)
-  nislEx <- rep(names(islands), unlist(nislEx))
-  islEx <- unlist(lapply(islands, names))
+  nislEx <- elementLengths(islands)
+  nislEx <- rep(names(islands), nislEx)
+  islEx <- names(islands@unlistData)
   names(islEx) <- nislEx
   isl <- match(sel1, islEx)
   isl <- names(islEx)[isl]
@@ -88,20 +81,25 @@ splitPaths <- function(paths, DB, mc.cores, stranded, geneid){
   ans[names(splCounts)] <- splCounts
   if(!stranded) ans <- list(ans)
   else {
-    plus <- ans[names(ans) %in% names(DB@islandStrand)[DB@islandStrand=='+']]
-    minus <- ans[names(ans) %in% names(DB@islandStrand)[DB@islandStrand=='-']]
+    is <- as.character(strand(DB@islands@unlistData))[cumsum(c(1, elementLengths(DB@islands)[-length(DB@islands)]))]
+    names(is) <- names(DB@islands)    
+    plus <- ans[names(ans) %in% names(DB@islands)[is=='+']]
+    minus <- ans[names(ans) %in% names(DB@islandStrand)[is=='-']]
     ans <- list(minus=minus, plus=plus)
   }
   ans
 }
 
-casperSim <- function(genomeDB, distrs, nSimReads, pis, selIslands, lr_file=NULL, rr_file=NULL, rl, chrlen, seed, bam, verbose=TRUE){
+casperSim <- function(genomeDB, distrs, nSimReads, pis, selIslands, lr_file=NULL, rr_file=NULL, rl, chrlen, seed, bam, chr=NULL, verbose=TRUE){
   if (verbose) cat("Formatting input\n")
   sel <- selIslands
+  nSimReads <- nSimReads[sel]
   txs <- genomeDB@transcripts[sel]
   sel1 <- unlist(lapply(txs, is.null))
   txs <- txs[!sel1]
-  island_strand <- genomeDB@islandStrand[sel][!sel1]
+  is <- as.character(strand(genomeDB@islands@unlistData))[cumsum(c(1, elementLengths(genomeDB@islands)[-length(genomeDB@islands)]))]
+  names(is) <- names(genomeDB@islands)
+  island_strand <- is[sel][!sel1]
   island_strand[island_strand=="+"] <- 1
   island_strand[island_strand=="-"] <- -1
   tmp <- names(island_strand)
@@ -109,11 +107,11 @@ casperSim <- function(genomeDB, distrs, nSimReads, pis, selIslands, lr_file=NULL
   names(island_strand) <- tmp
   variant_num <- unlist(lapply(txs, length))
   starts <- start(genomeDB@exonsNI)
-  names(starts) <- genomeDB@exonsNI$id
+  names(starts) <- names(genomeDB@exonsNI)
   ends <- end(genomeDB@exonsNI)
   names(ends) <- names(starts)
-  chroms <- genomeDB@exonsNI$space
-  names(chroms) <- genomeDB@exonsNI$id
+  chroms <- as.character(seqnames(genomeDB@exonsNI))
+  names(chroms) <- names(genomeDB@exonsNI)
   exon_num <- unlist(lapply(txs, function(x) lapply(x, length)))
   exs <- unlist(txs)
   exon_st <- starts[as.character(exs)]
@@ -126,7 +124,6 @@ casperSim <- function(genomeDB, distrs, nSimReads, pis, selIslands, lr_file=NULL
   variant_len <- tapply(widths, tmps, sum)
   txs <- unlist(lapply(txs,names)) 
   if(!all(txs %in% names(pis))) stop("Wrong pis vector, some transcripts missing")
-  if(!all(names(nSimReads) %in% selIslands)) stop("Wrong nSimReads vector, some islands missing")
   if(!all(nSimReads>0)) stop("nSimReads with zero entries")
   ge <- nSimReads[selIslands]
   ge <- as.integer(rep(0:(length(ge)-1), ge))
@@ -149,7 +146,7 @@ casperSim <- function(genomeDB, distrs, nSimReads, pis, selIslands, lr_file=NULL
   sdd <- std
   if(bam) {
     write.sam.header(chrlen[names(chrlen) %in% unique(chroms)], lr_file, max(vn))
-    write.sam.header(chrlen[names(chrlen) %in% unique(chroms)], rr_file, max(vn))
+    #write.sam.header(chrlen[names(chrlen) %in% unique(chroms)], rr_file, max(vn))
   }
   if (verbose) cat("Simulating fragments\n")
 # insideBam deprecated, only in case it is useful in simulations, return from C all information written to the bam file

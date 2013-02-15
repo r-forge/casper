@@ -6,3 +6,4 @@ setGeneric("rangesPlot",function(x, gene, exonProfile=TRUE, maxFragLength=500, x
 setGeneric("getReads", function(x) standardGeneric("getReads"))
 setGeneric("transcripts", function(entrezid, islandid, genomeDB) standardGeneric("transcripts"))
 setGeneric("getNreads", function(pc) standardGeneric("getNreads"))
+setGeneric("procBam", function(bam, stranded, seed, verbose) standardGeneric("procBam"))

@@ -17,16 +17,14 @@
 }
 \section{Slots}{
   \describe{
-    \item{islands}{Each element in the list corresponds to a gene island
-      and contains an \code{IRanges} object. It indicates the
-      start/end/exon id of each exon contained in the island}
+    \item{islands}{\code{GRangesList} object with elements corresponding
+      to gene islands. It indicates the
+      start/end/name of each exon contained in the island}
     \item{transcripts}{Each element in the list corresponds to a gene island. It indicates the exons contained in each known variant.}
     \item{exon2island}{\code{data.frame} indicating the chromosome,
       start and end of each exon, and its corresponding gene island.}
-    \item{exonsNI}{\code{RangedData} indicating the chromosome,
+    \item{exonsNI}{\code{GRanges} indicating the chromosome,
       start/end and id of each exon}
-    \item{islandStrand}{Character vector indicating the strand for each
-      gene island}
     \item{aliases}{\code{data.frame} indicating the aliases for each
       known transcript, i.e. transcripts having the exact same sequence
       of exons (as indicated in the UCSC database).}

@@ -149,8 +149,8 @@ nbExonsDistrib <- function(tab,maxExons=40,smooth=TRUE) {
     fit <- try(vglm(cbind(succ, fail) ~ 1, betabinomial.ab, data=ydf, trace=FALSE), silent=TRUE)
     #fit <- vglm(cbind(succ,fail) ~ 1, family=betabinomial, data=y, trace=FALSE)
     options(warn=warn)
-    
-    if (class(fit)=='try-error' | as.numeric(n[i])<=3) {
+
+    if ('try-error' %in% class(fit) | as.numeric(n[i])<=3) {
       if (i<nrow(tab)) {
         bbpar[n[i],1] <- max(0.1, sum((as.numeric(names(y))-1) * y / sum(y)) * sum(bbpar[n[i+1],]) / (as.numeric(n[i])-1))
         bbpar[n[i],2] <- max(0.1, sum(bbpar[n[i+1],]) - bbpar[n[i],1])

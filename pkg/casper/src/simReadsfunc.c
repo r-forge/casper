@@ -14,16 +14,13 @@ void build_genes(gene_t *genes, double *ve, int *vn, int *vl, int *en, int *es, 
   for (i=0; i<ngenes; i++){
     genes[i].nvar = vn[i];
     genes[i].strand = gs[i];
-    //printf("%d %d %s %s\n", ngenes, i, CHAR(STRING_ELT(chr, 0)), CHAR(STRING_ELT(chr, i)));
     genes[i].chr = malloc((strlen(CHAR(STRING_ELT(chr,i)))+1) * sizeof(char));
     strcpy(genes[i].chr, CHAR(STRING_ELT(chr, i)));
-    //printf("%d %d %s\n", i, genes[i].nvar,  genes[i].chr);
     genes[i].vars = malloc((vn[i]+1) * sizeof(var_t));
     for(j=0; j<vn[i]; j++){
       genes[i].vars[j].len = vl[varpos];
       genes[i].vars[j].nex = en[varpos];
       genes[i].vars[j].exp = ve[varpos];
-      //printf("%d %d %f\n", j, genes[i].vars[j].nex , genes[i].vars[j].exp);
       genes[i].vars[j].exst = malloc((genes[i].vars[j].nex+1) * sizeof(int));
       genes[i].vars[j].exst = malloc((genes[i].vars[j].nex+1) * sizeof(int));
       genes[i].vars[j].exen = malloc((genes[i].vars[j].nex+1) * sizeof(int));
@@ -32,7 +29,6 @@ void build_genes(gene_t *genes, double *ve, int *vn, int *vl, int *en, int *es, 
 	genes[i].vars[j].exst[k] = es[expos];
 	genes[i].vars[j].exen[k] = ee[expos];
 	genes[i].vars[j].exid[k] = ei[expos];
-	//printf("%d %d %d %d\n", k, genes[i].strand, genes[i].vars[j].exst[k], genes[i].vars[j].exid[k]);
 	expos++;
       }
       if(genes[i].strand==-1) {
@@ -152,45 +148,8 @@ void add_gap(char *str, int gap){
   strcat(str,tmp);
 } 
 
-void revCigar(char* str)
-{
-  int end= strlen(str), i, counter;
-  char **bricks, tmp[end], *pch, *tab="DIMN";;
-  bricks=malloc(end * sizeof(char *));
-  for (i=0; i<end; i++) bricks[i] = malloc(end * sizeof(char));
-  strcpy(tmp, str);
-  pch=strtok(tmp, tab);
-  Rprintf("%s %d\n", pch, end);
-  counter=0;
-  while(pch!=NULL){
-    strcpy(bricks[counter], pch);
-    if((counter % 2)==0) {strcat(bricks[counter], "M"); Rprintf("inside %s\n", bricks[counter]); }
-    else strcat(bricks[counter], "N");
-    pch=strtok(NULL, tab);
-    counter++;
-  }
-
-  strcpy(str, bricks[counter-1]);
-  if(counter>1) for(i=counter-2; i>=0; i--) strcat(str, bricks[i]);
-  
-  strcat(str, "\0");
-
-  for(i=0; i<end; i++) free(bricks[i]);
-  free(bricks);
-}
-
-int *reverseVector(int *vec, int len){
-  int i, tmp;
-  for(i=0; i<floor(len/2); i++){
-    tmp=vec[i];
-    vec[i]=vec[len-1-i];
-    vec[len-1-i]=tmp;
-  }
-  return(vec);
-}
-
 int *build_path(var_t var, int len, int st, int rl, hash_t *path, int strand, int *starts){
-  //double rst, wis, sum=0, en, ren;
+
   int en, rst, ren, wis, sum;
   char *pa, id[100];
   int i, pos=0, here, skip, l;
@@ -225,7 +184,6 @@ int *build_path(var_t var, int len, int st, int rl, hash_t *path, int strand, in
       pos=i;
       here=1;
       skip=1;
-      //starts[3] = var.exst[i]+(st-sum)*var.len;
     }
     if((sum<=en) && (en<sum+wis)) {
       if(pos!=i){
@@ -257,7 +215,6 @@ int *build_path(var_t var, int len, int st, int rl, hash_t *path, int strand, in
       pos=i;
       here=1;
       skip=1;
-      //ans[4] = var.exst[i]+(rst-sum)*var.len;
     }
     if((sum<=ren) && (ren<sum+wis)) {
       if(pos!=i){
@@ -276,8 +233,6 @@ int *build_path(var_t var, int len, int st, int rl, hash_t *path, int strand, in
     sum+=wis;
   }
   starts[2]=0;
-  
-  //printf("%s %d\n", pa, st);
   
   l=hash_lookup(path, pa);
   if(l!=HASH_FAIL) hash_update(path, pa, l+1); 
@@ -378,7 +333,6 @@ int *build_cigar(var_t var, int len, int st, int rl, char **cigars, int strand){
     //Build right read
   rltmp = rl;
   sum=1;
-
   if(rst+rl<=var.exen[var.nex-1]){
   for(i=0; i<var.nex; i++) {
     if((var.exst[i] <= rst) && (rst <= var.exen[i])) {

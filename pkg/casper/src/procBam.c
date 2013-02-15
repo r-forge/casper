@@ -75,7 +75,7 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
 	PROTECT(rid = coerceVector(rid, INTSXP));
 	int *p_rid=INTEGER(rid);
         PROTECT(rstrand = coerceVector(rstrand, INTSXP));
-	int *p_rstrand = INTEGER(rstrand);
+	int *p_rstrand = INTEGER(rstrand), ini;
 	for(i=0; i<fragsHash.size; i++) {
 	  if(fragsHash.bucket[i]!=NULL)  {
             bucket=fragsHash.bucket[i];
@@ -85,43 +85,55 @@ SEXP procBam(SEXP qname, SEXP flags, SEXP chr, SEXP start, SEXP cigar, SEXP stra
 	      if(frags[tmp].nreads==2) {
 		cigs=procCigar(m_strdup(frags[tmp].cigar_1), cigs);
 		frags[tmp].len_1=frags[tmp].st_1;
-		for(j=1; j<cigs[0]+1;j=j+2) {
-		  SET_STRING_ELT(key, counter, mkChar(bucket->key));
-		  SET_STRING_ELT(chrom, counter, mkChar(frags[tmp].chr_1));
-		  p_strs[counter] = frags[tmp].len_1;
-		  p_len[counter] = frags[tmp].len_1+(cigs[j]-1);
-		  p_flag[counter] = frags[tmp].flag_1;
-		  p_rid[counter] = 1;
-		  p_rstrand[counter] = frags[tmp].strand_1;
-		  frags[tmp].len_1+=cigs[j];
-		  if((cigs[0]>1)&&(j<cigs[0]-1)) {
-		    SET_STRING_ELT(jchrom, jcounter, mkChar(frags[tmp].chr_1));
-		    p_jstrs[jcounter] = p_len[counter];
-		    frags[tmp].len_1 += cigs[j+1];		    
-		    p_jlen[jcounter] = frags[tmp].len_1;
-		    jcounter++;
+		ini=1;
+		if(cigs[1]<0) ini=2;
+		  //frags[tmp].len_1-=cigs[1];
+		for(j=ini; j<cigs[0]+1;j++) {
+		  if(cigs[j]>0){
+		    SET_STRING_ELT(key, counter, mkChar(bucket->key));
+		    SET_STRING_ELT(chrom, counter, mkChar(frags[tmp].chr_1));
+		    p_strs[counter] = frags[tmp].len_1;
+		    p_len[counter] = frags[tmp].len_1+(cigs[j]-1);
+		    p_flag[counter] = frags[tmp].flag_1;
+		    p_rid[counter] = 1;
+		    p_rstrand[counter] = frags[tmp].strand_1;
+		    frags[tmp].len_1 += cigs[j];
+		    counter++;
+		  } else {
+		    if((cigs[0]>1)&&(j<cigs[0])) {
+		      SET_STRING_ELT(jchrom, jcounter, mkChar(frags[tmp].chr_1));
+		      p_jstrs[jcounter] = frags[tmp].len_1;
+		      frags[tmp].len_1 -= cigs[j];		    
+		      p_jlen[jcounter] = frags[tmp].len_1-1;
+		      jcounter++;
+		    }
 		  }
-		  counter++;
 		}
 		cigs=procCigar(m_strdup(frags[tmp].cigar_2), cigs);
 		frags[tmp].len_2=frags[tmp].st_2;
-		for(j=1; j<cigs[0]+1;j=j+2) {        
-		  SET_STRING_ELT(key, counter, mkChar(bucket->key));
-		  SET_STRING_ELT(chrom, counter, mkChar(frags[tmp].chr_2));
-		  p_strs[counter] = frags[tmp].len_2;
-		  p_len[counter] = frags[tmp].len_2+(cigs[j]-1);
-		  p_flag[counter] = frags[tmp].flag_2;
-		  p_rid[counter] = 2;
-		  p_rstrand[counter] = frags[tmp].strand_2;
-		  frags[tmp].len_2+=cigs[j];
-		  if((cigs[0]>1)&&(j<cigs[0]-1)) {
-		    SET_STRING_ELT(jchrom, jcounter, mkChar(frags[tmp].chr_2));
-                    p_jstrs[jcounter] = p_len[counter];
-                    frags[tmp].len_2 += cigs[j+1];
-                    p_jlen[jcounter] = frags[tmp].len_2;
-                    jcounter++;
+		ini=1;
+                if(cigs[1]<0) ini=2;
+		  //                  frags[tmp].len_2-=cigs[1];
+		for(j=ini; j<cigs[0]+1;j++) {        
+		  if(cigs[j]>0){
+		    SET_STRING_ELT(key, counter, mkChar(bucket->key));
+		    SET_STRING_ELT(chrom, counter, mkChar(frags[tmp].chr_2));
+		    p_strs[counter] = frags[tmp].len_2;
+		    p_len[counter] = frags[tmp].len_2+(cigs[j]-1);
+		    p_flag[counter] = frags[tmp].flag_2;
+		    p_rid[counter] = 2;
+		    p_rstrand[counter] = frags[tmp].strand_2;
+		    frags[tmp].len_2+=cigs[j];
+		    counter++;
+		  } else {
+		    if((cigs[0]>1)&&(j<cigs[0])) {
+		      SET_STRING_ELT(jchrom, jcounter, mkChar(frags[tmp].chr_2));
+		      p_jstrs[jcounter] = frags[tmp].len_2;
+		      frags[tmp].len_2 -= cigs[j];
+		      p_jlen[jcounter] = frags[tmp].len_2-1;
+		      jcounter++;
+		    }
 		  }
-		  counter++;
 		}
 		free(frags[tmp].chr_2);
 		free(frags[tmp].cigar_2);

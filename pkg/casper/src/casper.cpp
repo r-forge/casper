@@ -422,11 +422,34 @@ double Casper::LaplaceApprox(double *mode, int n)
 
   double sdet = log(det(S, n - 1, &posdef));
 
+  if(!posdef){
+
+    int i; double lmin=0, *vals;
+    
+    vals= dvector(1,n);
+    
+    eigenvals(S,n-1,vals);
+
+    for (i=1; i<n; i++) if (vals[i]<lmin) lmin= vals[i];
+
+    lmin = -lmin + .01;
+  
+    for (i=1; i<n; i++) S[i][i] += lmin;
+
+    sdet = log(det(S, n - 1, &posdef));
+    if(!posdef) printf("Whaaaat!!! sdet %f\n", sdet);
+    free_dvector(vals,1,n);
+
+  }
 
 
   double integral = emlk + gdet + (double)(n - 1) / 2.0 * log(2 * M_PI) - 0.5 * sdet;
 
-
+  bool chck;
+  chck=isnan(integral);
+  if(chck){
+    printf("%f %f %f %f\n", integral, emlk, gdet, sdet);
+  }
 
   delete [] thmode;
 
@@ -1012,12 +1035,10 @@ double Casper::det(double** a, int n, bool *posdef)
 
 	double **aout = dmatrix(0, n - 1, 0, n - 1);
 
-
-
 	int i,j,k;
 
 	double sum;
-
+	*posdef= true;
 
 
 	for (i=0;i<n;i++) { for (j=i;j<n;j++) { aout[i][j]= a[i][j]; } }  //copy a into aout
@@ -1031,7 +1052,6 @@ double Casper::det(double** a, int n, bool *posdef)
 			if (i == j) {
 
 			  if (sum <= 0.0) *posdef= false;
-
 			  aout[i][i]=sqrt(sum);
 
 			} else aout[j][i]=sum/aout[i][i];

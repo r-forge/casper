@@ -92,15 +92,17 @@ int are_connected(int i, int j, int **p_exons, int **ex2tx, int **tx2ex, hash_t 
 
 #define getDims(A) INTEGER( coerceVector( getAttrib(A, R_DimSymbol ) , INTSXP) )
 
-SEXP makeGeneIslands(SEXP exons, SEXP isl, SEXP exisl, SEXP txs, SEXP totEx, SEXP nexR){
+SEXP makeGeneIslands(SEXP exons, SEXP isl, SEXP exisl, SEXP txs, SEXP totEx, SEXP nexR, SEXP tabR, SEXP tabtxR){
   //ex2tx is a list of exons with the transcripts they belong to
   //exons is a named vector with exons where names will be the islands
 
-  int **p_exons, totExo, l, i, **p_islands, nex;
+  int **p_exons, totExo, l, i, **p_islands, nex, *p_tab, *p_tabtx;
 
   p_exons = malloc(3 * sizeof(int *));
   p_islands = malloc(3 * sizeof(int *));
   PROTECT (exons = coerceVector(exons, INTSXP));
+  PROTECT (tabR = coerceVector(tabR, INTSXP));
+  PROTECT (tabtxR = coerceVector(tabtxR, INTSXP));
   PROTECT (isl = coerceVector(isl, INTSXP)); 
   PROTECT (exisl = coerceVector(exisl, INTSXP));
   PROTECT (txs = coerceVector(txs, INTSXP));
@@ -110,6 +112,8 @@ SEXP makeGeneIslands(SEXP exons, SEXP isl, SEXP exisl, SEXP txs, SEXP totEx, SEX
   p_exons[1] = INTEGER(txs);
   p_islands[1] = INTEGER(isl);
   p_islands[0] = INTEGER(exisl);
+  p_tab = INTEGER(tabR);
+  p_tabtx = INTEGER(tabtxR);
   
   totExo = INTEGER(totEx)[0];
   nex = INTEGER(nexR)[0];
@@ -140,36 +144,46 @@ SEXP makeGeneIslands(SEXP exons, SEXP isl, SEXP exisl, SEXP txs, SEXP totEx, SEX
     //    printf("%d %d %d %s\n", nex, i, hash_lookup(ex2posP, id), id);
   }
 
-  //printf("Hash ready\n");
-
   int **ex2tx, **tx2ex;
   ex2tx = malloc((totExo*2) * sizeof(int *));
   tx2ex = malloc((totExo*2) * sizeof(int *));
-  for(i=0; i<totExo+1; i++) {
-    ex2tx[i] = malloc(500 * sizeof(int));
+  for(i=0; i<totExo; i++) {
+    ex2tx[i]=malloc(2 * sizeof(int));
     ex2tx[i][0]=0;
-    tx2ex[i] = malloc(500 * sizeof(int));
+    tx2ex[i] = malloc(2 * sizeof(int));
     tx2ex[i][0]=0;
   }
 
-  //printf("Arrays ready\n");
-
-   for(i=0; i<totExo; i++){
+  for(i=0; i<totExo; i++){
      sprintf(id, "%d", p_exons[0][i]);
      l=hash_lookup(ex2txP, id);
+     if(ex2tx[l][0]==0) {
+       ex2tx[l] = malloc((p_tab[i]+2) * sizeof(int));
+       ex2tx[l][0] = 0;
+     }
      ex2tx[l][ex2tx[l][0]+1] = p_exons[1][i];
      ex2tx[l][0]++;
      sprintf(id, "%d", p_exons[1][i]);
      l=hash_lookup(tx2exP, id);
+     if(tx2ex[l][0]==0) {
+       tx2ex[l] = malloc((p_tabtx[i]+2) * sizeof(int));
+       tx2ex[l][0] = 0;
+     }
      tx2ex[l][tx2ex[l][0]+1] = p_exons[0][i];
      tx2ex[l][0]++;
  }
 
-
-   //printf("Making islands\n");
-   makeIslands(p_exons, p_islands, nex, totExo, ex2tx, tx2ex, ex2txP, tx2exP, ex2posP);
+  makeIslands(p_exons, p_islands, nex, totExo, ex2tx, tx2ex, ex2txP, tx2exP, ex2posP);
+  free(p_exons);
+  free(p_islands);
+  for(i=0; i<totExo; i++){
+    free(ex2tx[i]);
+    free(tx2ex[i]);
+  }
+  free(ex2tx);
+  free(tx2ex);
   
-  UNPROTECT(5);
+  UNPROTECT(7);
   return(isl);
 
  }

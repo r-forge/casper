@@ -13,19 +13,18 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=FALSE, prio
   if ((niter<=burnin) & citype==2) stop("Too many burnin iterations specified. Decrease burnin or increase niter")
   if (missing(islandid)) islandid <- names(genomeDB@islands)[elementLengths(genomeDB@islands)>1]
 
-  exons <- names(unlist(genomeDB@islands))
-  exons <- as.integer(sub(".*\\.", "", exons))
+  exons <- names(genomeDB@islands@unlistData)
   names(exons) <- rep(names(genomeDB@islands), elementLengths(genomeDB@islands))
   exons <- split(unname(exons), names(exons))
-  exonwidth <- unlist(width(genomeDB@islands))
+  exonwidth <- width(genomeDB@islands@unlistData)
   names(exonwidth) <- rep(names(genomeDB@islands), elementLengths(genomeDB@islands))
   exonwidth <- split(unname(exonwidth), names(exonwidth))
-  strand <- genomeDB@islandStrand
-
+  strand <- as.character(strand(genomeDB@islands@unlistData))[cumsum(c(1, elementLengths(genomeDB@islands)[-length(genomeDB@islands)]))]
+  names(strand) <- names(genomeDB@islands)
+  
   if (!all(islandid %in% names(exons))) stop('islandid not found in genomeDB@islands')
   if (!all(islandid %in% names(pc))) stop('islandid not found in pc')
   if (!all(islandid %in% names(genomeDB@transcripts))) stop('islandid not found in genomeDB@transcripts')
-  if (!all(islandid %in% names(genomeDB@islandStrand))) stop('islandid not found in genomeDB@islandStrand')
   
       #Define basic function
   
@@ -132,19 +131,6 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=FALSE, prio
   ans
 }
 
-genomeBystrand <- function(DB, strand){
-  sel <- DB@islandStrand==strand
-  islands <- DB@islands[sel]
-  transcripts <- DB@transcripts[sel]
-  exonsNI <- DB@exonsNI[names(DB@exonsNI) %in% unlist(transcripts),]
-  exon2island <- DB@exon2island[DB@exon2island$id %in%unlist(transcripts),]
-  islandStrand <- DB@islandStrand[sel]
-  txid <- unlist(lapply(transcripts, names))
-  aliases <- DB@aliases[DB@aliases$tx %in% txid,]
-  ans <- new("annotatedGenome", aliases=aliases, denovo=TRUE, exonsNI=exonsNI, islandStrand=islandStrand, transcripts=transcripts, exon2island=exon2island, dateCreated=Sys.Date(), genomeVersion=DB@genomeVersion, islands=islands)
-  ans
-}
-
 mergeExp <- function(minus, plus){
   exp <- rbind(exprs(plus), exprs(minus))
   fdata <- new("AnnotatedDataFrame", rbind(fData(plus), fData(minus)))
@@ -160,13 +146,15 @@ calcExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=FALSE, prio
   if (pc@denovo) stop("pc must be a pathCounts object from known genome")
   if(pc@stranded){
     if(missing(islandid)) islandid <- c(names(pc@counts$plus), names(pc@counts$minus))
-    plusGI <- islandid[genomeDB@islandStrand[islandid]=="+"]
+    is <- as.character(strand(genomeDB@islands@unlistData))[cumsum(c(1, elementLengths(genomeDB@islands)[-length(genomeDB@islands)]))]
+    names(is) <- names(genomeDB@islands)
+    plusGI <- islandid[is[islandid]=="+"]
     plus <- NULL
     if(length(plusGI)>0) {
       plusDB <- genomeBystrand(genomeDB, "+")
       plus <- procExp(distrs, plusDB, pc=pc@counts$plus, readLength=readLength, islandid=plusGI, rpkm=rpkm, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype, totReads=totReads)
     }
-    minusGI <- islandid[genomeDB@islandStrand[islandid]=="-"]
+    minusGI <- islandid[is[islandid]=="-"]
     minus <- NULL
     if(length(minusGI)>0) {
       minusDB <- genomeBystrand(genomeDB, "-")
@@ -205,7 +193,9 @@ lhoodGrid <- function(pc, distrs, genomeDB, readLength, islandid, grid, priorq=2
 
   exons <- as.integer(names(genomeDB@islands[[islandid]]))
   exonwidth <- width(genomeDB@islands[[islandid]])
-  strand <- genomeDB@islandStrand[islandid]
+  strand <- as.character(strand(genomeDB@islands@unlistData))[cumsum(c(1, elementLengths(genomeDB@islands)[-length(genomeDB@islands)]))]
+  names(strand) <- names(genomeDB@islands)
+  strand   <- strand[islandid]
   transcripts <- genomeDB@transcripts[[islandid]]
   if (length(transcripts)==1) stop("Single transcript specified, estimation not run")
   strand <- as.integer(ifelse(strand=='+', 1, -1))

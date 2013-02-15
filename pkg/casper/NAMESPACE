@@ -3,11 +3,11 @@ useDynLib(casper)
 import(IRanges, graphics)
 importFrom(VGAM,vglm,betabinomial.ab,Coef)
 importFrom(mgcv,gam,predict.gam,s)
-importFrom(GenomicFeatures, transcripts, exonsBy, makeTranscriptDbFromUCSC)
+importFrom(GenomicFeatures, transcripts, exonsBy)
 importFrom(survival,Surv,survfit)
 
 #export regular functions
-export(calcDenovo, calcExp, createDenovoGenome, getDistrs, getIsland, getChr, genePlot, modelPrior, pathCounts, plotExpr, plotPriorAS, posprob, procBam, procGenome, relativeExpr, rmShortInserts, simReads, transcripts, variants, "variants<-", getReads, getNreads)
+export(calcDenovo, calcExp, createDenovoGenome, getDistrs, getIsland, genePlot, modelPrior, pathCounts, plotPriorAS, posprob, procBam, procGenome, relativeExpr, rmShortInserts, simReads, transcripts, variants, "variants<-", getReads, getNreads, getChr, getIsland, genomeBystrand, subsetGenome, makeIslands, subsetPbam, mergeGRanges)
 
 exportClasses(annotatedGenome, pathCounts, procBam)
 #export general methods

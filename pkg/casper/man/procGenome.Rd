@@ -13,8 +13,8 @@
 \usage{
 procGenome(genDB, genome, mc.cores = 1)
 
-createDenovoGenome(reads, DB, readLen, stranded=FALSE, minLinks=2,
-maxLinkDist=1e+05, maxDist=1000, mc.cores=1)
+createDenovoGenome(reads, DB, stranded=FALSE, minLinks=2,
+maxLinkDist=1e+05, maxDist=1000, minConn=2, minJunx=3, minLen=12, mc.cores=1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -25,8 +25,6 @@ maxLinkDist=1e+05, maxDist=1000, mc.cores=1)
     (multicore package required)}
   \item{DB}{\code{annotatedGenome} object, as returned by
     \code{procGenome}}
-  \item{readLen}{Read length, e.g. 75 for paired-end experiments where
-    75bp from each end were sequenced}
   \item{stranded}{Set to \code{TRUE} if a stranded RNA-seq experiment
     was performed, e.g. if we know the strand of the transcript that
     generated each read. Set to \code{FALSE} for non-stranded
@@ -37,6 +35,11 @@ maxLinkDist=1e+05, maxDist=1000, mc.cores=1)
     their correspondin genes. A value of \code{0} disables this option.}
   \item{maxDist}{Maximum distance between two exons with reads joining
     them to merge their corresponding genes.}
+  \item{minConn}{Minimum number of fragments connecting a new exon to an
+    annotated one to add to denovo genome.}
+  \item{minJunx}{Minimum number of junctions needed to redefine an annotated
+    exon's end or start.}
+  \item{minLen}{Minimum length of a junction to consider as a putative intron.}
   \item{reads}{Processed reads stored in a \code{RangedData}, as
     returned by \code{procBam}}
 }

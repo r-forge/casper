@@ -10,25 +10,21 @@ end reads according to given read start distribution, fragment length
 distribution and gene and variant expressions.
 }
 \usage{
-simReads(selIslands, geneExpr, rl, n, seed, writeBam, distrs, genomeDB, chrlen=NULL, repSims=FALSE, bamFile=NULL, stranded=FALSE, samtoolsPath=NULL, verbose=TRUE, mc.cores=1)
+simReads(selIslands, nSimReads, pis, rl, seed, writeBam, distrs, genomeDB, repSims=FALSE, bamFile=NULL, stranded=FALSE, samtoolsPath=NULL, verbose=TRUE, mc.cores=1)
 }
 \arguments{
   \item{selIslands}{
     Island ID's from the genomeDB object to simulate reads
   }
-  \item{geneExpr}{
-    Object of class list with the following elements:
-    - genes: Numeric vector with relative expressions for each of the simulated islands
-      (must add to 1). Names must coincide with 'selIslands'
-    - vars: Numeric vector with variant's relative
-      expressions. Must add to 1 for each of the simulated genes. Names
-      must coincide with transcripts names in the object genomeDB
-  }
+  \item{nSimReads}{
+    Named numeric vector with number of fragments to
+    simulate in each island.}
+  \item{pis}{
+    Named numeric vector with relative expression of
+    transcripts. Expressions add up to one for each island to simulate.
+    }
   \item{rl}{
     Read length
-  }
-  \item{n}{
-    Number of fragments to simulate
   }
   \item{seed}{
     Seed of the random numbers generator
@@ -44,7 +40,7 @@ simReads(selIslands, geneExpr, rl, n, seed, writeBam, distrs, genomeDB, chrlen=N
     Object of class 'annotatedGenome' with the genome to genererate
     reads from
 }
-  \item{repSims}{
+\item{repSims}{
     Set to TRUE to return relative read starts and fragment lengths from the simulation
 }
   \item{bamFile}{
@@ -60,8 +56,6 @@ simReads(selIslands, geneExpr, rl, n, seed, writeBam, distrs, genomeDB, chrlen=N
   }
   \item{verbose}{Set to \code{TRUE} to print progress}
   \item{mc.cores}{Number of cores to use in function}
-  \item{chrlen}{Numeric vector with lengths of chromosomes for reference
-    genome. Names must coincide with chromosomes in genomeDB}
 }
 
 \value{
@@ -89,17 +83,15 @@ distrs <- getDistrs(hg19DB,bam=K562.r1l1)
 
 selIslands <- c('474','18517')
 txs <- unlist(lapply(hg19DB@transcripts[selIslands], names))
-vars <- vector(mode='numeric', length=length(txs))
-nvars <- sapply(hg19DB@transcripts[selIslands],length)
-vars[1:nvars[1]] <- rep(1/nvars[1],nvars[1])
-vars[-1:-nvars[1]] <- rep(1/nvars[2],nvars[2])
-names(vars) <- txs
-geneExpr <- list(genes=c(0.25,0.75), vars=vars)
-names(geneExpr$genes) <- selIslands
+pis <- vector(mode='numeric', length=length(txs))
+npis <- sapply(hg19DB@transcripts[selIslands],length)
+pis[1:npis[1]] <- rep(1/npis[1],npis[1])
+pis[-1:-npis[1]] <- rep(1/npis[2],npis[2])
+names(pis) <- txs
+nSimReads <- c(100, 100)
+names(nSimReads) <- selIslands
 
-simpc <- simReads(selIslands=selIslands, repSims=TRUE,
-geneExpr=geneExpr, rl=75, n=10, seed=1, writeBam=FALSE, distrs=distrs,
-genomeDB=hg19DB)
+simpc <- simReads(selIslands=selIslands, nSimReads=nSimReads, pis=pis, rl=75, repSims=TRUE, seed=1, writeBam=FALSE, distrs=distrs,genomeDB=hg19DB)
 
 }
 \keyword{ datagen }

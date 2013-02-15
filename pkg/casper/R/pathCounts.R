@@ -71,19 +71,6 @@ procPaths <- function(reads, DB, mc.cores){
     ans
   }
 
-genomeBystrand <- function(DB, strand){
-  sel <- DB@islandStrand==strand
-  islands <- DB@islands[sel]
-  transcripts <- DB@transcripts[sel]
-  exonsNI <- DB@exonsNI[names(DB@exonsNI) %in% unlist(transcripts),]
-  exon2island <- DB@exon2island[DB@exon2island$id %in%unlist(transcripts),]
-  islandStrand <- DB@islandStrand[sel]
-  txid <- unlist(lapply(transcripts, names))
-  aliases <- DB@aliases[DB@aliases$tx %in% txid,]
-  ans <- new("annotatedGenome", aliases=aliases, denovo=TRUE, exonsNI=exonsNI, islandStrand=islandStrand, transcripts=transcripts, exon2island=exon2island, dateCreated=Sys.Date(), genomeVersion=DB@genomeVersion, islands=islands)
-  ans
-}
-
 pathCounts<-function(reads, DB, mc.cores=1) {
   if (class(reads) != 'procBam') stop('reads must be an object of class procBam')
   if(!reads@stranded) {

@@ -111,10 +111,18 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, islandid, priorq=3, mpr
   if (!all(islandid %in% names(genomeDB@islands))) stop('islandid not found in genomeDB@islands')
   if (!all(islandid %in% unlist(lapply(pc@counts, names)))) stop('islandid not found in pc')
   if (!all(islandid %in% names(genomeDB@transcripts))) stop('islandid not found in genomeDB@transcripts')
+  exons <- names(genomeDB@islands@unlistData)
+  names(exons) <- rep(names(genomeDB@islands), elementLengths(genomeDB@islands))
+  exons <- split(unname(exons), names(exons))
+  exonwidth <- width(genomeDB@islands@unlistData)
+  names(exonwidth) <- rep(names(genomeDB@islands), elementLengths(genomeDB@islands))
+  exonwidth <- split(unname(exonwidth), names(exonwidth))
+  strand <- as.character(strand(genomeDB@islands@unlistData))[cumsum(c(1, elementLengths(genomeDB@islands)[-length(genomeDB@islands)]))]
+  names(strand) <- names(genomeDB@islands)
   
   exons <- lapply(genomeDB@islands[islandid],function(z) as.integer(names(z)))
   exonwidth <- lapply(genomeDB@islands[islandid],width)
-  strand <- genomeDB@islandStrand
+
   if (missing(niter)) {
      niter <- as.list(as.integer(ifelse(sapply(exons,length)>20,10^3,10^4)))
   } else {
@@ -124,10 +132,14 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, islandid, priorq=3, mpr
   
   #Define basic function
   f <- function(z) {
-    islandid <- as.integer(z)
+    islandid <- as.integer(as.factor(z))
     transcripts <- genomeDB@transcripts[z]
     strand <- as.list(as.integer(ifelse(strand[z]=='+', 1,-1)))
-    ans <- calcDenovoMultiple(exons=exons[z],exonwidth=exonwidth[z],transcripts=transcripts,islandid=as.list(islandid),pc=pc@counts[[1]][z],startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,modelUnifPrior=modelUnifPrior,nvarPrior=nvarPrior,nexonPrior=nexonPrior,priorq=priorq,minpp=minpp,selectBest=selectBest,method=method,niter=niter[z],exactMarginal=exactMarginal,verbose=verbose, strand=strand)
+    exons <- exons[z]
+    exonwidth <- exonwidth[z]
+    #pc <- pc[z] pc's have to be subset from previous step to deal with strandedness !!!!!!
+
+    ans <- calcDenovoMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,islandid=as.list(islandid),pc=pc@counts[[1]][z],startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,modelUnifPrior=modelUnifPrior,nvarPrior=nvarPrior,nexonPrior=nexonPrior,priorq=priorq,minpp=minpp,selectBest=selectBest,method=method,niter=niter[z],exactMarginal=exactMarginal,verbose=verbose, strand=strand)
     mapply(function(z1,z2) formatDenovoOut(z1,z2), ans, genomeDB@islands[z], SIMPLIFY=FALSE)
   }
 
@@ -177,9 +189,8 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, islandid, priorq=3, mpr
   }
 
   #Initialize transcripts for new islands with known orientation
-  sel <- names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null) & !is.na(genomeDB@islandStrand)]
-  if (length(sel)>0) genomeDB@transcripts[sel] <- lapply(genomeDB@exons[sel],function(z) list(as.numeric(names(z))))
-
+  sel <- names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null) & !is.na(strand)]
+  if (length(sel)>0) genomeDB@transcripts[sel] <- tapply(names(genomeDB@islands[sel]@unlistData), rep(names(genomeDB@islands[sel]), elementLengths(genomeDB@islands[sel])), function(x) list(as.numeric(x))) 
   islandidUnknown <- islandid[islandid %in% names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null)]]
   if (length(islandidUnknown)>0) { islandidini <- islandid; islandid <- islandid[!(islandid %in% islandidUnknown)] }
 

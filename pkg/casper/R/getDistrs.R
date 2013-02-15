@@ -1,5 +1,3 @@
-
-
 startDist <- function(st,fragLength,txLength, nreads=NULL) {
                                         # Estimate relative start distribution under left­truncation (st < 1 ­ fragLength/txLength)
                                         # ­ st: relative start (i.e. start/txLength)
@@ -96,13 +94,15 @@ getDistrs<-function(DB, bam, nreads=4*10^6){
   names(oneTx) <- sub("[0-9]+\\.", "", names(oneTx))
   oneExons <- exonsRD[names(exonsRD) %in% unlist(oneTx)]
   oneExons <- oneExons[as.character(unlist(oneTx))]
-  islandStrand <- DB@islandStrand
+  islandStrand <- as.character(strand(DB@islands@unlistData))[cumsum(c(1, elementLengths(DB@islands)[-length(DB@islands)]))]
+  names(islandStrand) <- names(DB@islands)
+  
 
-  exon <- rank <- unlist(lapply(oneTx, function(x) 1:length(x)))
-  exon <- strand <- islandStrand[as.character(DB@exon2island$island[match(names(oneExons), DB@exon2island$id)])]
-  strand(oneExons) <- exon <- strand
-  values(oneExons)$exon <- rank <- exon <- rank
-  txid <- cumsum( values(oneExons)$exon <- rank==1 )
+  exon_rank <- unlist(lapply(oneTx, function(x) 1:length(x)))
+  exon_strand <- islandStrand[as.character(DB@exon2island$island[match(names(oneExons), DB@exon2island$id)])]
+  strand(oneExons) <- exon_strand
+  values(oneExons)$exon_rank <- exon_rank
+  txid <- cumsum( values(oneExons)$exon_rank==1 )
   wid <- end(oneExons) - start(oneExons) + 1
   values(oneExons)$exstnogap <- unlist(tapply(wid, txid, function(z) c(0, cumsum(z[-length(z)]))))
   values(oneExons)$txlength <- unlist(tapply((end(oneExons) - start(oneExons) + 1),INDEX=txid,function(z) rep(sum(z),length(z))))

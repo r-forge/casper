@@ -3,9 +3,11 @@
 \alias{getIsland,character,missing,annotatedGenome-method}
 \alias{getIsland,missing,character,annotatedGenome-method}
 \alias{getChr}
-\alias{getChr,character,missing,missing-method}
-\alias{getChr,missing,character,missing-method}
-\alias{getChr,missing,missing,character-method}
+\alias{getChr-method}
+\alias{getChr,character,missing,missing,annotatedGenome-method}
+\alias{getChr,missing,character,missing,annotatedGenome-method}
+\alias{getChr,missing,missing,missing,annotatedGenome-method}
+\alias{getChr,missing,missing,character,annotatedGenome-method}
 \docType{methods}
 \title{
 getIsland returns the island id associated to a given entrez or
@@ -41,8 +43,17 @@ getChr(entrezid, txid, islandid, genomeDB)
   \item{\code{signature(entrezid='missing',txid='character',genomeDB='annotatedGenome')}}{
     Return island id for given transcript identifier (RefSeq)
   }
+  \item{\code{signature(entrezid='character',txid='missing',islandid='missing',genomeDB='annotatedGenome')}}{
+    Return chromosome for given Entrez identifier (RefSeq)
+  }
+  \item{\code{signature(entrezid='missing',txid='character',islandid='missing',genomeDB='annotatedGenome')}}{
+    Return chromosome for given transcript identifier (RefSeq)
+  }
+  \item{\code{signature(entrezid='missing',txid='missing',islandid='character',genomeDB='annotatedGenome')}}{
+    Return chromosome for given island identifier
+  }
 }
-
+    
 \describe{
   \item{\code{signature(entrezid='character',txid='missing',islandid='missing')}}{
     Return chromosome for given Entrez identifier
@@ -54,7 +65,6 @@ getChr(entrezid, txid, islandid, genomeDB)
     Return chromosome for given island identifier
   }
 }
-
 }
 \value{Character with island identifier}
 \examples{

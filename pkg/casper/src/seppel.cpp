@@ -208,7 +208,8 @@ double Seppel::calcIntegral(Model* model, Model* similarModel)
 
 {
 
-
+  bool chck;
+  double *mode;
 
   if (modes.count(similarModel)==0) return this->calcIntegral(model);
 
@@ -228,14 +229,17 @@ double Seppel::calcIntegral(Model* model, Model* similarModel)
 
 
 
-    double* mode = this->initMode(model,similarModel);
+    mode = this->initMode(model,similarModel);
 
     casp->calculateMode(mode);
 
     modes[model] = mode;
 
     like = casp->calculateIntegral(mode, model->count());
-
+    chck=isnan(like);
+    if(chck) {
+      model->debugprint();
+    }
     prior = calculatePrior(model);
 
     like += prior;
@@ -379,7 +383,7 @@ void Seppel::exploreUnif(int runs)
 	Model* omodl = possiblemodels->at(onum);
 
 	double olike = calcIntegral(omodl);
-
+	
 
 
 	int accepted = 0;
@@ -443,12 +447,13 @@ void Seppel::exploreSmart(Model* startmodel, int runs)
 	Model *omodl = startmodel;
 
 	double olike = calcIntegral(omodl);
-
+	
 	SmartModelDist* odist = new SmartModelDist(this, frame, omodl, 0.8, modelsSet);
 
 	
 
 	int accepted = 0;
+	double nlike, nprob, oprob, l, lp, x;
 
 
 
@@ -462,7 +467,7 @@ void Seppel::exploreSmart(Model* startmodel, int runs)
 
 	  //models->push_back(nmodl);
 
-	  double nlike = calcIntegral(nmodl,omodl);
+	  nlike = calcIntegral(nmodl,omodl);
 
 	  //double nlike = calcIntegral(nmodl);
 
@@ -476,19 +481,15 @@ void Seppel::exploreSmart(Model* startmodel, int runs)
 
 
 
-			double nprob = odist->densityLn(nmodl);
+			nprob = odist->densityLn(nmodl);
 
-			double oprob = ndist->densityLn(omodl);
+			oprob = ndist->densityLn(omodl);
 
+			l = nlike - olike + oprob - nprob;
 
+			lp = exp(l);
 
-			double l = nlike - olike + oprob - nprob;
-
-			double lp = exp(l);
-
-			
-
-			double x = runif();
+			x = runif();
 
 			if (x < lp) {
 
@@ -545,6 +546,7 @@ map<Model*, double*, ModelCmp> Seppel::resultModes()
 map<Model*, double, ModelCmp> Seppel::resultPPIntegral()
 
 {
+  bool chck;
 
 	map<Model*, double, ModelCmp> probs;
 
@@ -566,6 +568,12 @@ map<Model*, double, ModelCmp> Seppel::resultPPIntegral()
 
 			continue;
 
+		}
+
+                chck=isnan(mi->second);
+		if(chck) {
+		  printf("Fuck %f %c\n", mi->second, chck);
+		  mi->first->debugprint();
 		}
 
 		integralMax = max(mi->second, integralMax);
