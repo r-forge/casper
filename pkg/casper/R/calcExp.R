@@ -13,7 +13,7 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=FALSE, prio
   if ((niter<=burnin) & citype==2) stop("Too many burnin iterations specified. Decrease burnin or increase niter")
   if (missing(islandid)) islandid <- names(genomeDB@islands)[elementLengths(genomeDB@islands)>1]
 
-  exons <- names(genomeDB@islands@unlistData)
+  exons <- as.integer(names(genomeDB@islands@unlistData))
   names(exons) <- rep(names(genomeDB@islands), elementLengths(genomeDB@islands))
   exons <- split(unname(exons), names(exons))
   exonwidth <- width(genomeDB@islands@unlistData)

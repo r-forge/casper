@@ -111,7 +111,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, islandid, priorq=3, mpr
   if (!all(islandid %in% names(genomeDB@islands))) stop('islandid not found in genomeDB@islands')
   if (!all(islandid %in% unlist(lapply(pc@counts, names)))) stop('islandid not found in pc')
   if (!all(islandid %in% names(genomeDB@transcripts))) stop('islandid not found in genomeDB@transcripts')
-  exons <- names(genomeDB@islands@unlistData)
+  exons <- as.integer(names(genomeDB@islands@unlistData))
   names(exons) <- rep(names(genomeDB@islands), elementLengths(genomeDB@islands))
   exons <- split(unname(exons), names(exons))
   exonwidth <- width(genomeDB@islands@unlistData)
@@ -190,7 +190,7 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, islandid, priorq=3, mpr
 
   #Initialize transcripts for new islands with known orientation
   sel <- names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null) & !is.na(strand)]
-  if (length(sel)>0) genomeDB@transcripts[sel] <- tapply(names(genomeDB@islands[sel]@unlistData), rep(names(genomeDB@islands[sel]), elementLengths(genomeDB@islands[sel])), function(x) list(as.numeric(x))) 
+  if (length(sel)>0) genomeDB@transcripts[sel] <- tapply(as.integer(names(genomeDB@islands[sel]@unlistData)), rep(names(genomeDB@islands[sel]), elementLengths(genomeDB@islands[sel])), function(x) list(as.numeric(x))) 
   islandidUnknown <- islandid[islandid %in% names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null)]]
   if (length(islandidUnknown)>0) { islandidini <- islandid; islandid <- islandid[!(islandid %in% islandidUnknown)] }
 
