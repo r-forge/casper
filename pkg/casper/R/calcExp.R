@@ -49,8 +49,8 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
     } else if (citype==1) {
       ans <- lapply(ans, function(z) { res=vector("list",2); res[[1]]= z[[1]]; res[[2]]= z[[3]]; names(res[[1]])= names(res[[2]])= z[[2]]; res })
     } else if (citype==2) {
-  ans <- lapply(ans, function(z) { res=vector("list",3); res[[1]]= z[[1]]; res[[2]]= z[[3]]; res[[3]]= matrix(z[[4]],nrow=niter-burnin); names(res[[1]])= names(res[[2]])= z[[2]]; res })
-}
+      ans <- lapply(ans, function(z) { res=vector("list",3); res[[1]]= z[[1]]; res[[2]]= z[[3]]; res[[3]]= matrix(z[[4]],nrow=niter-burnin); names(res[[1]])= names(res[[2]])= z[[2]]; res })
+    }
     ans
   }
 
@@ -157,7 +157,7 @@ mergeExp <- function(minus, plus){
   ans
 }
 
-calcExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=FALSE, priorq=2, priorqGeneExpr=2, citype='none', niter=10^3, burnin=100, mc.cores=1, verbose=FALSE) {
+calcExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, priorq=2, priorqGeneExpr=2, citype='none', niter=10^3, burnin=100, mc.cores=1, verbose=FALSE) {
   totReads <- getNreads(pc); totReads <- sum(totReads) + priorqGeneExpr*length(totReads) #Modified: totReads includes prior sample size
   
   if (missing(readLength)) stop("readLength must be specified")
