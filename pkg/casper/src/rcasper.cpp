@@ -263,7 +263,7 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP 
 
 
 
-void importTranscripts(set<Variant*, VariantCmp> *initvars, DataFrame* df, SEXP transcriptsR)
+void importTranscripts(set<Variant*, VariantCmp> *initvars, DataFrame* df, SEXP transcriptsR, SEXP strandR)
 
 {
 
@@ -276,6 +276,8 @@ void importTranscripts(set<Variant*, VariantCmp> *initvars, DataFrame* df, SEXP 
 	SEXP trow;
 
 	int ntsub, *tvals;
+
+	int strand=INTEGER(strandR)[0];
 
 	for (int i = 0; i < nt; i++) {
 
@@ -307,7 +309,7 @@ void importTranscripts(set<Variant*, VariantCmp> *initvars, DataFrame* df, SEXP 
 
 		v->antisense=FALSE;
 
-		if(tvals[0] > tvals[1]) v->antisense=TRUE;
+		if(tvals[0] > tvals[1] & strand==0) v->antisense=TRUE;
 		
 
 		int nbchar= Rf_length(STRING_ELT(tnames,i));
@@ -354,7 +356,7 @@ extern "C"
 
     set<Variant*, VariantCmp> *initvars = new set<Variant*, VariantCmp>();
 
-    importTranscripts(initvars, df, transcriptsR);
+    importTranscripts(initvars, df, transcriptsR, strandR);
 
     df->fixUnexplFrags(initvars, 0); // Discard fragments that are unexplained by know variants
 
@@ -641,7 +643,7 @@ extern "C"
 
 		set<Variant*, VariantCmp> *initvars = new set<Variant*, VariantCmp>();
 
-		importTranscripts(initvars, df, transcriptsR);
+		importTranscripts(initvars, df, transcriptsR, strandR);
 
 		df->fixUnexplFrags(initvars, 0); // Discard fragments that are unexplained by know variants
 
@@ -897,7 +899,7 @@ extern "C"
 
 	  set<Variant*, VariantCmp> *initvars = new set<Variant*, VariantCmp>();
 
-	  importTranscripts(initvars, df, transcriptsR);
+	  importTranscripts(initvars, df, transcriptsR, strandR);
 
 
 

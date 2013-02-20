@@ -169,7 +169,7 @@ procGenome<-function(genDB, genome, mc.cores=1){
   # Make islands
   ex2tx <- unlist(newTxs)
   names(ex2tx) <- rep(names(newTxs), unlist(lapply(newTxs, length)))
-  islands <- makeIslands(ex2tx)
+  islands <- casper:::makeIslands(ex2tx)
 
   cat("Splitting transcripts\n")
   extxs <- unlist(lapply(newTxs, "[", 1))    

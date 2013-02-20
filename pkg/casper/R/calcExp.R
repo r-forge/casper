@@ -72,12 +72,17 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
       names(ans) <- islandid
     }
 
-    miss <- lapply(genomeDB@transcripts[all[!(all %in% names(ans))]], names)  
+    miss <- lapply(genomeDB@transcripts[all[!(all %in% names(ans))]], names)
+  
     #Format as ExpressionSet
 
     if (verbose) cat("Formatting output...\n")
-    transcript <- c(unlist(lapply(ans, function(z) names(z[[1]]))), unname(unlist(miss)))
-    gene <- c(rep(names(ans),sapply(ans,function(z) length(z[[1]]))), rep(names(miss), sapply(miss, length)))
+  transcript <- unlist(lapply(ans, function(z) names(z[[1]])))
+  gene <- rep(names(ans),sapply(ans,function(z) length(z[[1]])))
+  fdata <- data.frame(transcript=transcript, gene=gene)
+  if(length(miss)>0){
+    transcript <- c(transcript, unname(unlist(miss)))
+    gene <- c(gene, rep(names(miss), sapply(miss, length)))
     fdata <- data.frame(transcript=transcript, gene=gene)
     ntx.miss <- sapply(miss,length) #Added
     misse <- rep(1/ntx.miss,ntx.miss) #Added: report prior mode for islands with no reads
@@ -88,9 +93,13 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
     exprsx <- matrix(c(unlist(lapply(ans,'[[',1)), misse) ,ncol=1)
     rownames(exprsx) <- c(unlist(lapply(ans, function(z) names(z[[1]]))), names(misse))
     #exprsx[exprsx==-1] <- NA #Removed
+  } else {
+    exprsx <- matrix(unlist(lapply(ans, '[[', 1)), ncol=1)
+    rownames(exprsx) <- unlist(lapply(ans, function(z) names(z[[1]])))
+  }
     exprsx <- round(exprsx,10)
     if (citype==1) {
-      se <- c(unlist(lapply(ans,'[[',2)), missSE) #Added: use missSE
+      if(length(miss)>0) se <- c(unlist(lapply(ans,'[[',2)), missSE) #Added: use missSE
       #se[se==-1] <- NA #Removed
       if (!rpkm) { #Added
         alpha <- .05
@@ -109,7 +118,7 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
         if (!rpkm) { #Added
           q <- lapply(ans,function(z) apply(z[[3]],2,quantile,probs=c(.025,.975)))
           q <- t(do.call(cbind,q))
-          q <- rbind(q, matrix(NA, nrow=length(misse), ncol=2))
+          if(length(miss)>0) q <- rbind(q, matrix(NA, nrow=length(misse), ncol=2))
           fdata$ci95.low <- q[,1]; fdata$ci95.high <- q[,2]
           tmp <- cbind(exprsx, fdata[,c('ci95.low','ci95.high')])
           tmp <- as.data.frame(t(apply(tmp, 1, function(x){
