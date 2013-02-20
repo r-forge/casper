@@ -41,11 +41,15 @@ setMethod("transcripts", signature(entrezid='character',islandid='missing',genom
 }
 )
 
-setGeneric("subsetGenome", function(islands, genomeDB) standardGeneric("subsetGenome"))
-setMethod("subsetGenome", signature(islands='character', genomeDB='annotatedGenome'), function(islands, genomeDB) {
+setGeneric("subsetGenome", function(islands, chr, genomeDB) standardGeneric("subsetGenome"))
+setMethod("subsetGenome", signature(islands='character', chr='missing', genomeDB='annotatedGenome'), function(islands, chr, genomeDB) {
   txs <- unlist(sapply(genomeDB@transcripts[islands], names))
-  exs <- genomeDB@exon2island[genomeDB@exon2island$island %in% islands,]$id
+  exs <- as.character(unique(unlist(genomeDB@transcripts[islands])))
   new("annotatedGenome", islands=genomeDB@islands[islands], transcripts=genomeDB@transcripts[islands], exonsNI=genomeDB@exonsNI[exs], aliases=genomeDB@aliases[txs,], exon2island=genomeDB@exon2island[as.character(genomeDB@exon2island$island) %in% islands,], dateCreated=genomeDB@dateCreated, denovo=genomeDB@denovo, genomeVersion=genomeDB@genomeVersion)
+})
+setMethod("subsetGenome", signature(islands='missing', chr='character', genomeDB='annotatedGenome'), function(islands, chr, genomeDB) {
+  islands <- unique(as.character(genomeDB@exon2island[genomeDB@exon2island$seqnames %in% chr,]$island))
+  subsetGenome(islands=islands, genomeDB=genomeDB)
 })
 
 ### FUNCTIONS
@@ -67,6 +71,7 @@ makeIslands <- function(exons){
 
 generateNOexons<-function(exByTx, startId=1, mc.cores){
   exByTx<-unlist(exByTx)
+  strand(exByTx) <- "*"
   exonsNI <- disjoin(exByTx)
   names(exonsNI) <- startId:(length(exonsNI)+startId-1)
   overEx <- findOverlaps(exonsNI, exByTx)
@@ -91,7 +96,7 @@ genomeBystrand <- function(DB, strand){
   islands <- DB@islands[sel]
   transcripts <- DB@transcripts[sel]
   exonsNI <- DB@exonsNI[names(DB@exonsNI) %in% as.character(unlist(transcripts)),]
-  exon2island <- DB@exon2island[DB@exon2island$id %in% as.character(unlist(transcripts)),]
+  exon2island <- DB@exon2island[rownames(DB@exon2island) %in% as.character(unlist(transcripts)),]
   txid <- unlist(lapply(transcripts, names))
   aliases <- DB@aliases[DB@aliases$tx %in% txid,]
   ans <- new("annotatedGenome", aliases=aliases, denovo=TRUE, exonsNI=exonsNI, transcripts=transcripts, exon2island=exon2island, dateCreated=Sys.Date(), genomeVersion=DB@genomeVersion, islands=islands)
@@ -127,14 +132,17 @@ procGenome<-function(genDB, genome, mc.cores=1){
   cat("Finding non-overlapping exons\n")
   txStrand <- as.character(strand(txs))
   names(txStrand) <- values(txs)$tx_name
-  sel <- names(txStrand)[txStrand=="+"]; plusExons <- Exons[sel]
-  sel <- names(txStrand)[txStrand=="-"]; minusExons <- Exons[sel]
+  #sel <- names(txStrand)[txStrand=="+"]; plusExons <- Exons[sel]
+  #sel <- names(txStrand)[txStrand=="-"]; minusExons <- Exons[sel]
 
-  fixExonsP <- generateNOexons(plusExons, startId=1, mc.cores)
-  fixExonsM <- generateNOexons(minusExons, startId=max(as.numeric(names(fixExonsP$exons)))+1, mc.cores)
-  exkey <- fixExonsP$exkey
-  exkey <- c(exkey, fixExonsM$exkey)
-  exonsNI <- suppressWarnings(c(fixExonsP$exons, fixExonsM$exons))
+  #fixExonsP <- generateNOexons(plusExons, startId=1, mc.cores)
+  #fixExonsM <- generateNOexons(minusExons, startId=max(as.numeric(names(fixExonsP$exons)))+1, mc.cores)
+  #exkey <- fixExonsP$exkey
+  #exkey <- c(exkey, fixExonsM$exkey)
+  #exonsNI <- suppressWarnings(c(fixExonsP$exons, fixExonsM$exons))
+  exonsNI <- generateNOexons(Exons, startId=1, mc.cores)  
+  exkey <- exonsNI$exkey
+  exonsNI <- exonsNI$exons
   
   #Find transcript structure for new exons
   cat("Remapping transcript structure to new exons\n")
@@ -162,38 +170,40 @@ procGenome<-function(genDB, genome, mc.cores=1){
   ex2tx <- unlist(newTxs)
   names(ex2tx) <- rep(names(newTxs), unlist(lapply(newTxs, length)))
   islands <- makeIslands(ex2tx)
-  
+
   cat("Splitting transcripts\n")
   extxs <- unlist(lapply(newTxs, "[", 1))    
   sel <- match(extxs, names(exonsNI))
   tx2island <- islands[as.character(sel)]
   names(tx2island) <- names(newTxs)
   transcripts <- newTxs[names(tx2island)]
+  sel <- txStrand[names(transcripts)]=='-'
+  transcripts[sel] <- sapply(transcripts[sel], rev)
   transcripts <- split(transcripts, tx2island)
   islandStrand <- tapply(txStrand, tx2island[names(txStrand)], unique)
-  
-  sel <- islandStrand=='-'
-  transcripts[sel] <- lapply(transcripts[sel], function(x) lapply(x,rev))
-
+  ss <- sapply(islandStrand, length)
+  islandStrand[ss>1] <- "*"
   id2tx <- data.frame(island_id=rep(names(transcripts),sapply(transcripts,length)) , txname=unlist(sapply(transcripts,names)))
   rownames(id2tx) <- id2tx$txname
   aliases$island_id <- id2tx[rownames(aliases),'island_id']
   exon2island <- as.data.frame(ranges(exonsNI))
   exon2island <- exon2island[,-4]
   exon2island$seqnames <- as.character(seqnames(exonsNI))
-  exon2island$id <- names(exonsNI)
-  exon2island$island <- islands[as.character(exon2island$id)]
+  rownames(exon2island) <- names(exonsNI)
+  exon2island$island <- islands[rownames(exon2island)]
 
-  exp <- exonsNI[islandStrand[as.character(exon2island$island)]=='+']
-  strand(exp) <- rep("+", length(exp))
+  exp <- exonsNI[unlist(islandStrand[as.character(exon2island$island)]) == '+']
+  strand(exp) <- "+"
   tmp <- split(exp, islands[names(exp)])
+  exu <- exonsNI[unlist(islandStrand[as.character(exon2island$island)]) == '*']
+  strand(exu) <- "*"
+  tmpu <- split(exu, islands[names(exu)])
   exm <- exonsNI[islandStrand[as.character(exon2island$island)]=='-']
-  strand(exm) <- rep("-", length(exm))
+  strand(exm) <- "-"
   tmpm <- split(rev(exm), islands[names(rev(exm))])
-  tmp <- c(tmp, tmpm)
+  tmp <- c(tmp, tmpm, tmpu)
   tmp <- tmp[names(transcripts)]
-  seqlengths(exonsNI) <- seqlengths(txs)[names(seqlengths(exonsNI))]
-  
+    
   ans <- new("annotatedGenome", islands=tmp, transcripts=transcripts, exon2island=exon2island, aliases=aliases, exonsNI=exonsNI, dateCreated=Sys.Date(), genomeVersion=genome, denovo=FALSE)
   ans
  } 

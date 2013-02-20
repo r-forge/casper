@@ -21,7 +21,6 @@ Fragment::Fragment(int leftc, int rightc, int count)
 }
 
 
-
 Fragment::~Fragment() {
 
   zaparray(left); //delete [] left;

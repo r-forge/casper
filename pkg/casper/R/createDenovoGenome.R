@@ -10,10 +10,6 @@ setMethod("findNewExons", signature(pbam='list'),
               nex <- lapply(pbam, function(x) findNewExons(x, DB=DB, minConn=minConn, minJunx=minJunx, minLen=minLen))
             }
             nex <- mergeGRanges(nex)
-            if(sum(!(seqnames(DB@exonsNI) %in% unique(as.character(seqnames(nex)))))>0){
-              extraex <- DB@exonsNI[!(seqnames(DB@exonsNI) %in% unique(as.character(seqnames(nex))))]
-              nex <- mergeGRanges(list(nex, extraex))
-            }
             names(nex) <- 1:length(nex)
             nex
           }
@@ -21,30 +17,20 @@ setMethod("findNewExons", signature(pbam='list'),
 setMethod("findNewExons", signature(pbam='procBam') ,
           function(pbam, DB, minConn, minJunx, minLen) {
             nex <- findNewExonsF(pbam=pbam, DB=DB, minConn=minConn, minJunx=minJunx, minLen=minLen)
-            if(sum(!(seqnames(DB@exonsNI) %in% unique(as.character(seqnames(nex)))))>0){
-              extraex <- DB@exonsNI[!(seqnames(DB@exonsNI) %in% unique(as.character(seqnames(nex))))]
-              nex <- mergeGRanges(list(nex, extraex))
-            }
             names(nex) <- 1:length(nex)
             nex
           }
           )
-
+ 
 setGeneric("assignExons2Gene", function(reads, ...) standardGeneric("assignExons2Gene"))
 setMethod("assignExons2Gene", signature(reads='list'),
-          function(reads, ...){
-            ans <- lapply(reads, function(x) assignExons2Gene(reads=x, ...))
-            isl <- lapply(ans, function(x) x@islands)
-            isl <- do.call('c', isl)
-            txs <- lapply(ans, function(x) x@transcripts)
-            txs <- do.call('c', txs)
-            alia <- lapply(ans, function(x) x@aliases)
-            alia <- do.call('rbind', alia)
-            e2i <- lapply(ans, function(x) x@exon2island)
-            e2i <- do.call('rbind', e2i)
-            exn <- lapply(ans, function(x) x@exonsNI)
-            exn <- do.call('c', exn)
-            ans <- new("annotatedGenome", islands=isl, transcripts=txs, aliases=alia, exon2island=e2i, exonsNI=exn, denovo=T, dateCreated=DB@dateCreated, genomeVersion=DB@genomeVersion)
+          function(reads, DB, ...){
+            ans <- lapply(reads, function(x) assignExons2Gene(reads=x, DB=DB, ...))
+            misschr <- unlist(lapply(ans, function(x) as.character(unique(seqnames(x@exonsNI)))))
+            allchr <- as.character(unique(seqnames(DB@exonsNI)))
+            misschr <- allchr[!(allchr %in% misschr)]
+            misschr <- lapply(misschr, function(x) formatChromo(subsetGenome(genomeDB=DB, chr=x)))
+            ans <- mergeGenomeByChr(c(ans, misschr))
             ans
           })
 setMethod("assignExons2Gene", signature(reads='procBam'),
@@ -52,19 +38,51 @@ setMethod("assignExons2Gene", signature(reads='procBam'),
             assignExons2GeneF(reads=reads@pbam, ...)
           })
                    
+formatChromo <- function(DB){
+  chr <- as.character(unique(seqnames(DB@exonsNI)))
+  isl <- DB@islands
+  names(isl) <- paste(chr, names(isl), sep='.')
+  txs <- DB@transcripts
+  names(txs) <- names(isl)
+  alia <- DB@aliases
+  alia$island_id <- paste(chr, alia$island_id, sep=".")
+  e2i <- DB@exon2island
+  e2i$island <- paste(chr, e2i$island, sep='.')
+  ans <- new("annotatedGenome", islands=isl, transcripts=txs, aliases=alia, exon2island=e2i, exonsNI=DB@exonsNI, denovo=T, dateCreated=DB@dateCreated, genomeVersion=DB@genomeVersion)
+}
+
+mergeGenomeByChr <- function(ans){
+  isl <- lapply(ans, function(x) x@islands)
+  isl <- do.call('c', isl)
+  txs <- lapply(ans, function(x) x@transcripts)
+  txs <- do.call('c', txs)
+  alia <- lapply(ans, function(x) x@aliases[,c("tx_id","tx_name","gene_id","tx","island_id")])
+  alia <- do.call('rbind', alia)
+  e2i <- lapply(ans, function(x) x@exon2island)
+  e2i <- do.call('rbind', e2i)
+  exn <- lapply(ans, function(x) x@exonsNI)
+  exn <- do.call('c', exn)
+  new("annotatedGenome", islands=isl, transcripts=txs, aliases=alia, exon2island=e2i, exonsNI=exn, denovo=T, dateCreated=ans[[1]]@dateCreated, genomeVersion=ans[[1]]@genomeVersion)
+}
+
 findNewExonsF <- function(pbam, DB, minConn=3, minJunx=3, minLen=12){
   junx <- pbam@junx
   pbam <- pbam@pbam
   chrs <- as.character(unique(seqnames(pbam)@values))
-  DB <- subsetGenome(genomeDB=DB, islands=unique(as.character(DB@exon2island[DB@exon2island$seqnames %in% chrs,]$island)))
+  DB <- subsetGenome(genomeDB=DB, chr=chrs)
   ## Find new putative exons by reads' islands
   cov <- coverage(pbam)
   isl <- slice(cov, lower=1,  rangesOnly=T)
   isl <- GRanges(ranges=unlist(isl), seqnames=rep(names(isl), sapply(isl, length)))
   cnt <- countOverlaps(isl, pbam)
   isl <- isl[cnt>3]
-  isls <- disjoin(c(reduce(c(isl, DB@exonsNI)), DB@exonsNI))
-
+  isls <- c(isl, DB@exonsNI)
+  strand(isls) <- "*"
+  isls <- reduce(isls)
+  isls <- c(isls, DB@exonsNI)
+  strand(isls) <- "*"
+  isls <- disjoin(isls)
+  
   ## Redefine known and new exons by junctions
   isls <- lapply(unique(as.character(seqnames(DB@exonsNI)@values)), function(x){
     if(sum(seqnames(junx)==x)){
@@ -84,9 +102,9 @@ findNewExonsF <- function(pbam, DB, minConn=3, minJunx=3, minLen=12){
 
   ## Find exons with no overlap with known exons
   kex <- subsetByOverlaps(isls, DB@exonsNI)
-  nisl <- isls[!(isls %in% DB@exonsNI),]
+  nisl <- isls[!(isls %in% DB@exonsNI)]
   over <- findOverlaps(nisl, DB@exonsNI, maxgap=1)
-  nex <- nisl[!(1:length(nisl) %in% queryHits(over)),]
+  nex <- nisl[!(1:length(nisl) %in% queryHits(over))]
 
   ## Find exons to redefine (grow)
   lex <- nisl[!(names(nisl) %in% names(nex))]
@@ -120,7 +138,7 @@ findNewExonsF <- function(pbam, DB, minConn=3, minJunx=3, minLen=12){
 
 assignExons2GeneF <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLinkDist=0, stranded=FALSE, mc.cores=1){
   chrs <- as.character(unique(seqnames(reads)@values))
-  DB <- subsetGenome(genomeDB=DB, islands=unique(as.character(DB@exon2island[DB@exon2island$seqnames %in% chrs,]$island)))
+  DB <- subsetGenome(genomeDB=DB, chr=chrs)
   exons <- exons[seqnames(exons) %in% chrs]
   over <- findOverlaps(exons, DB@exonsNI)
   exid <- names(exons)[queryHits(over)]
@@ -136,43 +154,45 @@ assignExons2GeneF <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLin
   newTxs <- split(newTxs, rep(names(lenkey), lenkey))
   newTxs <- newTxs[names(otxs)]
   newTxs <- split(newTxs, rep(names(DB@transcripts), sapply(DB@transcripts, length)))
-  
+  alljunx <- NULL
   exs <- exons[!(exons %in% DB@exonsNI)]
-  rea <- subsetByOverlaps(reads, exs)
+  if(length(exs)>0){
+    rea <- subsetByOverlaps(reads, exs)
   
 #Select read ids in these exons
-  area <- reads[values(reads)$id %in% values(rea)$id]
-  over <- findOverlaps(exons, area)
-  exs1 <- names(exons[queryHits(over)])
-  exs1 <- sub("\\..*","",exs1)
-  rea1 <- values(area[subjectHits(over)])$id
-  len <- length(unique(rea1))
-  if(length(unique(exs1))>1){
-    ans <- .Call("joinExons", as.integer(exs1), rea1, len)
-    junx <- ans[[1]][ans[[2]]>=minLinks]
-    junx <- strsplit(junx, split=".", fixed=T)
-    names(junx) <- 1:length(junx)
-    nalljunx <- rep(1:length(junx), unlist(lapply(junx, length)))
-    alljunx <- unlist(junx)
-    tmpex <- as.data.frame(exons)
-    rownames(tmpex) <- names(exons)
-    tmpex <- tmpex[alljunx,]
-    alljunx <- as.integer(alljunx)
-    names(alljunx) <- nalljunx
-    pos <- (tmpex$end+tmpex$start)/2
-    dis <- tapply(pos, names(alljunx), function(x) ifelse(length(x)>1, max(sort(x)[-length(x)]-sort(x)[-1]) < maxLinkDist, TRUE ))
-    alljunx <- alljunx[names(alljunx) %in% as.character(names(dis)[dis])]
-    if(sum(!(as.numeric(names(exs)) %in% unique(alljunx)))>0) {
-      sing <- as.numeric(names(exs))[!(as.numeric(names(exs)) %in% unique(alljunx))]
-      mname <- max(as.numeric(names(alljunx)))
-      names(sing) <- (mname+1):(mname+length(sing)) 
-      alljunx <- c(alljunx, sing)
+    area <- reads[values(reads)$id %in% values(rea)$id]
+    over <- findOverlaps(exons, area)
+    exs1 <- names(exons[queryHits(over)])
+    exs1 <- sub("\\..*","",exs1)
+    rea1 <- values(area[subjectHits(over)])$id
+    len <- length(unique(rea1))
+    if(length(unique(exs1))>1){
+      ans <- .Call("joinExons", as.integer(exs1), rea1, len)
+      junx <- ans[[1]][ans[[2]]>=minLinks]
+      junx <- strsplit(junx, split=".", fixed=T)
+      names(junx) <- 1:length(junx)
+      nalljunx <- rep(1:length(junx), unlist(lapply(junx, length)))
+      alljunx <- unlist(junx)
+      tmpex <- as.data.frame(exons)
+      rownames(tmpex) <- names(exons)
+      tmpex <- tmpex[alljunx,]
+      alljunx <- as.integer(alljunx)
+      names(alljunx) <- nalljunx
+      pos <- (tmpex$end+tmpex$start)/2
+      dis <- tapply(pos, names(alljunx), function(x) ifelse(length(x)>1, max(sort(x)[-length(x)]-sort(x)[-1]) < maxLinkDist, TRUE ))
+      alljunx <- alljunx[names(alljunx) %in% as.character(names(dis)[dis])]
+      if(sum(!(as.numeric(names(exs)) %in% unique(alljunx)))>0) {
+        sing <- as.numeric(names(exs))[!(as.numeric(names(exs)) %in% unique(alljunx))]
+        mname <- max(as.numeric(names(alljunx)))
+        names(sing) <- (mname+1):(mname+length(sing)) 
+        alljunx <- c(alljunx, sing)
+      }
+    } else {
+      alljunx <- unique(exs1)
+      names(alljunx) <- '1'
     }
-  } else {
-    alljunx <- unique(exs1)
-    names(alljunx) <- '1'
   }
-
+  
 #Build gene islands
   oldexs <- unlist(newTxs, recursive=F)
   txids <- sub("[0-9]+\\.", "", names(oldexs))
@@ -186,19 +206,19 @@ assignExons2GeneF <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLin
   names(islands) <- nislands
   values(exons)$island <- islands[names(exons)] 
   exon2gene <- as.data.frame(exons)
-  exon2gene$id <- names(exons)
-  exon2gene$island <- islands[as.character(exon2gene$id)]
-  rownames(exon2gene) <- exon2gene$id
-  islands <- GRanges(IRanges(exon2gene$start, exon2gene$end), seqnames=exon2gene$seqnames, id=exon2gene$id)
-  names(islands) <- exon2gene$id
+  #exon2gene$id <- names(exons)
+  rownames(exon2gene) <- names(exons)
+  exon2gene$island <- islands[rownames(exon2gene)]
+  islands <- GRanges(IRanges(exon2gene$start, exon2gene$end), seqnames=exon2gene$seqnames)
+  names(islands) <- rownames(exon2gene)
   exon2island <- as.data.frame(exons)  
-  exon2island$id <- names(exons)
+  exon2island$strand <- NULL
   if(any(strand(DB@islands@unlistData)=='+')) {
-    strand(islands)[exon2gene$id %in% oldexs] <- '+'
-    islands <- split(islands, as.character(exon2gene$island[match(exon2gene$id, values(islands)$id)]))
+    strand(islands)[rownames(exon2gene) %in% oldexs] <- '+'
+    islands <- split(islands, as.character(exon2gene$island[match(rownames(exon2gene), names(islands))]))
   } else {
     strand(islands)[exon2gene$id %in% oldexs] <- '-'
-    islands <- split(rev(islands), as.character(exon2gene$island[match(exon2gene$id, rev(values(islands)$id))]))
+    islands <- split(rev(islands), as.character(exon2gene$island[match(rownames(exon2gene), rev(names(islands)))]))
   }
   extxs <- unlist(newTxs, recursive=F)
   names(extxs) <- sub("[0-9]+\\.", "", names(extxs))
@@ -212,16 +232,22 @@ assignExons2GeneF <- function(exons, DB, reads, maxDist=1000, minLinks=2, maxLin
   aliases <- DB@aliases
   aliases$island_id <- tx2gene[match(rownames(aliases),names(extxs))]
   aliases <- aliases[,!(colnames(aliases) %in% 'exid')]
+  values(exons)$island <- NULL
   ans <- new("annotatedGenome", islands=islands, transcripts=transcripts, exon2island=exon2island, exonsNI=exons, aliases=aliases, genomeVersion=DB@genomeVersion, dateCreated=Sys.Date(), denovo=TRUE)
   ans
 }
 
 mergeStrDenovo <- function(plus, minus){  
   nullplus <- sapply(plus@transcripts, is.null)
-  newplus <- by(names(plus@islands[nullplus]@unlistData), rep(names(plus@islands)[nullplus], elementLengths(plus@islands[nullplus])), function(x) paste(x, collapse='.'))
+  if(sum(nullplus)>0) {
+    newplus <- by(names(plus@islands[nullplus]@unlistData), rep(names(plus@islands)[nullplus], elementLengths(plus@islands[nullplus])), function(x) paste(x, collapse='.'))
+  } else newplus <- NULL
   nullminus <- unlist(lapply(minus@transcripts, is.null))
-  newminus <- by(names(minus@islands[nullminus]@unlistData), rep(names(minus@islands)[nullminus], elementLengths(minus@islands[nullminus])), function(x) paste(sort(x), collapse='.'))
-  common <- names(newminus)[!(newminus %in% newplus)]
+  if(sum(nullminus)>0) {
+    newminus <- by(names(minus@islands[nullminus]@unlistData), rep(names(minus@islands)[nullminus], elementLengths(minus@islands[nullminus])), function(x) paste(sort(x), collapse='.'))
+  } else newminus <- NULL
+  common <- NULL
+  if(!is.null(newplus) & !is.null(newminus)) common <- names(newminus)[!(newminus %in% newplus)]
   allislands <- c(plus@islands, minus@islands[!(names(minus@islands) %in% common)])
   names(allislands) <- c(paste(names(plus@islands), "P", sep='.'), paste(names(minus@islands)[!(names(minus@islands) %in% common)], "M", sep="."))
   alltrans <- c(plus@transcripts, minus@transcripts[!(names(minus@islands) %in% common)])
@@ -283,7 +309,7 @@ createDenovoGenome <- function(reads, DB, minLinks=2, maxLinkDist=1e+05, maxDist
         if(!is.null(DBplus)) {
           new <- newex[!(newex %in% DBminus@exonsNI)]
           new <- new[!(new %in% DBplus@exonsNI)]
-          newexplus <- c(newex[newex %in% DBminus@exonsNI], new)
+          newexminus <- c(newex[newex %in% DBminus@exonsNI], new)
         }
         denovominus <- assignExons2Gene(exons=newexminus, DB=DBminus, reads=reads, maxDist=maxDist, stranded=stranded, minLinks=minLinks, maxLinkDist=maxLinkDist, mc.cores=mc.cores)
       }

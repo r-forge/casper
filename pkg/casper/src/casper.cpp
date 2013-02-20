@@ -384,10 +384,6 @@ double Casper::LaplaceApprox(double *mode, int n)
 
   if (n == 1) { return priorLikelihoodLn(mode); }
 
-
-
-  bool posdef;
-
   double *thmode, ***H, **G, **S;
 
 
@@ -410,9 +406,9 @@ double Casper::LaplaceApprox(double *mode, int n)
 
 
 
-  S= dmatrix(0,n,0,n);
+  S= dmatrix(1,n-1,1,n-1);
 
-  normapprox(S, G, H, mode, thmode, n, 0);
+  normapprox(S, G, H, mode, thmode, n, 1);
 
 
 
@@ -420,36 +416,43 @@ double Casper::LaplaceApprox(double *mode, int n)
 
   double gdet = vtGradLogdet(G, n);
 
-  double sdet = log(det(S, n - 1, &posdef));
+  double **cholS;
 
-  if(!posdef){
+  double sdet;
+
+  cholS= dmatrix(1,n-1,1,n-1);
+
+  bool posdef;
+  
+  choldc(S,n-1,cholS,&posdef);
+  
+  if (!posdef) {
 
     int i; double lmin=0, *vals;
-    
+
     vals= dvector(1,n);
-    
+
     eigenvals(S,n-1,vals);
 
     for (i=1; i<n; i++) if (vals[i]<lmin) lmin= vals[i];
 
-    lmin = -lmin + .01;
-  
+    lmin = -lmin + .001;
+
     for (i=1; i<n; i++) S[i][i] += lmin;
 
-    sdet = log(det(S, n - 1, &posdef));
-    if(!posdef) printf("Whaaaat!!! sdet %f\n", sdet);
+    choldc(S,n-1,cholS,&posdef);
+
     free_dvector(vals,1,n);
 
   }
 
+  sdet= choldc_det(cholS,n-1);
+
+  free_dmatrix(cholS, 1, n-1, 1, n-1);
+
 
   double integral = emlk + gdet + (double)(n - 1) / 2.0 * log(2 * M_PI) - 0.5 * sdet;
 
-  bool chck;
-  chck=isnan(integral);
-  if(chck){
-    printf("%f %f %f %f\n", integral, emlk, gdet, sdet);
-  }
 
   delete [] thmode;
 
@@ -457,7 +460,7 @@ double Casper::LaplaceApprox(double *mode, int n)
 
   free_dmatrix(G,0,n,0,n);
 
-  free_dmatrix(S,0,n,0,n);
+  free_dmatrix(S,1,n-1,1,n-1);
 
 	
 
@@ -781,7 +784,7 @@ void Casper::normapprox(double **S, double** G, double*** H, double* mode, doubl
 
 	    }
 
-	  for (int d = 0; d < n; d++) S[rowS][colS] -= (priorq - 1.0) * (H[d][l][m] * mode[d] - G[d][l] * G[d][m]) / pow(mode[d], 2);
+	  for (int d = 0; d < n - 1; d++) S[rowS][colS] -= (priorq - 1.0) * (H[d][l][m] * mode[d] - G[d][l] * G[d][m]) / pow(mode[d], 2);
 
 	  if (l != m) S[colS][rowS] = S[rowS][colS];
 

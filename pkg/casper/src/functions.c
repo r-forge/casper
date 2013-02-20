@@ -39,7 +39,7 @@ int *procCigar(char *cigar, int *cigs){
     cigar++;
   }
   
-  //  free(cigar);
+  //free(cigar);
   free(num);
   return(cigs);
 }

@@ -54,6 +54,7 @@ SEXP uniqQname(SEXP qname, SEXP totReadsR, SEXP pos, SEXP mpos, SEXP names){
   }
   free(tmp);
   free(idtmp);
+  hash_destroy(hashP);
 
   SEXP res;
   PROTECT(res = allocVector(STRSXP, count));

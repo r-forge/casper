@@ -29,10 +29,14 @@ public:
 	// all fragments
 
 	list<Fragment*> data;
+	
+	list<Fragment*> dataM;
 
 
 
 	void addData(Fragment* f);
+
+	void addDataM(Fragment* f);
 
 	void addExon(Exon* e);
 

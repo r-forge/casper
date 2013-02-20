@@ -33,7 +33,15 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=FALSE, prio
     exons <- exons[z]
     exonwidth <- exonwidth[z]
     transcripts <- genomeDB@transcripts[z]
-    strand <- as.list(as.integer(ifelse(strand[z]=='+', 1, -1)))
+    tmp <- strand[z]
+    strand <- vector(mode='integer', length=length(tmp))
+    sel <- tmp=='+'
+    strand[sel] <- 1
+    sel <- tmp=='-'
+    strand[sel] <- -1
+    sel <- tmp=='*'
+    strand[sel] <- 0
+    strand <- as.list(as.integer(strand))
     pc <- pc[z]
     ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,islandid=as.list(islandid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq, strand=strand, citype=citype, niter=niter, burnin=burnin, verbose=verbose)
     if (citype==0) {
@@ -41,8 +49,8 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=FALSE, prio
     } else if (citype==1) {
       ans <- lapply(ans, function(z) { res=vector("list",2); res[[1]]= z[[1]]; res[[2]]= z[[3]]; names(res[[1]])= names(res[[2]])= z[[2]]; res })
     } else if (citype==2) {
-      ans <- lapply(ans, function(z) { res=vector("list",3); res[[1]]= z[[1]]; res[[2]]= z[[3]]; res[[3]]= matrix(z[[4]],nrow=niter-burnin); names(res[[1]])= names(res[[2]])= z[[2]]; res })
-    }
+  ans <- lapply(ans, function(z) { res=vector("list",3); res[[1]]= z[[1]]; res[[2]]= z[[3]]; res[[3]]= matrix(z[[4]],nrow=niter-burnin); names(res[[1]])= names(res[[2]])= z[[2]]; res })
+}
     ans
   }
 

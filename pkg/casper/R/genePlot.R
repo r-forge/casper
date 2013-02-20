@@ -27,7 +27,7 @@ setMethod("genePlot", signature(generanges='missing',islandid='character',genome
   txexp<-exprs(exp)[names(txs),]
   #if(sum(txexp)>0) txexp<-(txexp/sum(txexp))*100
   gene<-buildGene(txs=txs, genomeDB=genomeDB, islandid=islandid)
-  rangesPlot(x=reads[as.character(genomeDB@exon2island[genomeDB@exon2island$id==names(gene[[1]])[1],]$space)], gene, exonProfile=FALSE)
+  rangesPlot(x=reads[as.character(genomeDB@exon2island[rownames(genomeDB@exon2island)==names(gene[[1]])[1],]$space)], gene, exonProfile=FALSE)
   #txexp
 }
 )
