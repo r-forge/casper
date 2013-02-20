@@ -208,7 +208,6 @@ double Seppel::calcIntegral(Model* model, Model* similarModel)
 
 {
 
-  bool chck;
   double *mode;
 
   if (modes.count(similarModel)==0) return this->calcIntegral(model);
@@ -236,10 +235,7 @@ double Seppel::calcIntegral(Model* model, Model* similarModel)
     modes[model] = mode;
 
     like = casp->calculateIntegral(mode, model->count());
-    chck=isnan(like);
-    if(chck) {
-      model->debugprint();
-    }
+
     prior = calculatePrior(model);
 
     like += prior;
@@ -546,7 +542,6 @@ map<Model*, double*, ModelCmp> Seppel::resultModes()
 map<Model*, double, ModelCmp> Seppel::resultPPIntegral()
 
 {
-  bool chck;
 
 	map<Model*, double, ModelCmp> probs;
 
@@ -570,11 +565,6 @@ map<Model*, double, ModelCmp> Seppel::resultPPIntegral()
 
 		}
 
-                chck=isnan(mi->second);
-		if(chck) {
-		  printf("Fuck %f %c\n", mi->second, chck);
-		  mi->first->debugprint();
-		}
 
 		integralMax = max(mi->second, integralMax);
 
