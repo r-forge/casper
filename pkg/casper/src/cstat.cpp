@@ -2496,8 +2496,9 @@ double qnormC(double cdf, double m, double s) {
     double y;
 
     if ((cdf < 0.0) | (cdf > 1.0)) {
-        errorC("qnormC", "tried inverse cdf with p<0 or p>1", 1);
-        /*NOTREACHED*/
+      char proc[]="qnormC", act[]="tried inverse cdf with p<0 or p>1", what[]="";
+      nrerror(proc,act,what); 
+      /*NOTREACHED*/
     }
 
     /* par check */
