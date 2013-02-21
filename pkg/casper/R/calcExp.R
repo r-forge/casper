@@ -45,11 +45,11 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
     pc <- pc[z]
     ans <- calcKnownMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,islandid=as.list(islandid),pc=pc,startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,priorq=priorq, strand=strand, citype=citype, niter=niter, burnin=burnin, verbose=verbose)
     if (citype==0) {
-      ans <- lapply(ans, function(z) { res=vector("list",1); res[[1]]= z[[1]]; names(res[[1]])= z[[2]]; res })
+      ans <- lapply(ans, function(z) { res=vector("list",2); res[[1]]= z[[1]]; names(res[[1]])= z[[2]]; res[[2]]=z[[5]]; res })
     } else if (citype==1) {
-      ans <- lapply(ans, function(z) { res=vector("list",2); res[[1]]= z[[1]]; res[[2]]= z[[3]]; names(res[[1]])= names(res[[2]])= z[[2]]; res })
+      ans <- lapply(ans, function(z) { res=vector("list",3); res[[1]]= z[[1]]; res[[2]]= z[[3]]; names(res[[1]])= names(res[[2]])= z[[2]]; res[[3]] = z[[5]]; res })
     } else if (citype==2) {
-      ans <- lapply(ans, function(z) { res=vector("list",3); res[[1]]= z[[1]]; res[[2]]= z[[3]]; res[[3]]= matrix(z[[4]],nrow=niter-burnin); names(res[[1]])= names(res[[2]])= z[[2]]; res })
+      ans <- lapply(ans, function(z) { res=vector("list",4); res[[1]]= z[[1]]; res[[2]]= z[[3]]; res[[3]]= matrix(z[[4]],nrow=niter-burnin); names(res[[1]])= names(res[[2]])= z[[2]]; res[[4]] = z[[5]]; res })
     }
     ans
   }
@@ -72,11 +72,23 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
       names(ans) <- islandid
     }
 
-    miss <- lapply(genomeDB@transcripts[all[!(all %in% names(ans))]], names)
+  nreads <- rep(0, length(all))
+
+  names(nreads) <- all
+
+  nreads[names(ans)] <- sapply(ans, '[[', length(ans[[1]]))
+  
+  sel <- sapply(ans, function(z) sum(z[[1]])==0)
+
+  ans[sel] <- NULL
+
+  miss <- lapply(genomeDB@transcripts[all[!(all %in% names(ans))]], names)
+
+  
   
     #Format as ExpressionSet
 
-    if (verbose) cat("Formatting output...\n")
+  if (verbose) cat("Formatting output...\n")
   transcript <- unlist(lapply(ans, function(z) names(z[[1]])))
   gene <- rep(names(ans),sapply(ans,function(z) length(z[[1]])))
   fdata <- data.frame(transcript=transcript, gene=gene)
@@ -106,9 +118,9 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
         fdata$ci95.low <- qnorm(alpha/2,mean=exprsx,sd=se)
         fdata$ci95.high <- qnorm(1-alpha/2,mean=exprsx,sd=se)
         sel <- round(fdata$ci95.low,10)<0 & !is.na(se); fdata$ci95.low[sel] <- 0
-        fdata$ci95.high[sel] <- unlist(mapply(function(m,s) qtnorm(1-alpha/2,mean=m,sd=s,lower=0,upper=1), as.list(exprsx[sel,1]), as.list(se[sel])))
+        fdata$ci95.high[sel] <- unlist(mapply(function(m,s) casper:::qtnorm(1-alpha/2,mean=m,sd=s,lower=0,upper=1), as.list(exprsx[sel,1]), as.list(se[sel])))
         sel <- round(fdata$ci95.high,10)>1 & !is.na(se); fdata$ci95.high[sel] <- 1
-        fdata$ci95.low[sel] <- unlist(mapply(function(m,s) qtnorm(alpha/2,mean=m,sd=s,lower=0,upper=1), as.list(exprsx[sel,1]), as.list(se[sel])))
+        fdata$ci95.low[sel] <- unlist(mapply(function(m,s) casper:::qtnorm(alpha/2,mean=m,sd=s,lower=0,upper=1), as.list(exprsx[sel,1]), as.list(se[sel])))
       }
       fdata$se <- se #Added: store SE
     }
@@ -135,11 +147,12 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
       }
     }
       
-  rownames(exprsx) <- rownames(fdata) <- fdata$transcript
+  rownames(exprsx) <- rownames(fdata) <- fdata$transcrips
+  
   #Compute log(RPKM)
   if (rpkm) {
     if (citype != 0) se.logpi <- fdata$se / exprsx #Added: delta method for Var(log(pi))
-    nreads <- sapply(pc[unique(as.character(fdata$gene))],sum)
+    nreads <- nreads[names(pc)]
     geneLength <- sum(width(genomeDB@islands[unique(as.character(fdata$gene))])) #Modified: deals with GRanges (faster)
     apost <- (nreads+(priorqGeneExpr-1)) #Added
     theta <- apost/totReads #Added
@@ -154,6 +167,10 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
     }
   }
   #Return ExpressionSet
+
+  fdata <- cbind(fdata, nreads[as.character(fdata$gene)])
+  colnames(fdata)[ncol(fdata)] <- "explCnts"
+  
   fdata <- new("AnnotatedDataFrame",fdata)
   ans <- new("ExpressionSet",exprs=exprsx,featureData=fdata)
   ans

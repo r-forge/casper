@@ -16,7 +16,7 @@ SEXP casperSimC(SEXP gene_exp, SEXP var_exp, SEXP var_num, SEXP var_len, SEXP ex
 
   int i=0, *ge, *vn, *vl, *en, *es, *ee, *ei, *gs, ngenes, *ldv, rl, ldlen, sdlen, n, bam, insideBam;
   double *ve, *ldd, *sdv, *sdd;
-  FILE *LRFILE=NULL, *RRFILE=NULL;
+  FILE *LRFILE=NULL;
   SEXP startsTmp;
 
   PROTECT(gene_exp = coerceVector(gene_exp, INTSXP));

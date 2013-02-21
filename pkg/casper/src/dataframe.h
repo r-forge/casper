@@ -66,6 +66,9 @@ public:
 
 	int frag_readlen;
 
+	// returns total number of counts in data and dataM objects
+
+	int totCounts();
 
 
 	//	void debugprint();

@@ -97,9 +97,8 @@ void importFragments(int np, SEXP pnames, int *pathCounts, int strand, int inv, 
       
       
       
-      Fragment* f = new Fragment(leftc, rightc, count);
-
-
+      Fragment* f = new Fragment(leftc, rightc, count, i);
+      
 
       //Set sequence of visited exons
       
@@ -160,7 +159,7 @@ void importFragments(int np, SEXP pnames, int *pathCounts, int strand, int inv, 
 	if (c1 || c2) {
 	  
 	  if(inv==0) {
-	    
+
 	    df->addData(f);
 
 	  } else {
@@ -253,9 +252,6 @@ DataFrame* importDataFrame(SEXP exonsR, SEXP exonwidthR, SEXP pathCountsR, SEXP 
 
 
 
-
-
-
   return df;
 
 
@@ -309,8 +305,7 @@ void importTranscripts(set<Variant*, VariantCmp> *initvars, DataFrame* df, SEXP 
 
 		v->antisense=FALSE;
 
-		if(tvals[0] > tvals[1] & strand==0) v->antisense=TRUE;
-		
+		if((tvals[0] > tvals[1]) && strand==0) v->antisense=TRUE;
 
 		int nbchar= Rf_length(STRING_ELT(tnames,i));
 
@@ -653,16 +648,35 @@ extern "C"
 
 		list<Fragment*>::const_iterator fi;
 
+		Fragment* f;
+
 		for (fi = df->data.begin(); fi != df->data.end(); fi++)
 
 		  {
 
-		    Fragment* f = *fi;
+		    f = *fi;
 
-		    totC += f->count;
+		    totC++;
+
+		    break;
 
 		  }
 
+		if(INTEGER(strandR)[0]==0) {
+
+		  for (fi = df->dataM.begin(); fi != df->dataM.end(); fi++)
+  
+		    {
+  
+		      f = *fi;
+
+		      totC++;
+
+		      break;
+
+		    }
+
+		}
 
 
 		//Model* model = new Model(new vector<Variant*>(initvars->begin(), initvars->end()));
@@ -677,7 +691,7 @@ extern "C"
 
 		Casper::em_tol= 0.00001;
 
-
+		totC = casp->totCounts();
 
 		int vc = model->count();
 
@@ -687,7 +701,7 @@ extern "C"
 
          	SEXP ans;
 
-                PROTECT(ans= allocVector(VECSXP, 4));
+                PROTECT(ans= allocVector(VECSXP, 5));
 
 
 
@@ -778,9 +792,12 @@ extern "C"
 		}
 
 
-
+		SET_VECTOR_ELT(ans, 4, allocVector(INTSXP, 1));
 		
+		int *totCp = INTEGER(VECTOR_ELT(ans, 4));
 
+		totCp[0] = totC;
+		
 		UNPROTECT(1);
 
 		delete df;

@@ -99,7 +99,7 @@ map<Fragment*, double> DataFrame::probabilities(Variant* v)
 	  for (fi = dataM.begin(); fi != dataM.end(); fi++)
 	    
 	    {
-
+	      
 	      Fragment* f = *fi;
 
 	      double p = probability(v, f);
@@ -107,7 +107,7 @@ map<Fragment*, double> DataFrame::probabilities(Variant* v)
 	      if (p > 0.0)
   
 		{
-
+		 
 		  cache[v][f] = p;
 
                 }
@@ -124,11 +124,11 @@ map<Fragment*, double> DataFrame::probabilities(Variant* v)
 	      Fragment* f = *fi;
 	      
 	      double p = probability(v, f);
-	      
+
 	      if (p > 0.0)
 		
 		{
-		  
+
 		  cache[v][f] = p;
 		  
 		}
@@ -146,7 +146,7 @@ double DataFrame::probability(Variant* v, Fragment* f)
 
 	double p = 0.0;
 
-	
+
 	if (v->contains(f))
 	  
 	  {
@@ -162,7 +162,6 @@ double DataFrame::probability(Variant* v, Fragment* f)
 	    p = prob(fs, fe, bs, be, v->positions, v->length);
 	    
 	  }
-
 
 	return p;
 
@@ -590,3 +589,47 @@ void DataFrame::debugprint() {
 
 }
 */
+
+
+bool compare(Fragment* first, Fragment* second)
+
+{ return( first->id == second->id  ); }
+
+
+int DataFrame::totCounts()
+
+{
+
+  list<Fragment*> data;
+
+  data = this->data;
+
+  if(this->dataM.size() > 0) 
+
+    {
+
+
+      data.insert(data.end(), this->dataM.begin(), this->dataM.end());
+
+      data.unique(compare);
+      
+    }
+
+
+  Fragment* f;
+
+  int totC = 0;
+
+  list<Fragment*>::const_iterator fi;                                                                                                                                                                                             
+
+  for (fi = data.begin(); fi != data.end(); fi++) {                                                                                                                                                                               
+
+    f = *fi;                                                                                                                                                                                                      
+ 
+    totC += f->count;
+
+  }
+
+  return(totC);
+
+}

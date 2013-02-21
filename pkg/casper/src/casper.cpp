@@ -1081,3 +1081,12 @@ double Casper::det(double** a, int n, bool *posdef)
 
 }
 
+int Casper::totCounts()
+
+{
+
+  int totC = this->frame->totCounts();
+
+  return(totC);
+
+}
