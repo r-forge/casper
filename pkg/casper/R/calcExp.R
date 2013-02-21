@@ -152,7 +152,7 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
   #Compute log(RPKM)
   if (rpkm) {
     if (citype != 0) se.logpi <- fdata$se / exprsx #Added: delta method for Var(log(pi))
-    nreads <- nreads[names(pc)]
+    nreads <- nreads[unique(as.character(fdata$gene))]
     geneLength <- sum(width(genomeDB@islands[unique(as.character(fdata$gene))])) #Modified: deals with GRanges (faster)
     apost <- (nreads+(priorqGeneExpr-1)) #Added
     theta <- apost/totReads #Added
@@ -170,6 +170,7 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
 
   fdata <- cbind(fdata, nreads[as.character(fdata$gene)])
   colnames(fdata)[ncol(fdata)] <- "explCnts"
+  rownames(fdata) <- fdata$transcript
   
   fdata <- new("AnnotatedDataFrame",fdata)
   ans <- new("ExpressionSet",exprs=exprsx,featureData=fdata)
