@@ -1,6 +1,7 @@
 #include <algorithm>
 #include "dataframe.h"
 #include "cppmemory.h"
+#include <list>
 using namespace std;
 
 
@@ -591,9 +592,14 @@ void DataFrame::debugprint() {
 */
 
 
-bool compare(Fragment* first, Fragment* second)
+bool compareF(Fragment* first, Fragment* second)
 
 { return( first->id == second->id  ); }
+
+
+bool orderF(Fragment* first, Fragment* second)
+
+{ return( first->id < second->id  ); }
 
 
 int DataFrame::totCounts()
@@ -608,11 +614,12 @@ int DataFrame::totCounts()
 
     {
 
-
       data.insert(data.end(), this->dataM.begin(), this->dataM.end());
 
-      data.unique(compare);
-      
+      data.sort(orderF);
+
+      data.unique(compareF);
+
     }
 
 
@@ -624,8 +631,9 @@ int DataFrame::totCounts()
 
   for (fi = data.begin(); fi != data.end(); fi++) {                                                                                                                                                                               
 
+
     f = *fi;                                                                                                                                                                                                      
- 
+    
     totC += f->count;
 
   }

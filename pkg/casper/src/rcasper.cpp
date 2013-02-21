@@ -56,11 +56,10 @@ void importFragments(int np, SEXP pnames, int *pathCounts, int strand, int inv, 
       int count = pathCounts[i];
       
       
-      
       //Set nb of left & right visited exons
       
       const char* pname = CHAR(STRING_ELT(pnames, i));
-      
+
       char* varname = new char[strlen(pname) + 1];
       
       char* left= varname;
