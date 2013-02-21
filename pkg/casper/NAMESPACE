@@ -11,7 +11,7 @@ export(calcDenovo, calcExp, createDenovoGenome, getDistrs, getIsland, genePlot, 
 
 exportClasses(annotatedGenome, pathCounts, procBam)
 #export general methods
-exportMethods("plot")
+exportMethods("plot","lines")
 
 
 
