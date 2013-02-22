@@ -154,6 +154,7 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
   if (rpkm) {
     if (citype != 0) se.logpi <- fdata$se / exprsx #Added: delta method for Var(log(pi))
     nreads <- nreads[unique(as.character(fdata$gene))]
+    totReads <- sum(nreads) + priorqGeneExpr*length(nreads) #Modified: totReads includes prior sample size
     geneLength <- sum(width(genomeDB@islands[unique(as.character(fdata$gene))])) #Modified: deals with GRanges (faster)
     apost <- (nreads+(priorqGeneExpr-1)) #Added
     theta <- apost/totReads #Added

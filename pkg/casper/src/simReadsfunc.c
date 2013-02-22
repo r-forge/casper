@@ -8,12 +8,11 @@
 #include "hash.h"
 #include "header.h"
 
-void build_genes(gene_t *genes, double *ve, int *vn, int *vl, int *en, int *es, int *ee, int *ei, int *gs, int ngenes, SEXP chr){
+void build_genes(gene_t *genes, double *ve, int *vn, int *vl, int *en, int *es, int *ee, int *ei, int *txstr, int ngenes, SEXP chr){
   int i, j, k, varpos=0, expos=0, tmp;
   
   for (i=0; i<ngenes; i++){
     genes[i].nvar = vn[i];
-    genes[i].strand = gs[i];
     genes[i].chr = malloc((strlen(CHAR(STRING_ELT(chr,i)))+1) * sizeof(char));
     strcpy(genes[i].chr, CHAR(STRING_ELT(chr, i)));
     genes[i].vars = malloc((vn[i]+1) * sizeof(var_t));
@@ -21,6 +20,7 @@ void build_genes(gene_t *genes, double *ve, int *vn, int *vl, int *en, int *es, 
       genes[i].vars[j].len = vl[varpos];
       genes[i].vars[j].nex = en[varpos];
       genes[i].vars[j].exp = ve[varpos];
+      genes[i].vars[j].strand = txstr[varpos];
       genes[i].vars[j].exst = malloc((genes[i].vars[j].nex+1) * sizeof(int));
       genes[i].vars[j].exst = malloc((genes[i].vars[j].nex+1) * sizeof(int));
       genes[i].vars[j].exen = malloc((genes[i].vars[j].nex+1) * sizeof(int));
@@ -31,7 +31,7 @@ void build_genes(gene_t *genes, double *ve, int *vn, int *vl, int *en, int *es, 
 	genes[i].vars[j].exid[k] = ei[expos];
 	expos++;
       }
-      if(genes[i].strand==-1) {
+      if(genes[i].vars[j].strand==-1) {
 	for(k=0; k < genes[i].vars[j].nex/2; k++){
 	  tmp = genes[i].vars[j].exst[k];
 	  genes[i].vars[j].exst[k] = genes[i].vars[j].exst[genes[i].vars[j].nex - k -1];
@@ -123,8 +123,7 @@ double cumu_fragsta(double x, double *startcdf, double lencdf)
 
 int choose_st(int fraglen, int varlen, double *sdv, double *sdd, int sdlen, int strand){
   int stdlen;
-  
-  stdlen = varlen - fraglen;
+  stdlen = varlen - fraglen + 1;
   if(stdlen < 0) return(-1);
   if(stdlen==0) return(1);
   double maxp=cumu_fragsta((double)stdlen/(double)varlen, sdd, sdlen);  
@@ -156,19 +155,18 @@ int *build_path(var_t var, int len, int st, int rl, hash_t *path, int strand, in
 
   pa = malloc((40 * var.nex) * sizeof(char));
   strcpy(pa, ".");
-
   if(strand==1) {
     rst = st + len - rl;
     en = st + rl - 1;
-    ren = rst + rl - 1;
+    ren = rst + rl;
   }
   else {
-    if((var.len - st - len + 2)<=0) Rprintf("%d %d %d %d %d %d\n", st, en, rst, ren, var.len, len);    
+    if((var.len - st - len + 2)<0) Rprintf("%d %d %d %d %d %d\n", st, en, rst, ren, var.len, len);    
     st = var.len - st - len + 2;
     rst = st + len - rl; 
     en = st + rl - 1;
     ren = rst + rl - 1;
-    if(st<=0) Rprintf("%d %d %d %d %d %d\n", st, en, rst, ren, var.len, len);    
+    if(st<0) Rprintf("%d %d %d %d %d %d\n", st, en, rst, ren, var.len, len);    
 }
 
   here=0;
@@ -239,6 +237,7 @@ int *build_path(var_t var, int len, int st, int rl, hash_t *path, int strand, in
   else {hash_insert(path, pa, 1); starts[2]=1;}
   starts[0] = st;
   starts[1] = rst;
+
   free(pa);
   return(0);
 }
@@ -257,18 +256,19 @@ unsigned NextPow2( unsigned x ) {
 int *build_cigar(var_t var, int len, int st, int rl, char **cigars, int strand){
   int i, rst, rltmp, *ans, sum=1, wis, done=0;
   ans = malloc(3 * sizeof(int));
+
   
   if(strand==1){ rst = st + len - rl;} else {st = var.len - st - len + 2; rst = st + len - rl;}
   
   for(i=0; i<var.nex; i++) {
-    wis = abs(var.exen[i] - var.exst[i]) + 1;
+    wis = abs(var.exen[i] - var.exst[i]);
     if((sum<=st) && (st<sum+wis)) {
-      st = var.exst[i] + st-sum;
+      st = var.exst[i] + st - sum;
       done++;
       if(done==2) break;
     }
     if((sum<=rst) && (rst < sum+wis)) {
-      rst = var.exst[i] + rst-sum;
+      rst = var.exst[i] + rst - sum;
       done++;
       if(done==2) break;
     }
@@ -333,7 +333,7 @@ int *build_cigar(var_t var, int len, int st, int rl, char **cigars, int strand){
     //Build right read
   rltmp = rl;
   sum=1;
-  if(rst+rl<=var.exen[var.nex-1]){
+  if(rst+rl<=var.exen[var.nex-1] + 1){
   for(i=0; i<var.nex; i++) {
     if((var.exst[i] <= rst) && (rst <= var.exen[i])) {
       if(rst+rltmp <= var.exen[i]) {add_match(cigars[1], rltmp); rltmp=0; break; }
