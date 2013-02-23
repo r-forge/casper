@@ -16,13 +16,16 @@ setMethod("subsetPbam", signature(pbam="procBam", strand="character"),
 
 
 buildRD<-function(reads){
+  sel <- which(reads$end<reads$start)
+  st <- en <- integer(length(reads$start))
+  st[sel] <- reads$end[sel]; st[-sel] <- reads$start[-sel]
+  en[-sel] <- reads$end[-sel]; en[sel] <- reads$start[sel]
   if(sum(grepl("chr", unique(reads$chrom)))>0) {
-    reads<-GRanges(ranges=IRanges(start=ifelse(reads$end<reads$start, reads$end, reads$start), end=ifelse(reads$end>reads$start, reads$end, reads$start)), seqnames=reads$chrom, id=reads$key, flag=reads$flag, rid=reads$rid, strand=reads$rstrand, XS=reads$strand)
+    reads<-GRanges(ranges=IRanges(start=st, end=en), seqnames=reads$chrom, id=reads$key, flag=reads$flag, rid=reads$rid, strand=reads$rstrand, XS=reads$strand)
   } else {
-    reads<-GRanges(ranges=IRanges(start=ifelse(reads$end<reads$start, reads$end, reads$start), end=ifelse(reads$end>reads$start, reads$end, reads$start)), seqnames=paste("chr", reads$chrom, sep=""), id=reads$key, flag=reads$flag, rid=reads$rid, strand=reads$rstrand, XS=reads$strand)
+    reads<-GRanges(ranges=IRanges(start=st, end=en), seqnames=paste("chr", reads$chrom, sep=""), id=reads$key, flag=reads$flag, rid=reads$rid, strand=reads$rstrand, XS=reads$strand)
   }
-  res<-reads
-  res
+  return(reads)
 }
 
 uniquifyQname<-function(bam, seed=1){   	
