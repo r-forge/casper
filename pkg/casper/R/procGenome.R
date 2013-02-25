@@ -43,6 +43,7 @@ setMethod("transcripts", signature(entrezid='character',islandid='missing',genom
 
 setGeneric("subsetGenome", function(islands, chr, genomeDB) standardGeneric("subsetGenome"))
 setMethod("subsetGenome", signature(islands='character', chr='missing', genomeDB='annotatedGenome'), function(islands, chr, genomeDB) {
+  islands <- unique(islands)
   txs <- unlist(sapply(genomeDB@transcripts[islands], names))
   exs <- as.character(unique(unlist(genomeDB@transcripts[islands])))
   new("annotatedGenome", islands=genomeDB@islands[islands], transcripts=genomeDB@transcripts[islands], exonsNI=genomeDB@exonsNI[exs], aliases=genomeDB@aliases[txs,], exon2island=genomeDB@exon2island[as.character(genomeDB@exon2island$island) %in% islands,], dateCreated=genomeDB@dateCreated, denovo=genomeDB@denovo, genomeVersion=genomeDB@genomeVersion)
