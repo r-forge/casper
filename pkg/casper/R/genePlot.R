@@ -230,8 +230,8 @@ setMethod("rangesPlot",signature(x='procBam'),
       layout(c(2,1),heights=heights)
       par(oma=c(1,0,0,0),mar=c(2.1,.1,.1,.1))
       genePlot(gene=gene, xlab='', ylab='', xlim=xlim, ...)
-      tab <- table(values(x)$id)
-      sel <- values(x)$id %in% c(names(tab[tab>2]), findLongInserts(x, minsize=maxFragLength))
+      tab <- table(names(x))
+      sel <- names(x) %in% c(names(tab[tab>2]), findLongInserts(x, minsize=maxFragLength))
       notsel <- !sel
       if (exonProfile) {
         st <- c(start(x)[sel],start(x)[!sel],end(x)[!sel]); en <- c(end(x)[sel],start(x)[!sel],end(x)[!sel])
@@ -249,9 +249,9 @@ setMethod("rangesPlot",signature(x='procBam'),
       }
       #Long reads
       if (any(sel)) {
-        longst <- tapply(x0[sel],INDEX=values(x)$id[sel],FUN=min)
-        longend <- tapply(x1[sel],INDEX=values(x)$id[sel],FUN=max)
-        longy0 <- tapply(y0[sel],INDEX=values(x)$id[sel],FUN=function(z) z[1])
+        longst <- tapply(x0[sel],INDEX=names(x)[sel],FUN=min)
+        longend <- tapply(x1[sel],INDEX=names(x)[sel],FUN=max)
+        longy0 <- tapply(y0[sel],INDEX=names(x)[sel],FUN=function(z) z[1])
         segments(x0=longst,x1=longend,y0=longy0,col=4,lty=3)
         segments(x0=x0[sel],x1=x1[sel],y0=y0[sel],col='red',lwd=3)
       }
@@ -267,13 +267,13 @@ findLongInserts <- function(x, minsize) {
   # - minsize: minimum length for an insert to be considered long. Defaults to 99% percentile of observed insert widths
   # Returns: ids of long inserts
   w <- end(x)[-1] - start(x)[-length(x)]
-  sel <- values(x)$id[-length(x)] == values(x)$id[-1]
+  sel <- names(x)[-length(x)] == names(x)[-1]
   w[!sel] <- 0
   if (missing(minsize)) minsize <- quantile(w[sel],probs=.99)
   #Select long inserts
-  idsel <- values(x)$id[which(w>minsize)]
-  sel <- which(values(x)$id %in% idsel)
-  chr <- seqnames(x)[sel]; st <- start(x)[sel]; en <- end(x)[sel]; id <- values(x)$id[sel]
+  idsel <- names(x)[which(w>minsize)]
+  sel <- which(names(x) %in% idsel)
+  chr <- seqnames(x)[sel]; st <- start(x)[sel]; en <- end(x)[sel]; id <- names(x)[sel]
   leftend <- which(c(TRUE,id[-1]!=id[-length(id)]))
   rightend <- c(leftend[-1]-1,length(id))
   st <- st[leftend]; en <- en[rightend]; chr <- chr[leftend]; id <- id[leftend]

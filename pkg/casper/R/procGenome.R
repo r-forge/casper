@@ -44,9 +44,14 @@ setMethod("transcripts", signature(entrezid='character',islandid='missing',genom
 setGeneric("subsetGenome", function(islands, chr, genomeDB) standardGeneric("subsetGenome"))
 setMethod("subsetGenome", signature(islands='character', chr='missing', genomeDB='annotatedGenome'), function(islands, chr, genomeDB) {
   islands <- unique(islands)
+  isl <- subset(genomeDB@islands, names(genomeDB@islands) %in% islands)
   txs <- unlist(sapply(genomeDB@transcripts[islands], names))
-  exs <- as.character(unique(unlist(genomeDB@transcripts[islands])))
-  new("annotatedGenome", islands=genomeDB@islands[islands], transcripts=genomeDB@transcripts[islands], exonsNI=genomeDB@exonsNI[exs], aliases=genomeDB@aliases[txs,], exon2island=genomeDB@exon2island[as.character(genomeDB@exon2island$island) %in% islands,], dateCreated=genomeDB@dateCreated, denovo=genomeDB@denovo, genomeVersion=genomeDB@genomeVersion)
+  exs <- unique(names(genomeDB@islands[islands]@unlistData))
+  alia <- genomeDB@aliases[txs,]
+  ex2is <- genomeDB@exon2island[as.character(genomeDB@exon2island$island) %in% islands,]
+  txs <- genomeDB@transcripts[islands]
+  exs <- subset(genomeDB@exonsNI, names(genomeDB@exonsNI) %in% exs)
+  new("annotatedGenome", islands=isl, transcripts=txs, exonsNI=exs, aliases=alia, exon2island=ex2is, dateCreated=genomeDB@dateCreated, denovo=genomeDB@denovo, genomeVersion=genomeDB@genomeVersion)
 })
 setMethod("subsetGenome", signature(islands='missing', chr='character', genomeDB='annotatedGenome'), function(islands, chr, genomeDB) {
   islands <- unique(as.character(genomeDB@exon2island[genomeDB@exon2island$seqnames %in% chr,]$island))
@@ -61,12 +66,15 @@ makeIslands <- function(exons){
   uniex <- unique(exons)
   nexR <- length(uniex)
   islands <- rep(0, nexR)
+  nexons <- names(exons)
+  exons <- as.character(sprintf("%d",exons))
+  names(exons) <- nexons
   tabex <- table(exons)
-  tabex <- tabex[as.character(exons)]
+  tabex <- tabex[exons]
   tabtx <- table(names(exons))
   tabtx <- tabtx[names(exons)]
-  ans<-.Call("makeGeneIslands", exons, islands, uniex, txs, totEx, nexR, as.integer(tabex), as.integer(tabtx))
-  names(ans) <- uniex
+  ans<-.Call("makeGeneIslands", as.integer(exons), islands, uniex, txs, totEx, nexR, as.integer(tabex), as.integer(tabtx))
+  names(ans) <- as.character(sprintf("%d",uniex))
   ans
 }
 

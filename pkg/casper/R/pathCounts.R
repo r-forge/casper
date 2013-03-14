@@ -10,10 +10,25 @@ setMethod("getNreads",signature(pc='pathCounts'),function(pc) {
 }
           )
 
+mergePC <- function(pc, DB){
+  tmp <- vector(mode='list', length=length(pc[[1]]@counts[[1]]))
+  names(tmp) <- names(DB@transcripts)
+  for(x in 1:length(pc)){
+    y <- pc[[x]]@counts[[1]]
+    sel <- names(y)[unlist(lapply(y, length)>0)]
+    tmp[sel] <- y[sel]
+  }
+  pc <- new("pathCounts", counts=list(tmp), stranded=pc[[1]]@stranded, denovo=pc[[1]]@denovo)
+  pc
+}
+
 procPaths <- function(reads, DB, mc.cores){
     cat("Finding overlaps between reads and exons\n")
+    chrs <- as.character(unique(seqnames(reads)@values))
+    DB <- subsetGenome(genomeDB=DB, chr=chrs)    
     over<-findOverlaps(reads, DB@exonsNI)    
-    readid<-as.character(values(reads)$id)[queryHits(over)]
+#    readid<-as.integer(names(reads)[queryHits(over)])
+    readid<-values(reads)$id[queryHits(over)]
     readside<-values(reads)$rid[queryHits(over)]
     exid <- names(DB@exonsNI)[subjectHits(over)]
     exst<-start(DB@exonsNI)[subjectHits(over)]
@@ -71,10 +86,12 @@ procPaths <- function(reads, DB, mc.cores){
     ans
   }
 
-pathCounts<-function(reads, DB, mc.cores=1) {
+setGeneric("pathCounts", function(reads, DB, mc.cores) standardGeneric("pathCounts"))
+
+setMethod("pathCounts", signature(reads='procBam'), function(reads, DB, mc.cores=1) {
   if (class(reads) != 'procBam') stop('reads must be an object of class procBam')
   if(!reads@stranded) {
-    counts <- procPaths(reads@pbam, DB, mc.cores)
+    counts <- procPaths(reads=reads@pbam, DB=DB, mc.cores=mc.cores)
     ans <- new("pathCounts", counts=list(counts), denovo=DB@denovo, stranded=reads@stranded)
   }
   else {
@@ -85,4 +102,9 @@ pathCounts<-function(reads, DB, mc.cores=1) {
     ans <- new("pathCounts", counts=list(plus=plus, minus=minus), denovo=DB@denovo, stranded=reads@stranded)
   }
   ans
-}
+})
+setMethod("pathCounts", signature(reads='list'), function(reads, DB, mc.cores=1) {
+  ans <- mclapply(reads, function(x) pathCounts(x, DB=DB, mc.cores=1), mc.cores=mc.cores)
+  mergePC(pc=ans, DB=DB)
+})
+          

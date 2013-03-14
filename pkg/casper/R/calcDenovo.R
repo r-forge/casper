@@ -4,13 +4,13 @@
 
 require(methods)
 
-setClass("denovoGeneExpr", representation(posprob = "data.frame", expression = "data.frame", variants = "RangedData", integralSum= "numeric", npathDeleted= "numeric"))
+setClass("denovoGeneExpr", representation(posprob = "data.frame", expression = "data.frame", variants = "GRanges", integralSum= "numeric", npathDeleted= "numeric"))
 
 valid_denovoGeneExpr <- function(object) {
   msg <- NULL
   if (any(!(c('model','posprob') %in% colnames(object@posprob)))) msg <- "Incorrect colnames in 'posprob'"
   if (any(!(c('model','expr','varName') %in% colnames(object@expression)))) msg <- "Incorrect colnames in 'expression'"
-  if (class(object@variants)!='RangedData') msg <- "Element variants must be of class 'RangedData'"
+  if (class(object@variants)!='GRanges') msg <- "Element variants must be of class 'Granges'"
   if (is.null(msg)) { TRUE } else { msg }
 }
 
@@ -106,8 +106,10 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, islandid, priorq=3, mpr
   method <- as.integer(method)
   verbose <- as.integer(verbose)
   exactMarginal <- as.integer(exactMarginal)
-  if (missing(islandid)) islandid <- names(genomeDB@islands)[sapply(genomeDB@islands,length)>1]
-
+  if (missing(islandid)) {
+    islandid <- names(genomeDB@islands)[elementLengths(genomeDB@islands)>1]
+    islandid <- islandid[islandid %in% names(pc@counts[[1]])]
+  }
   if (!all(islandid %in% names(genomeDB@islands))) stop('islandid not found in genomeDB@islands')
   if (!all(islandid %in% unlist(lapply(pc@counts, names)))) stop('islandid not found in pc')
   if (!all(islandid %in% names(genomeDB@transcripts))) stop('islandid not found in genomeDB@transcripts')
@@ -120,9 +122,6 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, islandid, priorq=3, mpr
   strand <- as.character(strand(genomeDB@islands@unlistData))[cumsum(c(1, elementLengths(genomeDB@islands)[-length(genomeDB@islands)]))]
   names(strand) <- names(genomeDB@islands)
   
-  exons <- lapply(genomeDB@islands[islandid],function(z) as.integer(names(z)))
-  exonwidth <- lapply(genomeDB@islands[islandid],width)
-
   if (missing(niter)) {
      niter <- as.list(as.integer(ifelse(sapply(exons,length)>20,10^3,10^4)))
   } else {
@@ -133,38 +132,44 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, islandid, priorq=3, mpr
   #Define basic function
   f <- function(z) {
     islandid <- as.integer(as.factor(z))
-    transcripts <- genomeDB@transcripts[z]
-    strand <- as.list(as.integer(ifelse(strand[z]=='+', 1,-1)))
     exons <- exons[z]
     exonwidth <- exonwidth[z]
+    transcripts <- genomeDB@transcripts[z]
+    tmp <- strand[z]
+    strand <- vector(mode='integer', length=length(tmp))
+    sel <- tmp=='+'
+    strand[sel] <- 1
+    sel <- tmp=='-'
+    strand[sel] <- -1
+    sel <- tmp=='*'
+    strand[sel] <- 0
+    strand <- as.list(as.integer(strand))
     #pc <- pc[z] pc's have to be subset from previous step to deal with strandedness !!!!!!
-
     ans <- calcDenovoMultiple(exons=exons,exonwidth=exonwidth,transcripts=transcripts,islandid=as.list(islandid),pc=pc@counts[[1]][z],startcdf=startcdf,lendis=lendis,lenvals=lenvals,readLength=readLength,modelUnifPrior=modelUnifPrior,nvarPrior=nvarPrior,nexonPrior=nexonPrior,priorq=priorq,minpp=minpp,selectBest=selectBest,method=method,niter=niter[z],exactMarginal=exactMarginal,verbose=verbose, strand=strand)
-    mapply(function(z1,z2) formatDenovoOut(z1,z2), ans, genomeDB@islands[z], SIMPLIFY=FALSE)
+    lapply(1:length(ans), function(y) formatDenovoOut(ans[[y]], genomeDB@islands[z][[y]]))
   }
 
   formatZeroExpr <- function(ids){
     isl <- genomeDB@islands[ids]
     txs <- genomeDB@transcripts[ids]
     spa <- lapply(txs, function(x) rep(names(x), unlist(lapply(x, length))))
-    exo <- lapply(names(txs), function(x) genomeDB@islands[[x]][as.character(unlist(txs[[x]])),])
+    exo <- lapply(names(txs), function(x) {tmp <- genomeDB@islands[[x]][as.character(unlist(txs[[x]])),]; names(tmp) <- sub("\\..*", "", names(tmp)); tmp})
     names(exo) <- names(txs)
-    ran <- lapply(names(txs), function(x) RangedData(unname(exo[[x]]), space=unlist(spa[[x]])))
-    names(ran) <- ids
-    expr <- lapply(ids, function(x) data.frame(model=rep(0, length(ran[[x]])), expr=rep(0, length(ran[[x]])), varName=names(ran[[x]])))
+    expr <- lapply(ids, function(x) data.frame(model=rep(0, length(exo[[x]])), expr=rep(0, length(exo[[x]])), varName=names(exo[[x]])))
     names(expr) <- ids
     posprob <- lapply(ids, function(x) data.frame(model=0, posprob=NA, modelid=0))
     names(posprob) <- ids
-    res <- lapply(ids, function(x) new("denovoGeneExpr", variants=ran[[x]], expression=expr[[x]], posprob=posprob[[x]]))
+    res <- lapply(ids, function(x) new("denovoGeneExpr", variants=exo[[x]], expression=expr[[x]], posprob=posprob[[x]]))
     names(res) <- ids
     res
   }
     
   runCalc <- function(islandid) {
-    sel <- !sapply(pc@counts[[1]][islandid], is.null)
+    sel <- !(sapply(pc@counts[[1]][islandid], is.null) | strand[islandid]=='*')
+    if (verbose==1) cat("Note: Islands with transcripts from both strands will not be processed at the moment\n")
     all <- islandid
     islandid <- islandid[sel]
-    
+    if(sum(sel)==0) stop("Not islands left to process due to strand or lack of path counts\n")
     if (mc.cores>1 && length(islandid)>mc.cores) {
       require(multicore)
       if ('multicore' %in% loadedNamespaces()) {
@@ -176,7 +181,6 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, islandid, priorq=3, mpr
         ans <- do.call(c,ans); names(ans) <- unlist(islandidList); ans <- ans[islandid]
       } else stop('multicore library has not been loaded!')
     } else {
-
       ans <- f(islandid)
       names(ans) <- islandid
     }
@@ -189,14 +193,14 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, islandid, priorq=3, mpr
   }
 
   #Initialize transcripts for new islands with known orientation
-  sel <- names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null) & !is.na(strand)]
+  sel <- names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null) & strand=='*']
   if (length(sel)>0) genomeDB@transcripts[sel] <- tapply(as.integer(names(genomeDB@islands[sel]@unlistData)), rep(names(genomeDB@islands[sel]), elementLengths(genomeDB@islands[sel])), function(x) list(as.numeric(x))) 
   islandidUnknown <- islandid[islandid %in% names(genomeDB@transcripts)[sapply(genomeDB@transcripts,is.null)]]
   if (length(islandidUnknown)>0) { islandidini <- islandid; islandid <- islandid[!(islandid %in% islandidUnknown)] }
 
 
   #Run
-  if (verbose==1) cat("Performing model search (this may take a while)")
+  if (verbose==1) cat("Performing model search (this may take a while)\n")
   if (length(islandidUnknown)==0) {
     ans <- runCalc(islandid)
   } else {
@@ -231,11 +235,11 @@ formatDenovoOut <- function(ans, genesel) {
   ans[[1]] <- ans[[1]][order(ans[[1]][,'posprob'],decreasing=TRUE),]
   ans[[6]] <- NULL
   ans[[2]] <- data.frame(ans[[2]],ans[[3]])
-  ans[[3]] <- NULL
   colnames(ans[[2]]) <- c('model','expr','varName')
+  ans[[3]] <- NULL
   variants <- genesel[as.character(ans[[3]])]
-  names(variants) <- NULL
-  ans[[3]] <- RangedData(ranges=variants,space=ans[[4]])
+  names(variants) <- sub("\\..*", "", names(variants))
+  ans[[3]] <- variants
   ans[[4]] <- NULL
   names(ans[[4]]) <- c('sum','logmax')
   names(ans) <- c('posprob','expression','variants','integralSum','npathDeleted')
