@@ -153,8 +153,9 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, islandid, priorq=3, mpr
     isl <- genomeDB@islands[ids]
     txs <- genomeDB@transcripts[ids]
     spa <- lapply(txs, function(x) rep(names(x), unlist(lapply(x, length))))
-    exo <- lapply(names(txs), function(x) {tmp <- genomeDB@islands[[x]][as.character(unlist(txs[[x]])),]; names(tmp) <- sub("\\..*", "", names(tmp)); tmp})
-    names(exo) <- names(txs)
+      #exo <- lapply(names(txs), function(x) {  tmp <- genomeDB@islands[[x]][as.character(unlist(txs[[x]]))]; names(tmp) <- sub("\\..*", "", names(tmp)); tmp})
+    #names(exo) <- names(txs)
+    exo <- isl
     expr <- lapply(ids, function(x) data.frame(model=rep(0, length(exo[[x]])), expr=rep(0, length(exo[[x]])), varName=names(exo[[x]])))
     names(expr) <- ids
     posprob <- lapply(ids, function(x) data.frame(model=0, posprob=NA, modelid=0))
