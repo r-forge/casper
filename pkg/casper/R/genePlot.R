@@ -222,8 +222,10 @@ function(x, gene, exonProfile=TRUE, maxFragLength=500, xlab='', ylab='', xlim, h
 setMethod("rangesPlot",signature(x='procBam'),
   function(x, gene, exonProfile=TRUE, maxFragLength=500, xlab='', ylab='', xlim, heights=c(2,1), ...) {
     if (missing(xlim)) xlim <- range(unlist(start(gene)))
+    browser()
     x <- getReads(x)
     x <- x[start(x)>=xlim[1] & end(x)<=xlim[2],]
+    if(sum(duplicated(names(x)))==0) names(x) <- sub("\\..*", "", names(x))
     if (length(x)==0) {
       warning('There are no reads in the specified region')
     } else {
@@ -243,7 +245,7 @@ setMethod("rangesPlot",signature(x='procBam'),
       #Height for large reads (i.e. spanning over several exons)
       plot(NA,NA,xlim=xlim,ylim=0:1,xlab='',ylab='',xaxt='n',yaxt='n',mgp=c(0,0,0))
       x0 <- start(x); x1 <- end(x)
-      y0 <- values(x)$'id'/max(values(x)$'id')
+      y0 <- as.numeric(names(x))/max(as.numeric(names(x)))
       if (any(notsel)) {
         segments(x0=x0[notsel],x1=x1[notsel],y0=y0[notsel])
       }
@@ -266,6 +268,7 @@ findLongInserts <- function(x, minsize) {
   # - x: GRanges, column id must indicate read pair id. Assumed to be ordered according to read id & fragment start
   # - minsize: minimum length for an insert to be considered long. Defaults to 99% percentile of observed insert widths
   # Returns: ids of long inserts
+  
   w <- end(x)[-1] - start(x)[-length(x)]
   sel <- names(x)[-length(x)] == names(x)[-1]
   w[!sel] <- 0

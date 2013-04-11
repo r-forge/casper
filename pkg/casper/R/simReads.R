@@ -10,14 +10,20 @@ simReads <- function(islandid, nSimReads, pis, rl, seed, writeBam, distrs, genom
     names(isl2chr) <- genomeDB@exon2island$island
     sims <- lapply(chr, function(x){
       if(verbose) cat("Simulating ", x, "\n")
-      if(writeBam==1) lr_file <- paste(bamFile, tmp, ".", x, ".sam", sep="")
+      if(writeBam) lr_file <- paste(bamFile, tmp, ".", x, ".sam", sep="")
       islandid <- islandid[islandid %in% names(isl2chr)[isl2chr %in% x]]
-      sims <- casperSim(genomeDB=genomeDB, distrs=distrs, nSimReads=nSimReads, pis=pis, islandid=islandid, lr_file=lr_file, rl=rl, chrlen, seed, bam=writeBam, chr=x, verbose=verbose)})
+      if(writeBam) sims <- casperSim(genomeDB=genomeDB, distrs=distrs, nSimReads=nSimReads, pis=pis, islandid=islandid, lr_file=lr_file, rl=rl, chrlen=chrlen, seed=seed, bam=writeBam, chr=x, verbose=verbose)
+    if(!writeBam) sims <- casperSim(genomeDB=genomeDB, distrs=distrs, nSimReads=nSimReads, pis=pis, islandid=islandid, rl=rl, seed=seed, bam=writeBam, chr=x, verbose=verbose)
+    })
     sims <- do.call('c', sims)
-  } else sims <- casperSim(genomeDB=genomeDB, distrs=distrs, nSimReads=nSimReads, pis=pis, islandid=islandid, lr_file=lr_file, rl=rl, chrlen, seed, bam=writeBam, chr=chr, verbose=verbose)
-  if (verbose) cat("Splitting counts\n")
-  counts <- splitPaths(sims$pc, genomeDB, mc.cores=mc.cores, stranded=stranded, geneid=islandid)
-  pc <- new("pathCounts", counts=counts, denovo=FALSE, stranded=stranded)
+  } else {
+    if(writeBam) {
+      sims <- casperSim(genomeDB=genomeDB, distrs=distrs, nSimReads=nSimReads, pis=pis, islandid=islandid, lr_file=lr_file, rl=rl, chrlen, seed, bam=writeBam, verbose=verbose)
+    } else sims <- casperSim(genomeDB=genomeDB, distrs=distrs, nSimReads=nSimReads, pis=pis, islandid=islandid, rl=rl, seed=seed, bam=writeBam,  verbose=verbose)
+  }
+    if (verbose) cat("Splitting counts\n")
+    counts <- splitPaths(sims$pc, genomeDB, mc.cores=mc.cores, stranded=stranded, geneid=islandid)
+    pc <- new("pathCounts", counts=counts, denovo=FALSE, stranded=stranded)
    
   if(repSims==1) {
     sims$pc <- NULL

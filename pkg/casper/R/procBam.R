@@ -1,5 +1,14 @@
 require(methods)
 
+#setGeneric("wrapKnown", function(bamFile, mc.cores) standardGeneric("wrapKnown"))
+#setMethod("wrapKnown", signature(bamFile='character', mc.cores='missing'), function(bamFile, mc.cores){
+  
+
+ # setMethod("wrapKnown", signature(bamFile='character', mc.cores='numeric'), function(bamFile, mc.cores){
+  
+          
+
+
 setGeneric("subsetPbam", function(pbam, strand, chr) standardGeneric("subsetPbam"))
 setMethod("subsetPbam", signature(pbam="procBam", strand="character", chr='missing'),
           function(pbam, strand) {
@@ -32,13 +41,13 @@ buildRD<-function(reads){
   st[sel] <- reads$end[sel]; st[!sel] <- reads$start[!sel]
   en[!sel] <- reads$end[!sel]; en[sel] <- reads$start[sel]
   if(sum(grepl("chr", unique(reads$chrom)))>0) {
-    reads<-GRanges(ranges=IRanges(start=st, end=en), seqnames=reads$chrom, rid=reads$rid, strand=reads$rstrand, XS=Rle(reads$strand))
-    names(reads) <- reads$key
+    ans<-GRanges(ranges=IRanges(start=st, end=en), seqnames=reads$chrom, rid=reads$rid, strand=reads$rstrand, XS=Rle(reads$strand))
+    names(ans) <- reads$key
   } else {
-    reads<-GRanges(ranges=IRanges(start=st, end=en), seqnames=paste("chr", reads$chrom, sep=""), rid=reads$rid, strand=reads$rstrand, XS=Rle(reads$strand))
-    names(reads) <- reads$key
+    ans<-GRanges(ranges=IRanges(start=st, end=en), seqnames=paste("chr", reads$chrom, sep=""), rid=reads$rid, strand=reads$rstrand, XS=Rle(reads$strand))
+    names(ans) <- reads$key
   }
-  return(reads)
+  return(ans)
 }
 
 uniquifyQname<-function(bam, seed=1){   	
@@ -111,7 +120,7 @@ procB <- function(bam, strnd, seed=1, verbose=FALSE){
     }
   })
   junx <- mergeGRanges(junx)
-  if(!is.null(lev)) data[[7]] <- lev[data[[7]]]
+  if(!is.null(lev)) data[[6]] <- lev[data[[6]]]
   sel<-data[[1]]!=0 & !is.na(data[[3]])
   data<-lapply(data, "[", sel)
   data[[length(data)+1]] <- rep(strnd, length(data[[1]]))
@@ -153,21 +162,24 @@ setMethod("procBam", signature(bam='list',stranded='logical',seed='integer', ver
               ans <- procBamF(bam=bam, stranded=stranded, seed=seed, verbose=verbose)
             } else {
               ans <- lapply(bam, function(x) procBamF(bam=x, stranded=stranded, seed=seed, verbose=verbose))
-              ans <- mergePbam(ans)
-              lens <- seqnames(ans@pbam)@lengths
-              fix <- rep(c(0, (names(ans@pbam)[cumsum(lens)]+1)), c(seqnames(ans@pbam)@lengths, 0))
-              names(ans@pbam) <- as.numeric(names(ans@pbam))+fix
+              if(length(ans)>1) {
+                ans <- mergePbam(ans, fixNames=TRUE)
+                lens <- seqnames(ans@pbam)@lengths
+                fix <- rep(c(0, (as.numeric(names(ans@pbam)[cumsum(lens)])+1)), c(seqnames(ans@pbam)@lengths, 0))
+                names(ans@pbam) <- as.numeric(names(ans@pbam))+fix
+              }
             }
             ans
           }
             )
 
-mergeGRanges <- function(gr, fixNames) {
+mergeGRanges <- function(gr, fixNames=FALSE) {
   values <- do.call('rbind',unname(lapply(gr, values)))
   colnames(values) <- sub("values.", "", colnames(values))
   seqn <- unlist(RleList(unname(lapply(gr, seqnames))))
   ranges <- unlist(IRangesList(lapply(gr, ranges)))
   ans <- GRanges(ranges=ranges, seqnames=seqn)
+  names(ans) <- unlist(sapply(gr, names))
   if(fixNames){
     lens <- sapply(gr, length)
     lens <- rep(c(0, lens[-length(lens)]), lens)

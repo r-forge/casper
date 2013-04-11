@@ -152,6 +152,6 @@ SEXP procBam(SEXP qname, SEXP chr, SEXP start, SEXP cigar, SEXP strand, SEXP tot
         SET_VECTOR_ELT(reads, 8, jlen);
 	free(frags);
 	hash_destroy(fragsHashPtr);
-	UNPROTECT(18);
+	UNPROTECT(17);
 	return(reads);
 }

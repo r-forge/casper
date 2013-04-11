@@ -22,17 +22,18 @@ mergePC <- function(pc, DB){
   pc
 }
 
-procPaths <- function(reads, DB, mc.cores){
-    cat("Finding overlaps between reads and exons\n")
+procPaths <- function(reads, DB, mc.cores, verbose){
+    if(verbose) cat("Finding overlaps between reads and exons\n")
     chrs <- as.character(unique(seqnames(reads)@values))
     DB <- subsetGenome(genomeDB=DB, chr=chrs)    
     over<-findOverlaps(reads, DB@exonsNI)    
-#    readid<-as.integer(names(reads)[queryHits(over)])
-    readid<-values(reads)$id[queryHits(over)]
+    if("id" %in% colnames(values(reads))) {
+      readid<-values(reads)$id[queryHits(over)]
+    } else readid<-as.integer(names(reads)[queryHits(over)])
     readside<-values(reads)$rid[queryHits(over)]
     exid <- names(DB@exonsNI)[subjectHits(over)]
     exst<-start(DB@exonsNI)[subjectHits(over)]
-    cat("Counting paths\n")
+    if(verbose) cat("Counting paths\n")
     pCounts<-.Call("pathCounts", readid, readside, exst, exid)
     pCounts<-lapply(pCounts[1:2], function(x) x[1:pCounts[[3]]])
     names(pCounts[[2]])<-pCounts[[1]]
@@ -86,12 +87,11 @@ procPaths <- function(reads, DB, mc.cores){
     ans
   }
 
-setGeneric("pathCounts", function(reads, DB, mc.cores) standardGeneric("pathCounts"))
-
-setMethod("pathCounts", signature(reads='procBam'), function(reads, DB, mc.cores=1) {
+setGeneric("pathCounts", function(reads, DB, mc.cores=1, verbose=FALSE) standardGeneric("pathCounts"))
+setMethod("pathCounts", signature(reads='procBam'), function(reads, DB, mc.cores, verbose) {
   if (class(reads) != 'procBam') stop('reads must be an object of class procBam')
   if(!reads@stranded) {
-    counts <- procPaths(reads=reads@pbam, DB=DB, mc.cores=mc.cores)
+    counts <- procPaths(reads=reads@pbam, DB=DB, mc.cores=mc.cores, verbose=verbose)
     ans <- new("pathCounts", counts=list(counts), denovo=DB@denovo, stranded=reads@stranded)
   }
   else {
@@ -103,8 +103,8 @@ setMethod("pathCounts", signature(reads='procBam'), function(reads, DB, mc.cores
   }
   ans
 })
-setMethod("pathCounts", signature(reads='list'), function(reads, DB, mc.cores=1) {
-  ans <- mclapply(reads, function(x) pathCounts(x, DB=DB, mc.cores=1), mc.cores=mc.cores)
+setMethod("pathCounts", signature(reads='list'), function(reads, DB, mc.cores, verbose) {
+  ans <- mclapply(reads, function(x) pathCounts(x, DB=DB, mc.cores=1, verbose=verbose), mc.cores=mc.cores)
   mergePC(pc=ans, DB=DB)
 })
           
