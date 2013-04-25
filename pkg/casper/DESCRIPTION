@@ -4,7 +4,7 @@ Date: 2012-10-26
 Title: Characterization of Alternative Splicing based on Paired-End Reads
 Author: David Rossell, Camille Stephan-Otto, Manuel Kroiss
 Maintainer: David Rossell <rosselldavid@gmail.org>
-Depends: R (>= 2.14.1), Biobase, IRanges, methods, gtools, GenomicRanges
+Depends: R (>= 2.14.1), Biobase, IRanges, methods, gtools, GenomicRanges, Rsamtools
 Imports: VGAM, mgcv, GenomicFeatures, survival
 Enhances: multicore
 Description: Infer alternative splicing from paired-end RNA-seq data. The model is based on counting paths across exons, rather than pairwise exon connections, and estimates the fragment size and start distributions non-parametrically, which improves estimation precision. 
