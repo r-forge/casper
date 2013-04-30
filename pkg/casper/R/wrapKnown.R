@@ -36,7 +36,7 @@ mergeDisWr <- function(distrs, pcs){
 
 
 
-wrapKnown <- function(bamFile, verbose=FALSE, seed=1, mc.cores.int=1, mc.cores=1, genomeDB, readLength, rpkm=TRUE, priorq=2, priorqGeneExpr=2, citype='none', niter=10^3, burnin=100, keep.pbams=FALSE) {
+wrapKnown <- function(bamFile, verbose=FALSE, seed=1, mc.cores.int=1, mc.cores=1, genomeDB, readLength, rpkm=TRUE, priorq=2, priorqGeneExpr=2, citype='none', niter=10^3, burnin=100, keep.pbam=FALSE) {
   what <- scanBamWhat(); what <- what[!(what %in% c('seq','qual', 'flag'))]
   t <- scanBamHeader(bamFile)[[1]][["targets"]]
   which <- GRanges(names(t), IRanges(1, unname(t)))

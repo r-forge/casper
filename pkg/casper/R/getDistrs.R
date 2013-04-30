@@ -81,6 +81,7 @@ getDistrs<-function(DB, bam, islandid=NULL, verbose=FALSE, nreads=4*10^6){
   n <- levels(seqnames(frags))[levels(seqnames(frags)) %in% levels(seqnames(exonsRD))]
   fragsL<-frags[levels(seqnames(frags)) %in% n]
   over <- suppressWarnings(findOverlaps(fragsL, subset(exonsRD, width(exonsRD)>1000), type="within"))
+  if(length(subjectHits(over))==0) over <- suppressWarnings(findOverlaps(fragsL, subset(exonsRD, width(exonsRD)>500), type="within"))
   ld<-table(width(fragsL)[queryHits(over)])
   ld <- ld[ld/sum(ld) > 0.0001]
  
