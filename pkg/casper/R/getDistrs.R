@@ -38,7 +38,7 @@ firstBamReads <- function(bam, nreads) {
   return(bam)
 }
 
-getDistrs<-function(DB, bam, islandid=NULL, verbose=FALSE, nreads=4*10^6){
+getDistrs<-function(DB, bam, islandid=NULL, verbose=FALSE, nreads=4*10^6, readLength){
   
   #Format exons as RangedData
   if(verbose) cat("Calculating fragment length distribution\n")
@@ -50,14 +50,15 @@ getDistrs<-function(DB, bam, islandid=NULL, verbose=FALSE, nreads=4*10^6){
   #Find fragment length distribution for fragments aligning to exons larger than 1000 bases
 
   
-  if (!all(c('qname','rname','qwidth','pos','mpos') %in% names(bam))) stop('bam must contain elements qname, rname, qwidth, pos, mpos')
+  if (!all(c('qname','rname','pos','mpos') %in% names(bam))) stop('bam must contain elements qname, rname, pos, mpos')
 #  tab <- table(bam$qname)
 #  sel <- bam$qname %in% names(tab[tab==2])
 #  bam <- bam[!(names(bam) %in% 'tag')]
 #  bam <- lapply(bam, '[', sel)
   
   d <- bam$mpos - bam$pos
-  sel <- d<0; n <- bam$qname[sel]; sp <- bam$rname[sel]; names(sp) <- n; en <- bam$pos[sel]+bam$qwidth[sel]-1; names(en) <- n
+  sel <- d<0; n <- bam$qname[sel]; sp <- bam$rname[sel]; names(sp) <- n
+  en <- bam$pos[sel]+readLength-1; names(en) <- n  #faster than bam$pos[sel]+bam$qwidth[sel]-1
   sel <- d>0; st <- bam$pos[sel]; names(st) <- bam$qname[sel];
   sel <- match(n, names(st))
   st <- st[sel[!is.na(sel)]]

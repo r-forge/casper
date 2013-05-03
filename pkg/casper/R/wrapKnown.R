@@ -37,8 +37,8 @@ mergeDisWr <- function(distrs, pcs){
 
 
 wrapKnown <- function(bamFile, verbose=FALSE, seed=1, mc.cores.int=1, mc.cores=1, genomeDB, readLength, rpkm=TRUE, priorq=2, priorqGeneExpr=2, citype='none', niter=10^3, burnin=100, keep.pbam=FALSE) {
-  what <- c('qname','rname','strand','pos','mpos','cigar','qwidth')
-  #what <- scanBamWhat(); what <- what[!(what %in% c('seq','qual', 'flag','mapq','mrnm','mpos','isize'))]
+  what <- c('qname','rname','strand','pos','mpos','cigar')
+  #what <- scanBamWhat(); what <- what[!(what %in% c('seq','qual','qwidth','flag','mapq','mrnm','mpos','isize'))]
   t <- scanBamHeader(bamFile)[[1]][["targets"]]
   which <- GRanges(names(t), IRanges(1, unname(t)))
   which <- which[!grepl("_",as.character(seqnames(which)))]
@@ -54,19 +54,20 @@ wrapKnown <- function(bamFile, verbose=FALSE, seed=1, mc.cores.int=1, mc.cores=1
     if(keep.pbam) {
       ans <- vector("list",3); names(ans) <- c("pbam","distr","pc")
       ans$pbam <- procBam(bam=bam, stranded=FALSE, seed=as.integer(seed), verbose=verbose)[[1]]
-      ans$distr <- getDistrs(DB=genomeDB, bam=bam[[1]], verbose=verbose)
+      ans$distr <- getDistrs(DB=genomeDB, bam=bam[[1]], verbose=verbose, readLength=readLength)
       cat("Removing bam object\n")
       rm(bam); gc()
       ans$pc <- pathCounts(reads=ans$pbam, DB=genomeDB, mc.cores=mc.cores, verbose=verbose)
     } else {
       ans <- vector("list",2); names(ans) <- c("distr","pc")
       pbam <- procBam(bam=bam, stranded=FALSE, seed=as.integer(seed), verbose=verbose)[[1]]
-      ans$distr <- getDistrs(DB=genomeDB, bam=bam[[1]], verbose=verbose)
+      ans$distr <- getDistrs(DB=genomeDB, bam=bam[[1]], verbose=verbose, readLength=readLength)
       cat("Removing bam object\n")
       rm(bam); gc()
       ans$pc <- pathCounts(reads=pbam, DB=genomeDB, mc.cores=mc.cores, verbose=verbose)
       #rm(pbam); gc()
     }
+    cat("Finished chromosome ", as.character(seqnames(which[i])), "\n")
     return(ans)
   }
 
