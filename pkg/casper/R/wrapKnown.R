@@ -37,8 +37,8 @@ mergeDisWr <- function(distrs, pcs){
 
 
 wrapKnown <- function(bamFile, verbose=FALSE, seed=1, mc.cores.int=1, mc.cores=1, genomeDB, readLength, rpkm=TRUE, priorq=2, priorqGeneExpr=2, citype='none', niter=10^3, burnin=100, keep.pbam=FALSE) {
-  what <- c('qname','rname','strand','pos','cigar')
-  #what <- scanBamWhat(); what <- what[!(what %in% c('seq','qual', 'flag','qwidth','mapq','mrnm','mpos','isize'))]
+  what <- c('qname','rname','strand','pos','mpos','cigar','qwidth')
+  #what <- scanBamWhat(); what <- what[!(what %in% c('seq','qual', 'flag','mapq','mrnm','mpos','isize'))]
   t <- scanBamHeader(bamFile)[[1]][["targets"]]
   which <- GRanges(names(t), IRanges(1, unname(t)))
   which <- which[!grepl("_",as.character(seqnames(which)))]
@@ -51,19 +51,22 @@ wrapKnown <- function(bamFile, verbose=FALSE, seed=1, mc.cores.int=1, mc.cores=1
     param <- ScanBamParam(flag=flag,what=what, which=which[i], tag='XS')
     cat("Processing chromosome: ", as.character(seqnames(which[i])), "\n")
     bam <- scanBam(file=bamFile,param=param)
-    pbam <- procBam(bam=bam, stranded=FALSE, seed=as.integer(seed), verbose=verbose)[[1]]
-    distr <- getDistrs(DB=genomeDB, bam=bam[[1]], verbose=verbose)
-    cat("Removing bam object\n")
-    rm(bam)
-    gc()
-    pc <- pathCounts(reads=pbam, DB=genomeDB, mc.cores=mc.cores, verbose=verbose)
     if(keep.pbam) {
-      ans <- list(pbam=pbam, distr=distr, pc=pc)
+      ans <- vector("list",3); names(ans) <- c("pbam","distr","pc")
+      ans$pbam <- procBam(bam=bam, stranded=FALSE, seed=as.integer(seed), verbose=verbose)[[1]]
+      ans$distr <- getDistrs(DB=genomeDB, bam=bam[[1]], verbose=verbose)
+      cat("Removing bam object\n")
+      rm(bam); gc()
+      ans$pc <- pathCounts(reads=ans$pbam, DB=genomeDB, mc.cores=mc.cores, verbose=verbose)
     } else {
-      ans <- list(distr=distr, pc=pc)
+      ans <- vector("list",2); names(ans) <- c("distr","pc")
+      pbam <- procBam(bam=bam, stranded=FALSE, seed=as.integer(seed), verbose=verbose)[[1]]
+      ans$distr <- getDistrs(DB=genomeDB, bam=bam[[1]], verbose=verbose)
+      cat("Removing bam object\n")
+      rm(bam); gc()
+      ans$pc <- pathCounts(reads=pbam, DB=genomeDB, mc.cores=mc.cores, verbose=verbose)
+      #rm(pbam); gc()
     }
-    rm(pbam)
-    gc()
     return(ans)
   }
 
