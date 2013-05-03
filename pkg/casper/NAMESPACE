@@ -4,6 +4,7 @@ import(IRanges, graphics)
 importFrom(VGAM,vglm,betabinomial.ab,Coef)
 importFrom(mgcv,gam,predict.gam,s)
 importFrom(GenomicFeatures, transcripts, exonsBy)
+importClassesFrom(GenomicFeatures, TranscriptDb)
 importFrom(survival,Surv,survfit)
 
 #export regular functions

@@ -137,7 +137,7 @@ casperSim <- function(genomeDB, distrs, nSimReads, pis, islandid, lr_file=NULL, 
   ee=exon_end
   ei=exs
   ngenes=length(sel)
-  ldv <- sample(as.numeric(names(distrs@lenDis)), p=distrs@lenDis/sum(distrs@lenDis), size=sum(nSimReads), replace=T)
+  ldv <- sample(as.numeric(names(distrs@lenDis)), prob=distrs@lenDis/sum(distrs@lenDis), size=sum(nSimReads), replace=T)
   ldd <- as.integer(1)
   th <- seq(0, 1, len=10000)
   std <- distrs@stDis(th)

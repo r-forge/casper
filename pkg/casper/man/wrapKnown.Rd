@@ -2,62 +2,52 @@
 \alias{wrapKnown}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  %%  ~~function to do ... ~~
   Run all necessary steps to analyze a bam file with the casper pipeline.
 }
 \description{
-  %%  ~~ A concise (1-5 lines) description of what the function does. ~~
   Function to analyze a bam file to generate expression estimates,
   read start and fragment length distributions, path counts and
   processed reads.
 }
 \usage{
-wrapKnown(bamFile, verbose = FALSE, seed = 1, mc.cores.int = 1, mc.cores = 1, genomeDB, readLength, rpkm = TRUE, priorq = 2, priorqGeneExpr = 2, citype = "none", niter = 10^3, burnin = 100)
+wrapKnown(bamFile, verbose = FALSE, seed = 1, mc.cores.int = 1, mc.cores
+= 1, genomeDB, readLength, rpkm = TRUE, priorq = 2, priorqGeneExpr = 2,
+citype = "none", niter = 10^3, burnin = 100, keep.bam = FALSE)
 }
-%- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{bamFile}{
-    %%     ~~Describe \code{bamFile} here~~
     Bam file with the sample to analyze. Index of bam file must be in
     the same directory.
 }
   \item{verbose}{
-    %%     ~~Describe \code{verbose} here~~
     Set to \code{TRUE} to display progress information.
 }
   \item{seed}{
-    %%     ~~Describe \code{seed} here~~
     Set seed of random number generator.
 }
   \item{mc.cores.int}{
-    %%     ~~Describe \code{mc.cores.int} here~~
     Number of cores to use when loading bam files. This is a memory intensive
     step, therefore number of cores must be chosen according to available RAM
     memory.
 }
   \item{mc.cores}{
-    %%     ~~Describe \code{mc.cores} here~~
     Number of cores to use in expression estimation.
 }
   \item{genomeDB}{
-    %%     ~~Describe \code{genomeDB} here~~
     \code{knownGenome} object containing annotated genome,
     as returned by the \code{procGenome} function.
 }
   \item{readLength}{
-    %%     ~~Describe \code{readLength} here~~
     Read length in bp, e.g. in a paired-end experiment where
     75bp are sequenced on each end one would set \code{readLength=75}.
 }
   \item{rpkm}{
-    %%     ~~Describe \code{rpkm} here~~
     Set to \code{FALSE} to return relative expression levels,
     i.e. the proportion of reads generated from each variant per
     gene. These proportions add up to 1 for each gene.
     Set to \code{TRUE} to return reads per kilobase per million (RPKM).
 }
   \item{priorq}{
-    %%     ~~Describe \code{priorq} here~~
     Parameter of the prior distribution on the proportion of reads
     coming from each variant. The prior is Dirichlet with prior sample
     size for each variant equal to priorq.
@@ -67,13 +57,11 @@ wrapKnown(bamFile, verbose = FALSE, seed = 1, mc.cores.int = 1, mc.cores = 1, ge
     experiments.
 }
   \item{priorqGeneExpr}{
-    %%     ~~Describe \code{priorqGeneExpr} here~~
     Parameter for prior distribution on overall gene
     expression. Defaults to 2, which ensures non-zero estimates for
     all genes
 }
   \item{citype}{
-    %%     ~~Describe \code{citype} here~~
     Set to \code{"none"} to return no credibility intervals. Set to
     \code{"asymp"} to return approximate 95\% CIs (obtained via the
     delta method). Set to \code{"exact"} to obtain exact
@@ -82,13 +70,15 @@ wrapKnown(bamFile, verbose = FALSE, seed = 1, mc.cores.int = 1, mc.cores = 1, ge
     computation time substantially.
 }
   \item{niter}{
-    %%     ~~Describe \code{niter} here~~
     Number of Monte Carlo iterations. Only used when \code{citype=="exact"}.
 }
   \item{burnin}{
-    %%     ~~Describe \code{burnin} here~~
     Number of burnin Monte Carlo iterations. Only used when \code{citype=="exact"}.
-}
+  }
+  \item{keep.pbam}{Set to \code{TRUE} to save processed bam object, as
+    returned by \code{procBam}. This object can require substantial memory
+    during execution and disk storage upon saving and is not needed
+    for a default analysis.}
 }
 \details{
   %%  ~~ If necessary, more details than the description above ~~
