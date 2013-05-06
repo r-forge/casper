@@ -19,8 +19,7 @@
   combining UCSC annotations and observed RNA-seq data.
 }
 \usage{
-procGenome(genDB, genome, txid="tx_id", txname="tx_name",
-  geneid="gene_id", mc.cores = 1)
+procGenome(genDB, genome, mc.cores = 1)
 
 createDenovoGenome(reads, DB, minLinks=2,
 maxLinkDist=1e+05, maxDist=1000, minConn=2, minJunx=3, minLen=12, mc.cores=1)
@@ -33,13 +32,6 @@ maxLinkDist=1e+05, maxDist=1000, minConn=2, minJunx=3, minLen=12, mc.cores=1)
     import('transcripts.gtf')). See details.}
   \item{genome}{Character indicating genome version (e.g. "hg19",
     "dm3")}
-  \item{txid}{Only used if \code{genDB} is a \code{GRanges} object. Name
-  of the column storing the transcript identifiers}
-  \item{txname}{Only used if \code{genDB} is a \code{GRanges}
-    object. Name of the column storing the transcript names, defaults to
-  \code{txid}}
-  \item{geneid}{Only used if \code{genDB} is a \code{GRanges}
-    object. Name of the column storing the gene identifiers}
   \item{mc.cores}{Number of cores to use in parallel processing
     (multicore package required)}
   \item{DB}{\code{annotatedGenome} object, as returned by
@@ -71,8 +63,7 @@ maxLinkDist=1e+05, maxDist=1000, minConn=2, minJunx=3, minLen=12, mc.cores=1)
     usual in GRanges objects. \code{genDB} must have a column named
     \code{"type"} taking the value \code{"transcript"} for rows
     corresponding to transcript and \code{"exon"} for rows corresponding
-    to exons. It must also be sorted increasingly according to start,
-    and store transcript and gene ids. For instance, Cufflinks RABT
+    to exons. It must also store transcript and gene ids. For instance, Cufflinks RABT
     module creates a gtf file with information formatted in this manner
     for known and de novo predicted isoforms.
   }
@@ -117,8 +108,13 @@ maxLinkDist=1e+05, maxDist=1000, minConn=2, minJunx=3, minLen=12, mc.cores=1)
   To extract the transcripts for a entrez or island id see help(transcripts).
 }
 \examples{
+##Known transcripts from UCSC
 ## genDB<-makeTranscriptDbFromUCSC(genome="hg19", tablename="refGene")
 ## hg19DB <- procGenome(genDB, "hg19")
+
+##Transcripts inferred by Cufflinks-RABT module
+##genDB.Cuff <- import('transcripts.gtf')
+##hg19DB.Cuff <- procGenome(genDB.Cuff, genome='hg19')
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
