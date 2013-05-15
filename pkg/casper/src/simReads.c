@@ -173,7 +173,7 @@ SEXP casperSimC(SEXP gene_exp, SEXP var_exp, SEXP var_num, SEXP var_len, SEXP ex
 	i++;
 	j=1;
 	if(i % (int) floor(n*0.1) == 0) {
-	  Rprintf("%d %% of fragments simulated\n", (int) ceil(((double)i/(double)n)*100));
+          Rprintf("%d %% of fragments simulated\n", (int) ceil(((double)i/(double)n)*100));
 	  R_CheckUserInterrupt();
 	}
       }

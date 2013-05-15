@@ -73,7 +73,7 @@ getDistrsFrompBam <- function(DB, pbam, islandid=NULL, verbose=FALSE, nreads=4*1
   if(verbose) cat("Calculating fragment length distribution\n")
 
   #Remove reads with >2 appearances
-  sel <- c(TRUE, names(pbam@pbam)[-1]!=names(pbam@pbam)[-length(pbam@pbam)] | (pbam@pbam$rid[-1] != pbam@pbam$rid[-length(pbam@pbam)]))
+  sel <- c(TRUE, pbam@pbam$names[-1]!=pbam@pbam$names[-length(pbam@pbam)] | (pbam@pbam$rid[-1] != pbam@pbam$rid[-length(pbam@pbam)]))
   pbam@pbam <- pbam@pbam[sel,]
   
   sel <- pbam@pbam$rid==1

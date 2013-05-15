@@ -4,7 +4,7 @@ setGeneric("getChr", function(entrezid, txid, islandid, genomeDB) standardGeneri
 setGeneric("getNreads", function(pc) standardGeneric("getNreads"))
 setGeneric("getReads", function(x) standardGeneric("getReads"))
 setGeneric("plotExpr", function(gene, minProbExpr=.5, minExpr=.1, xlab='(kb)', ylab='', xlim, cex=1, yaxt='n', col, ...) standardGeneric("plotExpr"))
-setGeneric("procBam", function(bam, stranded, seed, verbose) standardGeneric("procBam"))
+setGeneric("procBam", function(bam, stranded, seed, verbose, rname, keep.junx) standardGeneric("procBam"))
 setGeneric("procGenome", function(genDB, genome, mc.cores=1) standardGeneric("procGenome"))
 setGeneric("rangesPlot",function(x, gene, exonProfile=TRUE, maxFragLength=500, xlab='', ylab='', xlim, ...) standardGeneric("rangesPlot"))
 setGeneric("transcripts", function(entrezid, islandid, genomeDB) standardGeneric("transcripts"))

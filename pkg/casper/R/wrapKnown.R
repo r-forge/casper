@@ -9,17 +9,20 @@ mergePCWr <- function(x, genomeDB){
 }
 
 mergeDisWr <- function(distrs, pcs){
-  minlen <- min(unlist(lapply(distrs, function(x) min(as.numeric(names(x@lenDis))))))
-  maxlen <- max(unlist(lapply(distrs, function(x) max(as.numeric(names(x@lenDis))))))
-  tmp <- lapply(distrs, function(x){
-    y <- x@lenDis
-    tmp <- vector(mode='numeric', length=maxlen-minlen+1)
-    names(tmp) <- minlen:maxlen
-    tmp[names(y)] <- y
-    tmp
-  } )
-  tmp <- do.call(cbind, tmp)
-  tmp <- as.array(rowSums(tmp))
+  lenDis <- lapply(distrs, function(x) x@lenDis)
+  lenDis <- lenDis[unlist(lapply(lenDis, function(x) !any(names(x)==0)))]
+  if(length(lenDis)>1){
+    minlen <- min(unlist(lapply(lenDis, function(x) min(as.numeric(names(x))))))
+    maxlen <- max(unlist(lapply(lenDis, function(x) max(as.numeric(names(x))))))
+    tmp <- lapply(lenDis, function(x){
+      tmp <- vector(mode='numeric', length=maxlen-minlen+1)
+      names(tmp) <- minlen:maxlen
+      tmp[names(x)] <- x
+      tmp
+    } )
+    tmp <- do.call(cbind, tmp)
+    tmp <- as.array(rowSums(tmp))
+  } else tmp <- lenDis[[1]]
   distr <- new('readDistrs', lenDis=tmp)
   th <- seq(0,1,length=10000)
   if (missing(pcs)) w <- sapply(distrs, function(z) sum(z@lenDis)) else w <- sapply(1:length(distrs), function(x) sum(getNreads(pcs[[x]])))
@@ -38,9 +41,12 @@ mergeDisWr <- function(distrs, pcs){
 
 
 
-wrapKnown <- function(bamFile, verbose=FALSE, seed=1, mc.cores.int=1, mc.cores=1, genomeDB, readLength, rpkm=TRUE, priorq=2, priorqGeneExpr=2, citype='none', niter=10^3, burnin=100, keep.pbam=FALSE) {
-  what <- c('qname','rname','strand','pos','mpos','cigar')
+wrapKnown <- function(bamFile, verbose=FALSE, seed=1, mc.cores.int=1, mc.cores=1, genomeDB, readLength, rpkm=TRUE, priorq=2, priorqGeneExpr=2, citype='none', niter=10^3, burnin=100, keep.pbam=FALSE, keep.multihits=TRUE) {
+
+   if(!exists(as.character(substitute(genomeDB)))) stop("No genomeDB found")
+  what <- c('qname','strand','pos','mpos','cigar')
   #what <- scanBamWhat(); what <- what[!(what %in% c('seq','qual','qwidth','flag','mapq','mrnm','mpos','isize'))]
+  if(!keep.multihits) what <- c(what, 'mapq')
   t <- scanBamHeader(bamFile)[[1]][["targets"]]
   which <- GRanges(names(t), IRanges(1, unname(t)))
   which <- which[!grepl("_",as.character(seqnames(which)))]
@@ -53,9 +59,18 @@ wrapKnown <- function(bamFile, verbose=FALSE, seed=1, mc.cores.int=1, mc.cores=1
     param <- ScanBamParam(flag=flag,what=what, which=which[i], tag='XS')
     cat("Processing chromosome: ", as.character(seqnames(which[i])), "\n")
     bam <- scanBam(file=bamFile,param=param)
+    if(!keep.multihits) {
+      single.hit <- which(bam[[1]][['mapq']]>0)
+      bam[[1]] <- lapply(bam[[1]], '[', single.hit)
+    }
+    
+    if(verbose) cat(paste("Finished loading bam for chr", as.character(seqnames(which[i])), "\n"))
+
+    bam[[1]]$qname <- as.integer(as.factor(bam[[1]]$qname))
+    if(verbose) cat(paste("Replaced qname for chr", as.character(seqnames(which[i])), "\n"))
     if(keep.pbam) {
       ans <- vector("list",3); names(ans) <- c("pbam","distr","pc")
-      ans$pbam <- procBam(bam=bam, stranded=FALSE, seed=as.integer(seed), verbose=verbose)[[1]]
+      ans$pbam <- procBam(bam=bam[[1]], stranded=FALSE, seed=as.integer(seed), verbose=verbose, keep.junx=FALSE, rname=as.character(seqnames(which)[i]))
       #ans$distr <- getDistrs(DB=genomeDB, bam=bam[[1]], verbose=verbose, readLength=readLength)
       cat("Removing bam object\n")
       rm(bam); gc()
@@ -63,7 +78,7 @@ wrapKnown <- function(bamFile, verbose=FALSE, seed=1, mc.cores.int=1, mc.cores=1
       ans$pc <- pathCounts(reads=ans$pbam, DB=genomeDB, mc.cores=mc.cores, verbose=verbose)
     } else {
       ans <- vector("list",2); names(ans) <- c("distr","pc")
-      pbam <- procBam(bam=bam, stranded=FALSE, seed=as.integer(seed), verbose=verbose)[[1]]
+      pbam <- procBam(bam=bam[[1]], stranded=FALSE, seed=as.integer(seed), verbose=verbose, keep.junx=FALSE, rname=as.character(seqnames(which)[i]))
       #ans$distr <- getDistrs(DB=genomeDB, bam=bam[[1]], verbose=verbose, readLength=readLength)
       cat("Removing bam object\n")
       rm(bam); gc()

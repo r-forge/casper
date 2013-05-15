@@ -57,14 +57,17 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
 
       #Run
   sel <- !sapply(pc[islandid], is.null)
-    all <- islandid
-    islandid <- islandid[sel]
-  if (verbose) cat("Obtaining expression estimates...\n")
+  all <- islandid
+  islandid <- islandid[sel]
+  sel <- elementLengths(genomeDB@islands[islandid])>1
+  islandid <- islandid[sel]
+  if(length(islandid)>0){
+    if (verbose) cat("Obtaining expression estimates...\n")
     if (mc.cores>1 && length(islandid)>mc.cores) {
       if ('multicore' %in% loadedNamespaces()) {
                     #split into smaller jobs
         islandid <- split(islandid, cut(1:length(islandid), mc.cores))
-        ans <- multicore::mclapply(islandid,f,mc.cores=mc.cores)
+        ans <- multicore::mclapply(islandid,f,mc.cores=mc.cores, mc.preschedule=FALSE)
         ans <- unlist(ans, recursive=F)
         names(ans) <- unlist(islandid)
       } else stop('multicore library has not been loaded!')
@@ -72,12 +75,14 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
       ans <- f(islandid)
       names(ans) <- islandid
     }
+  } else ans <- NULL
 
-  nreads <- rep(0, length(all))
+  #nreads <- rep(0, length(all))
+  #names(nreads) <- all
 
-  names(nreads) <- all
-
-  nreads[names(ans)] <- sapply(ans, '[[', length(ans[[1]]))
+  nreads <- unlist(lapply(pc[all], sum))
+  
+  nreads[names(ans)] <- unlist(sapply(ans, '[[', length(ans[[1]])))
   
   sel <- sapply(ans, function(z) sum(z[[1]])==0)
 
@@ -158,7 +163,7 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
       }
     }
   rownames(exprsx) <- rownames(fdata) <- fdata$transcrips
-  
+
   #Compute log(RPKM)
   if (rpkm) {
     if (citype != 0) se.logpi <- fdata$se / exprsx #Added: delta method for Var(log(pi))

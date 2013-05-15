@@ -163,14 +163,14 @@ assignExons2GeneF <- function(exons, DB, reads, chrs, maxDist=1000, minLinks=3, 
     #area <- reads[names(reads) %in% names(rea)]
     over <- findOverlaps(exons, reads)
     exs1 <- names(exons)[queryHits(over)]
-    rea1 <- names(reads)[subjectHits(over)]
+    rea1 <- values(reads)$names[subjectHits(over)]
     rea1 <- sub("\\..*", "", rea1)
     len <- length(unique(rea1))
     if(length(unique(exs1))>1){
       ans <- .Call("joinExons", as.integer(exs1), as.integer(rea1), len)
       junx <- ans[[1]][ans[[2]]>=minLinks]
       junx <- strsplit(junx, split=".", fixed=T)
-      names(junx) <- 1:length(junx)
+      values(junx)$names <- 1:length(junx)
       nalljunx <- rep(1:length(junx), unlist(lapply(junx, length)))
       alljunx <- unlist(junx)
       tmpex <- as.data.frame(exons)
