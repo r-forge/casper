@@ -12,7 +12,7 @@
   left-end read and the end of the right-end read.
 }
 \usage{
-getDistrs(DB, bam, islandid, verbose, nreads=4*10^6, readLength)
+getDistrs(DB, bam, pbam, islandid, verbose, nreads=4*10^6, readLength)
 }
 \arguments{
   \item{DB}{
@@ -20,7 +20,13 @@ getDistrs(DB, bam, islandid, verbose, nreads=4*10^6, readLength)
   }
   \item{bam}{
     Aligned reads, as returned by \code{scanBam}. It must be a list with
-    elements 'qname', 'rname', 'pos' and 'mpos'.
+    elements 'qname', 'rname', 'pos' and 'mpos'. Ignored when argument \code{pbam} is
+    specified.
+  }
+  \item{pbam}{
+    Processed BAM object of class \code{procBam}, as returned by
+    function \code{procBam}. Arguments \code{bam} and \code{readLength}
+    are ignored when \code{pbam} is specified. 
   }
   \item{islandid}{
     Island IDs of islands to be used in the read start distribution

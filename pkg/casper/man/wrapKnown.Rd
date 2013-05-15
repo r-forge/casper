@@ -12,7 +12,7 @@
 \usage{
 wrapKnown(bamFile, verbose = FALSE, seed = 1, mc.cores.int = 1, mc.cores
 = 1, genomeDB, readLength, rpkm = TRUE, priorq = 2, priorqGeneExpr = 2,
-citype = "none", niter = 10^3, burnin = 100, keep.bam = FALSE)
+citype = "none", niter = 10^3, burnin = 100, keep.pbam = FALSE)
 }
 \arguments{
   \item{bamFile}{

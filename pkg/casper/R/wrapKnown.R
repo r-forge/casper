@@ -22,8 +22,10 @@ mergeDisWr <- function(distrs, pcs){
   tmp <- as.array(rowSums(tmp))
   distr <- new('readDistrs', lenDis=tmp)
   th <- seq(0,1,length=10000)
+  if (missing(pcs)) w <- sapply(distrs, function(z) sum(z@lenDis)) else w <- sapply(1:length(distrs), function(x) sum(getNreads(pcs[[x]])))
   tmp <- lapply(1:length(distrs), function(x){
-    all <- distrs[[x]]@stDis(th)*sum(getNreads(pcs[[x]]))
+    all <- distrs[[x]]@stDis(th)*w[x]
+    #all <- distrs[[x]]@stDis(th)*sum(getNreads(pcs[[x]]))
   }
                 )
   tmp <- do.call(cbind, tmp)
@@ -54,17 +56,19 @@ wrapKnown <- function(bamFile, verbose=FALSE, seed=1, mc.cores.int=1, mc.cores=1
     if(keep.pbam) {
       ans <- vector("list",3); names(ans) <- c("pbam","distr","pc")
       ans$pbam <- procBam(bam=bam, stranded=FALSE, seed=as.integer(seed), verbose=verbose)[[1]]
-      ans$distr <- getDistrs(DB=genomeDB, bam=bam[[1]], verbose=verbose, readLength=readLength)
+      #ans$distr <- getDistrs(DB=genomeDB, bam=bam[[1]], verbose=verbose, readLength=readLength)
       cat("Removing bam object\n")
       rm(bam); gc()
+      ans$distr <- getDistrs(DB=genomeDB, pbam=ans$pbam, verbose=verbose)
       ans$pc <- pathCounts(reads=ans$pbam, DB=genomeDB, mc.cores=mc.cores, verbose=verbose)
     } else {
       ans <- vector("list",2); names(ans) <- c("distr","pc")
       pbam <- procBam(bam=bam, stranded=FALSE, seed=as.integer(seed), verbose=verbose)[[1]]
-      ans$distr <- getDistrs(DB=genomeDB, bam=bam[[1]], verbose=verbose, readLength=readLength)
+      #ans$distr <- getDistrs(DB=genomeDB, bam=bam[[1]], verbose=verbose, readLength=readLength)
       cat("Removing bam object\n")
       rm(bam); gc()
       ans$pc <- pathCounts(reads=pbam, DB=genomeDB, mc.cores=mc.cores, verbose=verbose)
+      ans$distr <- getDistrs(DB=genomeDB, pbam=pbam, verbose=verbose)
       #rm(pbam); gc()
     }
     cat("Finished chromosome ", as.character(seqnames(which[i])), "\n")

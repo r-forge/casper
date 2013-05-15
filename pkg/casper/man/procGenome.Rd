@@ -24,7 +24,6 @@ procGenome(genDB, genome, mc.cores = 1)
 createDenovoGenome(reads, DB, minLinks=2,
 maxLinkDist=1e+05, maxDist=1000, minConn=2, minJunx=3, minLen=12, mc.cores=1)
 }
-%- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{genDB}{Either annotations downloaded from UCSC
     (e.g. genDB<-makeTranscriptDbFromUCSC(genome="hg19",
@@ -103,9 +102,12 @@ maxLinkDist=1e+05, maxDist=1000, minConn=2, minJunx=3, minLen=12, mc.cores=1)
   Camille Stephan-Otto Attolini
 }
 \seealso{
-  annotatedGenome-class for a description of the class.
+  See \code{annotatedGenome-class} for a description of the class.
   To obtain the island id for an entrez gene id or a transcript id see help(getIsland).
-  To extract the transcripts for a entrez or island id see help(transcripts).
+  To extract the transcripts for a entrez or island id see
+  help(transcripts).
+  See \code{splitGenomeByLength} for splitting an \code{annotatedGenome}
+  according to gene length.
 }
 \examples{
 ##Known transcripts from UCSC
