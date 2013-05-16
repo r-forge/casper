@@ -40,10 +40,10 @@ simMultSamples <- function(B, nsamples, nreads, readLength, x, groups='group', d
     N <- apply(th, 2, function(x) rmultinom(size=nreads, n=1, prob=x))
     rownames(N) <- rownames(th)
     if (mc.cores>1) {
-      if ('multicore' %in% loadedNamespaces()) {
-        sim.exp <- multicore::mclapply(1:ncol(xnew), simOneExp, mc.cores=mc.cores, mc.preschedule=FALSE)
+      if ('parallel' %in% loadedNamespaces()) {
+        sim.exp <- parallel::mclapply(1:ncol(xnew), simOneExp, mc.cores=mc.cores, mc.preschedule=FALSE)
       } else {
-        stop("multicore package has not been loaded!")
+        stop("parallel package has not been loaded!")
       }
     } else {
       sim.exp <- lapply(1:ncol(xnew), simOneExp)

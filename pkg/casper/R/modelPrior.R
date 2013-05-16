@@ -385,14 +385,14 @@ getNBinomParams <- function(x,mc.cores=1,components=1) {
     if (length(use)>8) tmp.3.list <- unclass(as.data.frame(t(unique(tmp[,c(1,2,3,5,6)]))))
     if (length(use)>11) tmp.4.list <- unclass(as.data.frame(t(unique(tmp))))
     if (mc.cores>1) {
-      if ('multicore' %in% loadedNamespaces()) {
+      if ('parallel' %in% loadedNamespaces()) {
         #
         myfun <- function(idx) {
           ans <- vector('list',length(idx))
           for (i in 1:length(idx)) ans[[i]] <- mynlminb(params=tmp.1.list[[idx[i]]],numexp,numtrial,'objective',components=1)
           return(ans)
         }
-        objec.1 <- unlist(multicore::pvec(1:length(tmp.1.list),myfun,mc.cores=ifelse(length(tmp.1.list)<=mc.cores,round(length(tmp.1.list)/2),mc.cores)))
+        objec.1 <- unlist(parallel::pvec(1:length(tmp.1.list),myfun,mc.cores=ifelse(length(tmp.1.list)<=mc.cores,round(length(tmp.1.list)/2),mc.cores)))
         params.1 <- mynlminb(tmp.1.list[[which(objec.1==min(objec.1))[1]]],numexp,numtrial,'par',components=1)
         toadd <- df2list(cbind(rep(ilogit(params.1[2]),length(p)),p,1))
         tmp.2.list[(length(tmp.2.list)+1):(length(tmp.2.list)+length(toadd))] <- toadd
@@ -402,7 +402,7 @@ getNBinomParams <- function(x,mc.cores=1,components=1) {
           for (i in 1:length(idx)) ans[[i]] <- mynlminb(params=tmp.2.list[[idx[i]]],numexp,numtrial,'objective',components=2)
           return(ans)
         }
-        objec.2 <- unlist(multicore::pvec(1:length(tmp.2.list),myfun,mc.cores=ifelse(length(tmp.2.list)<=mc.cores,round(length(tmp.2.list)/2),mc.cores)))
+        objec.2 <- unlist(parallel::pvec(1:length(tmp.2.list),myfun,mc.cores=ifelse(length(tmp.2.list)<=mc.cores,round(length(tmp.2.list)/2),mc.cores)))
         params.2 <- mynlminb(tmp.2.list[[which(objec.2==min(objec.2))[1]]],numexp,numtrial,'par',components=2)
         toadd <- df2list(cbind(rep(ilogit(params.2[3]),length(p)),rep(ilogit(params.2[4]),length(p)),p,rep(ilogit(params.2[5]),length(p)),1-ilogit(params.2[5])))
         if (length(use)>8) {
@@ -413,7 +413,7 @@ getNBinomParams <- function(x,mc.cores=1,components=1) {
             for (i in 1:length(idx)) ans[[i]] <- mynlminb(params=tmp.3.list[[idx[i]]],numexp,numtrial,'objective',components=3)
             return(ans)
           }
-          objec.3 <- unlist(multicore::pvec(1:length(tmp.3.list),myfun,mc.cores=ifelse(length(tmp.3.list)<=mc.cores,round(length(tmp.3.list)/2),mc.cores)))
+          objec.3 <- unlist(parallel::pvec(1:length(tmp.3.list),myfun,mc.cores=ifelse(length(tmp.3.list)<=mc.cores,round(length(tmp.3.list)/2),mc.cores)))
           params.3 <- mynlminb(tmp.3.list[[which(objec.3==min(objec.3))[1]]],numexp,numtrial,'par',components=3)
           toadd <- df2list(cbind(rep(ilogit(params.3[4]),length(p)),rep(ilogit(params.3[5]),length(p)),rep(ilogit(params.3[6]),length(p)),p,rep(ilogit(params.3[7]),length(p)),rep(ilogit(params.3[8]),length(p)),1-ilogit(params.3[7])-ilogit(params.3[8])))
         }
@@ -424,10 +424,10 @@ getNBinomParams <- function(x,mc.cores=1,components=1) {
             for (i in 1:length(idx)) ans[[i]] <- mynlminb(params=tmp.4.list[[idx[i]]],numexp,numtrial,'objective',components=4)
             return(ans)
           }
-          objec.4 <- unlist(multicore::pvec(1:length(tmp.4.list),myfun,mc.cores=ifelse(length(tmp.4.list)<=mc.cores,round(length(tmp.4.list)/2),mc.cores)))
+          objec.4 <- unlist(parallel::pvec(1:length(tmp.4.list),myfun,mc.cores=ifelse(length(tmp.4.list)<=mc.cores,round(length(tmp.4.list)/2),mc.cores)))
           params.4 <- mynlminb(tmp.4.list[[which(objec.4==min(objec.4))[1]]],numexp,numtrial,'par',components=4)
         }
-      } else stop('multicore library has not been loaded!')
+      } else stop('parallel library has not been loaded!')
     } else {
       objec.1 <- unlist(lapply(tmp.1.list,function(x) mynlminb(params=x,numexp,numtrial,'objective',components=1)))
       params.1 <- mynlminb(tmp.1.list[[which(objec.1==min(objec.1))[1]]],numexp,numtrial,'par',components=1)
@@ -478,14 +478,14 @@ getNBinomParams <- function(x,mc.cores=1,components=1) {
     }
     tmp.list <- unclass(as.data.frame(t(tmp)))
     if (mc.cores>1) {
-      if ('multicore' %in% loadedNamespaces()) {
+      if ('parallel' %in% loadedNamespaces()) {
         myfun <- function(idx) {
           ans <- vector('list',length(idx))
           for (i in 1:length(idx)) ans[[i]] <- mynlminb(params=tmp.list[[idx[i]]],numexp,numtrial,'objective',components)
           return(ans)
         }
-        objec <- unlist(multicore::pvec(1:length(tmp.list),myfun,mc.cores=ifelse(length(tmp.list)<=mc.cores,round(length(tmp.list)/2),mc.cores)))
-      } else stop('multicore library has not been loaded!')
+        objec <- unlist(parallel::pvec(1:length(tmp.list),myfun,mc.cores=ifelse(length(tmp.list)<=mc.cores,round(length(tmp.list)/2),mc.cores)))
+      } else stop('parallel library has not been loaded!')
     } else {
       objec <- unlist(lapply(tmp.list,function(x) mynlminb(params=x,numexp,numtrial,'objective',components)))
     }

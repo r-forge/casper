@@ -64,13 +64,13 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
   if(length(islandid)>0){
     if (verbose) cat("Obtaining expression estimates...\n")
     if (mc.cores>1 && length(islandid)>mc.cores) {
-      if ('multicore' %in% loadedNamespaces()) {
+      if ('parallel' %in% loadedNamespaces()) {
                     #split into smaller jobs
         islandid <- split(islandid, cut(1:length(islandid), mc.cores))
-        ans <- multicore::mclapply(islandid,f,mc.cores=mc.cores, mc.preschedule=FALSE)
+        ans <- parallel::mclapply(islandid,f,mc.cores=mc.cores, mc.preschedule=FALSE)
         ans <- unlist(ans, recursive=F)
         names(ans) <- unlist(islandid)
-      } else stop('multicore library has not been loaded!')
+      } else stop('parellel library has not been loaded!')
     } else {
       ans <- f(islandid)
       names(ans) <- islandid
@@ -135,9 +135,9 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
     if (citype==2) {
       if(sum(unlist(lapply(ans, function(x) is.na(x[[3]]))))==0){
         if (mc.cores>1) {
-          if ('multicore' %in% loadedNamespaces()) {
-           se <- unlist(multicore::mclapply(ans, function(z) (colMeans(z[[3]]^2) - colMeans(z[[3]])^2) * nrow(z[[3]])/(nrow(z[[3]]) - 1), mc.cores=mc.cores))
-         } else stop('multicore library has not been loaded!')
+          if ('parellel' %in% loadedNamespaces()) {
+           se <- unlist(parallel::mclapply(ans, function(z) (colMeans(z[[3]]^2) - colMeans(z[[3]])^2) * nrow(z[[3]])/(nrow(z[[3]]) - 1), mc.cores=mc.cores))
+         } else stop('parallel library has not been loaded!')
         } else se <- unlist(lapply(ans, function(z) (colMeans(z[[3]]^2) - colMeans(z[[3]])^2) * nrow(z[[3]])/(nrow(z[[3]]) - 1)))
         
         if(length(miss)>0) se <- c(se, missSE)

@@ -15,8 +15,9 @@ mergePCs <- function(pcs, genomeDB, mc.cores=1){
       new("pathCounts", counts=counts, denovo=pcs[[1]]@denovo, stranded=pcs[[1]]@stranded)
   }
 
-simMAE <- function(nsim, islandid, n, r, f, burnin=1000, pc, distrs, usePilot=FALSE, retTxsError=FALSE, genomeDB, mc.cores=1, verbose=FALSE) {
+simMAE <- function(nsim, islandid=NULL, n, r, f, burnin=1000, pc, distrs, usePilot=FALSE, retTxsError=FALSE, genomeDB, mc.cores=1, verbose=FALSE) {
    if (length(r) != length(n)) stop("length(n) not equal to length(r)")
+   if(is.null(islandid)) islandid <- names(genomeDB@transcripts)
    U <- NULL
    txe <- list()
    for (j in 1:length(n)) {
@@ -25,21 +26,21 @@ simMAE <- function(nsim, islandid, n, r, f, burnin=1000, pc, distrs, usePilot=FA
      nmean <- f[j] - nmean
      names(d@lenDis) <- as.numeric(names(d@lenDis)) + round(nmean)
      if(verbose) cat(paste("Generating posterior samples j =",j, "\n"))
-      pis <- simPost(islandid=islandid, nsim=nsim, distrs=d, genomeDB=genomeDB, pc=pc, readLength=r[j])
+      pis <- simPost(islandid=islandid, nsim=nsim, distrs=d, genomeDB=genomeDB, pc=pc, readLength=r[j], mc.cores=mc.cores, verbose=verbose)
      if(verbose) cat(paste("Running simulations for j =",j, "\n"))
      if(mc.cores>1) {
-       require(multicore)
-       Un <- multicore::mclapply(1:nsim, function(i){
+       require(parallel)
+       Un <- parallel::mclapply(1:nsim, function(i){
          sim.pc <-  simPostPred(nreads=n[j], pis=pis[i,], pc=pc, distrs=d, rl=r[j], genomeDB=genomeDB, verbose=verbose)
          if(usePilot) sim.pc$pc <- mergePCs(pcs=list(sim.pc$pc,pc), genomeDB=genomeDB)
-         sim.exp <- exprs(calcExp(distrs=d, genomeDB=genomeDB, pc=sim.pc$pc, readLength=r[j], rpkm=FALSE))
+         sim.exp <- exprs(calcExp(islandid=islandid, distrs=d, genomeDB=genomeDB, pc=sim.pc$pc, readLength=r[j], rpkm=FALSE))
          abs(sim.exp[colnames(pis),]-pis[i,])
        }, mc.cores=mc.cores)
      } else {
        Un <- lapply(1:nsim, function(i){
          sim.pc <-  simPostPred(nreads=n[j], pis=pis[i,], pc=pc, distrs=d, rl=r[j], genomeDB=genomeDB, verbose=verbose)
          if(usePilot) sim.pc$pc <- mergePCs(pcs=list(sim.pc$pc,pc), genomeDB=genomeDB)
-         sim.exp <- exprs(calcExp(distrs=d, genomeDB=genomeDB, pc=sim.pc$pc, readLength=r[j], rpkm=FALSE))
+         sim.exp <- exprs(calcExp(islandid=islandid, distrs=d, genomeDB=genomeDB, pc=sim.pc$pc, readLength=r[j], rpkm=FALSE))
          abs(sim.exp[colnames(pis),]-pis[i,])
        })
      }
@@ -127,12 +128,12 @@ procsimPost <- function(nsim, distrs, genomeDB, pc, readLength, islandid, initva
     islandid <- islandid[sel]
   if (verbose) cat("Obtaining expression estimates...\n")
     if (mc.cores>1 && length(islandid)>mc.cores) {
-      if ('multicore' %in% loadedNamespaces()) {
+      if ('parallel' %in% loadedNamespaces()) {
                     #split into smaller jobs
         islandid <- split(islandid, cut(1:length(islandid), mc.cores))
-        ans <- multicore::mclapply(islandid,f,mc.cores=mc.cores)
+        ans <- parallel::mclapply(islandid,f,mc.cores=mc.cores)
         ans <- do.call(cbind,ans)
-      } else stop('multicore library has not been loaded!')
+      } else stop('parallel library has not been loaded!')
     } else {
       ans <- f(islandid)
     }
@@ -155,13 +156,13 @@ simPost <- function(nsim, distrs, genomeDB, pc, readLength, islandid, initvals, 
     plus <- NULL
     if(length(plusGI)>0) {
       plusDB <- genomeBystrand(genomeDB, "+")
-      plus <- procsimPost(nsim, distrs, plusDB, pc=pc@counts$plus, readLength=readLength, islandid=plusGI, initvals=initvals, useinit=useinit, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
+      plus <- procsimPost(nsim, distrs, plusDB, pc=pc@counts$plus, readLength=readLength, islandid=plusGI, initvals=initvals, useinit=useinit, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype, verbose=verbose)
     }
     minusGI <- islandid[genomeDB@islandStrand[islandid]=="-"]
     minus <- NULL
     if(length(minusGI)>0) {
       minusDB <- genomeBystrand(genomeDB, "-")
-      minus <- procsimPost(nsim, distrs, minusDB, pc=pc@counts$minus, readLength=readLength, islandid=minusGI, initvals=initvals, useinit=useinit, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype)
+      minus <- procsimPost(nsim, distrs, minusDB, pc=pc@counts$minus, readLength=readLength, islandid=minusGI, initvals=initvals, useinit=useinit, relativeExpr=relativeExpr, priorq=priorq, niter=niter, burnin=burnin, mc.cores=mc.cores, citype=citype, verbose=verbose)
     }
     if(is.null(plus) & is.null(minus)) stop("No counts in islandid genes")
     if(!(is.null(plus) | is.null(minus))) { ans <- mergeExp(plus, minus) }
@@ -170,7 +171,7 @@ simPost <- function(nsim, distrs, genomeDB, pc, readLength, islandid, initvals, 
 else {
     if(missing(islandid)) islandid <- names(pc@counts[[1]])
     if(sum(!unlist(lapply(pc@counts[islandid], is.null)))) stop("No counts in islandid genes")
-    ans <- procsimPost(nsim, distrs, genomeDB, pc=pc@counts[[1]], readLength=readLength, islandid=islandid, initvals=initvals, useinit=useinit, relativeExpr=relativeExpr, priorq=priorq, burnin=burnin, mc.cores=mc.cores)
+    ans <- procsimPost(nsim, distrs, genomeDB, pc=pc@counts[[1]], readLength=readLength, islandid=islandid, initvals=initvals, useinit=useinit, relativeExpr=relativeExpr, priorq=priorq, burnin=burnin, mc.cores=mc.cores, verbose=verbose)
 }
   ans
 }
@@ -218,7 +219,7 @@ simPostPred <- function(nreads, islandid=NULL, pis, pc, distrs, rl, genomeDB, se
     pis <- append(unlist(pi.miss), pis)
     }
   }
-  pc <- simReads(nonzero, nSimReads=nreadsPerGeneSim, pis=pis, rl=rl, seed=seed, distrs=distrs, genomeDB=genomeDB, mc.cores=mc.cores, repSims=T, writeBam=FALSE, verbose=FALSE)
+  pc <- simReads(nonzero, nSimReads=nreadsPerGeneSim, pis=pis, rl=rl, seed=seed, distrs=distrs, genomeDB=genomeDB, mc.cores=mc.cores, repSims=T, writeBam=FALSE, verbose=verbose)
   if(verbose) cat("Finished simulations\n")
   notinpc <- names(genomeDB@transcripts)[!(names(genomeDB@transcripts) %in% names(pc$pc@counts[[1]]))]
   pcs <- vector(length=length(pc$pc@counts[[1]]) + length(notinpc), mode='list')

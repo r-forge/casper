@@ -172,15 +172,15 @@ calcDenovo <- function(distrs, genomeDB, pc, readLength, islandid, priorq=3, mpr
     islandid <- islandid[sel]
     if(sum(sel)==0) stop("Not islands left to process due to strand or lack of path counts\n")
     if (mc.cores>1 && length(islandid)>mc.cores) {
-      require(multicore)
-      if ('multicore' %in% loadedNamespaces()) {
+      require(parallel)
+      if ('parallel' %in% loadedNamespaces()) {
         #ans <- mclapply(islandid, f, mc.cores=mc.cores)
         #split into smaller jobs
         nsplit <- ceiling(max(length(islandid), mc.cores)/mc.cores)
         islandidList <- lapply(1:min(length(islandid), mc.cores), function(z) islandid[seq(z,length(islandid),by=mc.cores)])
-        ans <- multicore::mclapply(islandidList,f,mc.cores=min(length(islandidList), mc.cores))
+        ans <- parallel::mclapply(islandidList,f,mc.cores=min(length(islandidList), mc.cores))
         ans <- do.call(c,ans); names(ans) <- unlist(islandidList); ans <- ans[islandid]
-      } else stop('multicore library has not been loaded!')
+      } else stop('parallel library has not been loaded!')
     } else {
       ans <- f(islandid)
       names(ans) <- islandid

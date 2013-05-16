@@ -53,8 +53,8 @@ splitPaths <- function(paths, DB, mc.cores, stranded, geneid){
     sel <- lapply(sel, "[", -1)
     tmp <- split(sel, isl)
     if(mc.cores>1) {
-      require(multicore)
-      tmp1 <- multicore:::mclapply(names(tmp), function(x){
+      require(parellel)
+      tmp1 <- parallel:::mclapply(names(tmp), function(x){
         n <- sapply(tmp[[x]], length)
         nn <- unlist(tmp[[x]])
         names(nn) <- rep(names(splCounts[[x]]), n)

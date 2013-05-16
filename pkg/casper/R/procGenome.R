@@ -119,11 +119,11 @@ generateNOexons<-function(exByTx, startId=1, mc.cores){
   overEx <- findOverlaps(exonsNI, exByTx)
   exid <- names(exonsNI)[queryHits(overEx)]
   exkey <- split(exid, values(exByTx)$exon_id[subjectHits(overEx)])
-  if(mc.cores>1) require(multicore)
+  if(mc.cores>1) require(parallel)
   if(mc.cores>1) {
-    if ('multicore' %in% loadedNamespaces()) {
-      exkey<-multicore::mclapply(exkey, unique, mc.cores=mc.cores)
-    } else stop('multicore library has not been loaded!')
+    if ('parallel' %in% loadedNamespaces()) {
+      exkey<-parallel::mclapply(exkey, unique, mc.cores=mc.cores)
+    } else stop('parallel library has not been loaded!')
   }
   else {
     exkey<-lapply(exkey, unique, mc.cores=mc.cores)

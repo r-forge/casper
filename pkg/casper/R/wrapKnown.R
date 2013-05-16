@@ -92,9 +92,9 @@ wrapKnown <- function(bamFile, verbose=FALSE, seed=1, mc.cores.int=1, mc.cores=1
 
   ## Run for all chromosomes, mclapply or for loop
   if (mc.cores.int>1 ){
-    if ('multicore' %in% loadedNamespaces()) {
-      ans <- multicore::mclapply(1:length(which), procChr, mc.cores=mc.cores.int, mc.preschedule=FALSE)
-    } else stop('multicore library has not been loaded!')
+    if ('parallel' %in% loadedNamespaces()) {
+      ans <- parallel::mclapply(1:length(which), procChr, mc.cores=mc.cores.int, mc.preschedule=FALSE)
+    } else stop('parallel library has not been loaded!')
   } else {
     ans <- list()
     for(i in 1:length(which)) ans[[i]] <- procChr(i)

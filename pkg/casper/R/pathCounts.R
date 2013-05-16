@@ -63,8 +63,8 @@ procPaths <- function(reads, DB, mc.cores, verbose){
       sel <- sapply(sel, "[", -1)
       tmp <- split(sel, isl)
       if(mc.cores>1) {
-        require(multicore)
-        tmp1 <- multicore::mclapply(names(tmp), function(x){
+        require(parallel)
+        tmp1 <- parallel::mclapply(names(tmp), function(x){
           n <- sapply(tmp[[x]], length)
           nn <- unlist(tmp[[x]])
           names(nn) <- rep(names(splCounts[[x]]), n)
