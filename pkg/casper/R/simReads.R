@@ -89,22 +89,13 @@ splitPaths <- function(paths, DB, mc.cores, stranded, geneid){
   ans
 }
 
-casperSim <- function(genomeDB, distrs, nSimReads, pis, islandid, lr_file=NULL, rl, chrlen, seed, bam, chr=NULL, verbose=TRUE){
+casperSim <- function(genomeDB, distrs, nSimReads, pis, islandid, lr_file=NULL, rl, chrlen, seed, bam, chr=NULL, verbose=FALSE){
   if (verbose) cat("Formatting input\n")
   sel <- islandid
   nSimReads <- nSimReads[sel]
   txs <- genomeDB@transcripts[sel]
   sel1 <- unlist(lapply(txs, is.null))
   txs <- txs[!sel1]
-  #is <- as.character(strand(genomeDB@islands@unlistData))[cumsum(c(1, elementLengths(genomeDB@islands)[-length(genomeDB@islands)]))]
-  #names(is) <- names(genomeDB@islands)
-  #island_strand <- is[sel][!sel1]
-  #island_strand[island_strand=="+"] <- 1
-  #island_strand[island_strand=="-"] <- -1
-  #island_strand[island_strand=="*"] <- 0
-  #tmp <- names(island_strand)
-  #island_strand <- as.numeric(island_strand)
-  #names(island_strand) <- tmp
   variant_num <- unlist(lapply(txs, length))
   starts <- start(genomeDB@exonsNI)
   names(starts) <- names(genomeDB@exonsNI)
@@ -137,8 +128,8 @@ casperSim <- function(genomeDB, distrs, nSimReads, pis, islandid, lr_file=NULL, 
   ee=exon_end
   ei=exs
   ngenes=length(sel)
-  ldv <- sample(as.numeric(names(distrs@lenDis)), prob=distrs@lenDis/sum(distrs@lenDis), size=sum(nSimReads), replace=T)
-  ldd <- as.integer(1)
+  ldv <- sample(as.integer(names(distrs@lenDis)), prob=distrs@lenDis/sum(distrs@lenDis), size=sum(nSimReads), replace=T)
+  ldd <- as.numeric(1)
   th <- seq(0, 1, len=10000)
   std <- distrs@stDis(th)
   std[1] <- 0
@@ -149,7 +140,7 @@ casperSim <- function(genomeDB, distrs, nSimReads, pis, islandid, lr_file=NULL, 
   if (verbose) cat("Simulating fragments\n")
 # insideBam deprecated, only in case it is useful in simulations, return from C all information written to the bam file
   insideBam=integer(0)
-  ans <- .Call("casperSimC", ge, ve, vn, vl, en, es, ee, ei, ldv, ldd, sdv, sdd, rl, length(ge), tx_strand, lr_file, chroms, as.integer(seed), as.integer(bam), as.integer(insideBam))
+  ans <- .Call("casperSimC", ge, ve, vn, as.integer(vl), en, es, ee, ei, ldv, ldd, sdv, sdd, as.integer(rl), length(ge), as.integer(tx_strand), lr_file, chroms, as.integer(seed), as.integer(bam), as.integer(insideBam), as.integer(verbose))
   ans <- ans[1:7]
   names(ans[[7]]) <- ans[[6]]
   ans[[6]] <- NULL

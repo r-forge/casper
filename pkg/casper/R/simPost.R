@@ -15,51 +15,51 @@ mergePCs <- function(pcs, genomeDB, mc.cores=1){
       new("pathCounts", counts=counts, denovo=pcs[[1]]@denovo, stranded=pcs[[1]]@stranded)
   }
 
-simMAE <- function(nsim, islandid, n, r, f, pc, distrs, usePilot=FALSE, retTxsError=FALSE, genomeDB, mc.cores=1, verbose=FALSE) {
+simMAE <- function(nsim, islandid, n, r, f, burnin=1000, pc, distrs, usePilot=FALSE, retTxsError=FALSE, genomeDB, mc.cores=1, verbose=FALSE) {
    if (length(r) != length(n)) stop("length(n) not equal to length(r)")
    U <- NULL
    txe <- list()
    for (j in 1:length(n)) {
-      d <- distrs
-      nmean <-  mean(rep(as.numeric(names(d@lenDis)), d@lenDis))
-      nmean <- f[j] - nmean
-      names(d@lenDis) <- as.numeric(names(d@lenDis)) + nmean
-      if(verbose) cat(paste("Generating posterior samples j=",j))
+     d <- distrs
+     nmean <-  mean(rep(as.numeric(names(d@lenDis)), d@lenDis))
+     nmean <- f[j] - nmean
+     names(d@lenDis) <- as.numeric(names(d@lenDis)) + round(nmean)
+     if(verbose) cat(paste("Generating posterior samples j =",j, "\n"))
       pis <- simPost(islandid=islandid, nsim=nsim, distrs=d, genomeDB=genomeDB, pc=pc, readLength=r[j])
-      if(verbose) cat(paste("Running simulations for j=",j))
-      if(mc.cores>1) {
-        require(multicore)
-        Un <- multicore::mclapply(1:nsim, function(i){
-          sim.pc <-  simPostPred(nreads=n[j], pis=pis[i,], pc=pc, distrs=d, rl=r[j], genomeDB=genomeDB)
-          if(usePilot) sim.pc$pc <- mergePCs(pcs=list(sim.pc$pc,pc), genomeDB=genomeDB)
-          sim.exp <- exprs(calcExp(distrs=d, genomeDB=genomeDB, pc=sim.pc$pc, readLength=r[j], rpkm=FALSE))
-          abs(sim.exp[colnames(pis),]-pis[i,])
-        }, mc.cores=mc.cores)
-      } else {
-        Un <- lapply(1:nsim, function(i){
-          sim.pc <-  simPostPred(nreads=n[j], pis=pis[i,], pc=pc, distrs=d, rl=r[j], genomeDB=genomeDB)
-          if(usePilot) sim.pc$pc <- mergePCs(pcs=list(sim.pc$pc,pc), genomeDB=genomeDB)
-          sim.exp <- exprs(calcExp(distrs=d, genomeDB=genomeDB, pc=sim.pc$pc, readLength=r[j], rpkm=FALSE))
-          abs(sim.exp[colnames(pis),]-pis[i,])
-        })
-      }
-      Un <- do.call(cbind, Un)
-      df <- data.frame(MAE= colMeans(Un), Nreads=rep(n[j], nsim), ReadLength=rep(r[j], nsim), frLength=rep(f[j], nsim))
-      U <- rbind(U, df)
-      if(retTxsError) {
-        rownames(Un) <- colnames(pis)
-        txe[[j]] <- Un
-      }
-    }
+     if(verbose) cat(paste("Running simulations for j =",j, "\n"))
+     if(mc.cores>1) {
+       require(multicore)
+       Un <- multicore::mclapply(1:nsim, function(i){
+         sim.pc <-  simPostPred(nreads=n[j], pis=pis[i,], pc=pc, distrs=d, rl=r[j], genomeDB=genomeDB, verbose=verbose)
+         if(usePilot) sim.pc$pc <- mergePCs(pcs=list(sim.pc$pc,pc), genomeDB=genomeDB)
+         sim.exp <- exprs(calcExp(distrs=d, genomeDB=genomeDB, pc=sim.pc$pc, readLength=r[j], rpkm=FALSE))
+         abs(sim.exp[colnames(pis),]-pis[i,])
+       }, mc.cores=mc.cores)
+     } else {
+       Un <- lapply(1:nsim, function(i){
+         sim.pc <-  simPostPred(nreads=n[j], pis=pis[i,], pc=pc, distrs=d, rl=r[j], genomeDB=genomeDB, verbose=verbose)
+         if(usePilot) sim.pc$pc <- mergePCs(pcs=list(sim.pc$pc,pc), genomeDB=genomeDB)
+         sim.exp <- exprs(calcExp(distrs=d, genomeDB=genomeDB, pc=sim.pc$pc, readLength=r[j], rpkm=FALSE))
+         abs(sim.exp[colnames(pis),]-pis[i,])
+       })
+     }
+     Un <- do.call(cbind, Un)
+     df <- data.frame(MAE= colMeans(Un), Nreads=rep(n[j], nsim), ReadLength=rep(r[j], nsim), frLength=rep(f[j], nsim))
+     U <- rbind(U, df)
+     if(retTxsError) {
+       rownames(Un) <- colnames(pis)
+       txe[[j]] <- Un
+     }
+   }
    if(retTxsError){
-     names(txe) <- paste(n, r, sep='-')
+     names(txe) <- paste(n, r, f, sep='-')
      return(list(txe=txe, U=U))
    }
    return(U)
 }
 
 
-procsimPost <- function(nsim, distrs, genomeDB, pc, readLength, islandid, initvals, useinit, relativeExpr=TRUE, priorq=2, burnin=100, mc.cores=1, verbose=FALSE) {
+procsimPost <- function(nsim, distrs, genomeDB, pc, readLength, islandid, initvals, useinit, relativeExpr=TRUE, priorq=2, burnin=1000, mc.cores=1, verbose=FALSE) {
   startcdf <- distrs@stDis(seq(0,1,.001))
   lendis <- as.double(distrs@lenDis/sum(distrs@lenDis))
   lenvals <- as.integer(names(distrs@lenDis))
@@ -140,7 +140,7 @@ procsimPost <- function(nsim, distrs, genomeDB, pc, readLength, islandid, initva
   ans
 }
 
-simPost <- function(nsim, distrs, genomeDB, pc, readLength, islandid, initvals, relativeExpr=TRUE, priorq=2, burnin=100, mc.cores=1, verbose=FALSE) {
+simPost <- function(nsim, distrs, genomeDB, pc, readLength, islandid, initvals, relativeExpr=TRUE, priorq=2, burnin=1000, mc.cores=1, verbose=FALSE) {
   if (missing(initvals)) {
     useinit <- 0
     initvals <- NULL
@@ -180,7 +180,7 @@ else {
 #  return(ans)
 #}
 
-simPostPred <- function(nreads, islandid=NULL, pis, pc, distrs, rl, genomeDB, seed=1, mc.cores=1) {
+simPostPred <- function(nreads, islandid=NULL, pis, pc, distrs, rl, genomeDB, seed=1, mc.cores=1, verbose=FALSE) {
   a <- tapply(pis, getIsland(txid=names(pis), genomeDB=genomeDB), sum)
   def <- names(a)[a==0]
   pc@counts[[1]][def] <- NULL
@@ -210,29 +210,19 @@ simPostPred <- function(nreads, islandid=NULL, pis, pc, distrs, rl, genomeDB, se
     nonone <- subset(vars, vars > 1)
     pi.miss <- NULL
     if(length(nonone)>0){
-#      for (i in 1:length(nonone)) {
       pi.miss <- lapply(1:length(nonone), function(i){
         pi <- as.numeric(rdirichlet(1, rep(2, nonone[i])))
         names(pi) <- miss[names(miss) %in% names(nonone[i])]
-        #pi.miss <- append(pi,pi.miss)
         pi
       })
     pis <- append(unlist(pi.miss), pis)
     }
   }
   pc <- simReads(nonzero, nSimReads=nreadsPerGeneSim, pis=pis, rl=rl, seed=seed, distrs=distrs, genomeDB=genomeDB, mc.cores=mc.cores, repSims=T, writeBam=FALSE, verbose=FALSE)
-  cat("Finished simulations\n")
+  if(verbose) cat("Finished simulations\n")
   notinpc <- names(genomeDB@transcripts)[!(names(genomeDB@transcripts) %in% names(pc$pc@counts[[1]]))]
-  #st <- pc$sims$abst[pc$sims$abst>=0]; len <- pc$sims$len[pc$sims$abst>=0]; varl <- pc$sims$varl[pc$sims$abst>=0]
-  #cat("Calculating start distribution\n")
-  #stDis <- casper:::startDist(st/varl, len, varl, nreads=10^6)
-  #lent <- table(pc$sims$len)
-  #len <- as.array(as.vector(lent))
-  #names(len) <- names(lent)
-  #distrsim <- new('readDistrs', stDis=stDis, lenDis=len)
-#  pc$pc@counts[[1]][notinpc] <- lapply(notinpc,function(x) NULL)
   pcs <- vector(length=length(pc$pc@counts[[1]]) + length(notinpc), mode='list')
-  names(pcs) <- c(names(pc$pc@counts[[1]]), names(notinpc))
+  names(pcs) <- c(names(pc$pc@counts[[1]]), notinpc)
   pcs[names(pc$pc@counts[[1]])] <- pc$pc@counts[[1]]
   pc$pc@counts[[1]] <- pcs
   list(pc=pc$pc, pis=pis, distrsim=distrs)

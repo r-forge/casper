@@ -218,7 +218,7 @@ SEXP casperSimC(SEXP gene_exp, SEXP var_exp, SEXP var_num, SEXP var_len, SEXP ex
   SET_VECTOR_ELT(ans, 10, posr);
   SET_VECTOR_ELT(ans, 11, cigar);
 
-  UNPROTECT(33);
+  UNPROTECT(34);
 
   free(genes);   
   if(bam==1){
