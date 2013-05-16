@@ -115,14 +115,14 @@ casperSim <- function(genomeDB, distrs, nSimReads, pis, islandid, lr_file=NULL, 
   variant_len <- tapply(widths, tmps, sum)
   tmptxs <- unlist(txs, recursive=F)
   txs <- unlist(lapply(txs,names))
-  tx_strand <- sapply(tmptxs, function(x) ifelse(x[1]<x[2], 1, -1))
+  tx_strand <- as.integer(sapply(tmptxs, function(x) ifelse(x[1]<x[2], 1, -1)))
   if(!all(txs %in% names(pis))) stop("Wrong pis vector, some transcripts missing")
   if(!all(nSimReads>0)) stop("nSimReads with zero entries")
   ge <- nSimReads[sel]
   ge <- as.integer(rep(0:(length(ge)-1), ge))
   ve=pis[txs]
   vn=variant_num
-  vl=variant_len
+  vl=as.integer(variant_len)
   en=exon_num
   es=exon_st
   ee=exon_end
