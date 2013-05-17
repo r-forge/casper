@@ -7,8 +7,6 @@ simMultSamples <- function(B, nsamples, nreads, readLength, x, groups='group', d
 # groups: name of column in pData(x) indicating the groups
 # distrs: fragment start and length distributions. It can be either an object of class readDistrs, or a list where each element is of class readDistrs. In the latter case, an element is chosen at random for each individual sample (so that uncertainty in these distributions is taken into account).
 # genomeDB: annotatedGenome object 
-  require(gaga)
-  require(plyr)
   if (verbose) cat("Fitting NNGV model...\n")
   seed <- sample(1:10000, 1)
   l <- genomeDB@txLength
@@ -40,13 +38,13 @@ simMultSamples <- function(B, nsamples, nreads, readLength, x, groups='group', d
     N <- apply(th, 2, function(x) rmultinom(size=nreads, n=1, prob=x))
     rownames(N) <- rownames(th)
     if (mc.cores>1) {
-      if ('parallel' %in% loadedNamespaces()) {
-        sim.exp <- parallel::mclapply(1:ncol(xnew), simOneExp, mc.cores=mc.cores, mc.preschedule=FALSE)
+      if ('multicore' %in% loadedNamespaces()) {
+        sim.exp <- multicore::mclapply(1:ncol(xnew), simOneExp, distrs=distrs, N=N, pis=pis, readLength=readLength, genomeDB=genomeDB, featnames=featureNames(xnew), seed=seed, verbose=verbose, mc.cores=mc.cores, mc.preschedule=FALSE)
       } else {
         stop("parallel package has not been loaded!")
       }
     } else {
-      sim.exp <- lapply(1:ncol(xnew), simOneExp)
+      sim.exp <- lapply(1:ncol(xnew), simOneExp, distrs=distrs, N=N, pis=pis, readLength=readLength, genomeDB=genomeDB, featnames=featureNames(xnew), seed=seed)
     }
     explCnts <- do.call(cbind,lapply(sim.exp,'[[','explCnts'))
     colnames(explCnts) <- paste('explCnts',1:ncol(explCnts))
@@ -54,14 +52,14 @@ simMultSamples <- function(B, nsamples, nreads, readLength, x, groups='group', d
     colnames(sim.exp) <- sampleNames(xnew)
     b <- new("AnnotatedDataFrame", data=pData(xnew))
     e <- new("ExpressionSet", exprs=sim.exp, phenoData=b, featureData=new("AnnotatedDataFrame", explCnts)) 
-    ans[[i]] <- list(simTruth=fData(xnew), simExpr=e)
+    ans[[k]] <- list(simTruth=fData(xnew), simExpr=e)
     if (verbose) cat("\n")
   }
   return(ans)
 } 
 
 
-simOneExp <- function(i) {
+simOneExp <- function(i, distrs, N, pis, readLength, genomeDB, featnames, seed, verbose) {
   #Simulate a single sample
   if (is.list(distrs)) distrsCur <- sample(distrs, 1)[[1]] else distrsCur <- distrs
   nSimReads <- N[which(N[,i] != 0),i]
@@ -73,7 +71,7 @@ simOneExp <- function(i) {
   names(v.list) <-  as.character(zero)
   sim.r@counts[[1]] <- c(v.list, sim.r@counts[[1]])
   exp.sim <- calcExp(distrs=distrsCur, genomeDB=genomeDB, pc=sim.r, readLength=readLength)
-  ans <- list(explCnts=fData(exp.sim)[featureNames(xnew),'explCnts',drop=FALSE], exp=exprs(exp.sim)[featureNames(xnew),,drop=FALSE])
+  ans <- list(explCnts=fData(exp.sim)[featnames,'explCnts',drop=FALSE], exp=exprs(exp.sim)[featnames,,drop=FALSE])
   if (verbose) cat('.')
   return(ans)
 }
