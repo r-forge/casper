@@ -70,7 +70,7 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
         ans <- parallel::mclapply(islandid,f,mc.cores=mc.cores, mc.preschedule=FALSE)
         ans <- unlist(ans, recursive=F)
         names(ans) <- unlist(islandid)
-      } else stop('parellel library has not been loaded!')
+      } else stop('parallel library has not been loaded!')
     } else {
       ans <- f(islandid)
       names(ans) <- islandid
