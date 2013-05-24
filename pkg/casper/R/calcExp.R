@@ -164,11 +164,10 @@ procExp <- function(distrs, genomeDB, pc, readLength, islandid, rpkm=TRUE, prior
     txLength <- txLength(genomeDB=genomeDB)
     apost <- nreads + (priorqGeneExpr-1)
     thest <- apost/sum(apost)
-    theta <- data.frame(gene=ames(nreads), thest=thest)
+    theta <- data.frame(gene=names(nreads), thest=thest)
     exprsx <- as.matrix(logrpkm(fdata, th=theta, pi=exprsx, genomeDB=genomeDB))
     colnames(exprsx) <- NULL
     if (citype != 0) {
-      browser()
       se.theta <- sqrt(apost * (1-apost/totReads) / (totReads * (totReads+1))) 
       se.logtheta <- se.theta / thest
       fdata$se <- sqrt(se.logpi^2 + se.logtheta[as.character(fdata$gene)]^2)
