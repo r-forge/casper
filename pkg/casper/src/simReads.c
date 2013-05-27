@@ -112,7 +112,7 @@ SEXP casperSimC(SEXP gene_exp, SEXP var_exp, SEXP var_num, SEXP var_len, SEXP ex
   }
   
   paths = &paths_pted;
-  hash_init(paths, NextPow2(n)); 
+  hash_init(paths, NextPow2(length(exon_st)*20)); 
 
   int l=0, cnt=0;
   char geStr[2], *last;
@@ -203,7 +203,8 @@ SEXP casperSimC(SEXP gene_exp, SEXP var_exp, SEXP var_num, SEXP var_len, SEXP ex
       }
     }
   }
-  
+  hash_destroy(paths);
+         
   
   SET_VECTOR_ELT(ans, 0, gans);
   SET_VECTOR_ELT(ans, 1, vans);
@@ -220,6 +221,15 @@ SEXP casperSimC(SEXP gene_exp, SEXP var_exp, SEXP var_num, SEXP var_len, SEXP ex
 
   UNPROTECT(34);
 
+  for (i=0; i<ngenes; i++){
+    free(genes[i].chr);
+    for(j=0; j<vn[i]; j++) {
+      free(genes[i].vars[j].exst);
+      free(genes[i].vars[j].exen);
+      free(genes[i].vars[j].exid);
+    }
+    free(genes[i].vars);
+  }
   free(genes);   
   if(bam==1){
     for(i=0; i<3; i++) free(cigars[i]);
