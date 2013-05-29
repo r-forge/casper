@@ -55,7 +55,8 @@ simMultSamples <- function(B, nsamples, nreads, readLength, x, groups='group', d
   ans <- vector("list",B)
   if (verbose) cat(paste("Obtaining ",B," simulations (",sum(nsamples)," samples with ",nreads," reads each)\n",sep=''))
   for (k in 1:B) {
-    xnew <- casper:::simnewsamplesNoisyObs(nnfit, groupsnew=groupsnew, x=x, groups=groups, sigma2ErrorObs=sigma2ErrorObs)
+    xnew <- simnewsamplesNoisyObs(nnfit, groupsnew=groupsnew, x=x, groups=groups, sigma2ErrorObs=sigma2ErrorObs)
+    #xnew <- t(t(exprs(xnew)) - colMeans(exprs(xnew)) + colMeans(exprs(x)))
     sampleNames(xnew) <- paste("Sample",1:ncol(xnew))
     featureNames(xnew) <- featureNames(x)
     # fData(xnew), simulated (phi, mu1, mu2)
