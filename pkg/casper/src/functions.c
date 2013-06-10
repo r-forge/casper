@@ -42,9 +42,20 @@ int *procCigar(char *cigar, int *cigs){
   free(num);
   return(cigs);
 }
-	
-//void addRead2Frag(const char *qname, const char *chr, int start, int strand, const char *cigar, int totF, read_t *frags, int read){
+
+
 void addRead2Frag(const char *qname, const char *chr, int start, int strand, int cigar, int totF, read_t *frags, int read){
+  if(read==1) {
+    frags[totF].nreads=1;
+    frags[totF].strand_1=cigar;
+  }  else {
+    frags[totF].nreads=2;
+    frags[totF].strand_2=cigar;
+  }
+}
+
+//void addRead2Frag(const char *qname, const char *chr, int start, int strand, const char *cigar, int totF, read_t *frags, int read){
+/*void addRead2Frag(const char *qname, const char *chr, int start, int strand, int cigar, int totF, read_t *frags, int read){
   if(read==1){
     frags[totF].qname = malloc((strlen(qname)+1) * sizeof(char));
     strcpy(frags[totF].qname, qname);
@@ -71,3 +82,4 @@ void addRead2Frag(const char *qname, const char *chr, int start, int strand, int
     frags[totF].nreads=2;
   }   
 }
+*/

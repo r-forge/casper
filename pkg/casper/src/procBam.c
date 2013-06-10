@@ -10,7 +10,7 @@
 #include "functions.h"
 
 
-SEXP procBam(SEXP qname, SEXP chr, SEXP start, SEXP mpos, SEXP cigar, SEXP strand, SEXP totFrags, SEXP totReads, SEXP totJunx, SEXP len, SEXP strs, SEXP key, SEXP chrom, SEXP rid, SEXP rstrand, SEXP jchrom, SEXP jstrs, SEXP jlen){
+SEXP procBam(SEXP qname, SEXP chr, SEXP start, SEXP mpos, SEXP cigar, SEXP strand, SEXP totFrags, SEXP totReads, SEXP flag, SEXP totJunx, SEXP len, SEXP strs, SEXP key, SEXP chrom, SEXP rid, SEXP rstrand, SEXP jchrom, SEXP jstrs, SEXP jlen, SEXP rflag){
 	read_t *frags;
 	int totF, j, l, hashSize, i, frags_size, reads_size, *qname_p;
 	hash_t *fragsHashPtr, fragsHash;
@@ -24,8 +24,7 @@ SEXP procBam(SEXP qname, SEXP chr, SEXP start, SEXP mpos, SEXP cigar, SEXP stran
 	frags = malloc((frags_size + 1) * sizeof(read_t));
 	
     	fragsHashPtr = &fragsHash;		
-	hashSize=frags_size+100;
-	hash_init(fragsHashPtr, hashSize);
+	hashSize=frags_size+100;hash_init(fragsHashPtr, hashSize);
     
 	PROTECT(qname);
 	qname_p = INTEGER(qname);
@@ -38,6 +37,7 @@ SEXP procBam(SEXP qname, SEXP chr, SEXP start, SEXP mpos, SEXP cigar, SEXP stran
 	PROTECT(totReads);
 	PROTECT(strand);
 	int *p_strand=INTEGER(strand);
+	int *p_flag=INTEGER(flag);
 	reads_size = INTEGER(totReads)[0];
 	char *str;
 	str=malloc(100 * sizeof(char));
@@ -80,6 +80,7 @@ SEXP procBam(SEXP qname, SEXP chr, SEXP start, SEXP mpos, SEXP cigar, SEXP stran
 	int *p_rid=INTEGER(rid);
         PROTECT(rstrand);
 	int *p_rstrand = INTEGER(rstrand), ini;
+	int *p_rflag = INTEGER(rflag);
 
 	for(i=0; i<fragsHash.size; i++) {
 	  if(fragsHash.bucket[i]!=NULL)  {
@@ -88,24 +89,30 @@ SEXP procBam(SEXP qname, SEXP chr, SEXP start, SEXP mpos, SEXP cigar, SEXP stran
 	      tmp=bucket->data;
 	      cigs=malloc(50 * sizeof(int));
 	      if(frags[tmp].nreads==2) {
-		cigs=procCigar(m_strdup(CHAR(STRING_ELT(cigar,frags[tmp].cigar_1))), cigs);
-		frags[tmp].len_1=frags[tmp].st_1;
+		//cigs=procCigar(m_strdup(CHAR(STRING_ELT(cigar, frags[tmp].cigar_1))), cigs);
+		cigs = procCigar(m_strdup(CHAR(STRING_ELT(cigar, frags[tmp].strand_1))), cigs);
+		//frags[tmp].len_1=frags[tmp].st_1;
+		frags[tmp].len_1 = p_start[frags[tmp].strand_1];
 		ini=1;
 		if(cigs[1]<0) ini=2;
 		for(j=ini; j<cigs[0]+1;j++) {
 		  if(cigs[j]>0){
 		    SET_STRING_ELT(key, counter, mkChar(bucket->key));
-		    if(length(chr)>1) SET_STRING_ELT(chrom, counter, mkChar(frags[tmp].chr_1));
+		    //if(length(chr)>1) SET_STRING_ELT(chrom, counter, mkChar(frags[tmp].chr_1));
+		    if(length(chr)>1) SET_STRING_ELT(chrom, counter, STRING_ELT(chr, frags[tmp].strand_1));
+		    if(length(flag)>1) p_rflag[counter] = p_flag[frags[tmp].strand_1];
 		    p_strs[counter] = frags[tmp].len_1;
 		    p_len[counter] = frags[tmp].len_1+(cigs[j]-1);
 		    p_rid[counter] = 1;
-		    p_rstrand[counter] = frags[tmp].strand_1;
+		    //p_rstrand[counter] = frags[tmp].strand_1;
+		    p_rstrand[counter] = p_strand[frags[tmp].strand_1];
 		    frags[tmp].len_1 += cigs[j];
 		    counter++;
 		  } else {
 		    if(INTEGER(totJunx)[0]>1){
 		      if((cigs[0]>1)&&(j<cigs[0])) {
-			if(length(chr)>1) SET_STRING_ELT(jchrom, jcounter, mkChar(frags[tmp].chr_1));
+			//if(length(chr)>1) SET_STRING_ELT(jchrom, jcounter, mkChar(frags[tmp].chr_1));
+			if(length(chr)>1) SET_STRING_ELT(jchrom, jcounter, mkChar(CHAR(STRING_ELT(chr, frags[tmp].strand_1))));
 			p_jstrs[jcounter] = frags[tmp].len_1;
 			frags[tmp].len_1 -= cigs[j];		    
 			p_jlen[jcounter] = frags[tmp].len_1-1;
@@ -114,24 +121,30 @@ SEXP procBam(SEXP qname, SEXP chr, SEXP start, SEXP mpos, SEXP cigar, SEXP stran
 		    }
 		  }
 		}
-		cigs=procCigar(m_strdup(CHAR(STRING_ELT(cigar,frags[tmp].cigar_2))), cigs);
-		frags[tmp].len_2=frags[tmp].st_2;
+		//cigs=procCigar(m_strdup(CHAR(STRING_ELT(cigar,frags[tmp].cigar_2))), cigs);
+		cigs = procCigar(m_strdup(CHAR(STRING_ELT(cigar, frags[tmp].strand_2))), cigs);
+		//frags[tmp].len_2=frags[tmp].st_2;
+		frags[tmp].len_2=p_start[frags[tmp].strand_2];
 		ini=1;
                 if(cigs[1]<0) ini=2;
 		for(j=ini; j<cigs[0]+1;j++) {        
 		  if(cigs[j]>0){
 		    SET_STRING_ELT(key, counter, mkChar(bucket->key));
-		    if(length(chr)>1) SET_STRING_ELT(chrom, counter, mkChar(frags[tmp].chr_2));
+		    //if(length(chr)>1) SET_STRING_ELT(chrom, counter, mkChar(frags[tmp].chr_2));
+		    if(length(chr)>1) SET_STRING_ELT(chrom, counter, mkChar(CHAR(STRING_ELT(chr, frags[tmp].strand_2))));
+		    if(length(flag)>1) p_rflag[counter] = p_flag[frags[tmp].strand_2];
 		    p_strs[counter] = frags[tmp].len_2;
 		    p_len[counter] = frags[tmp].len_2+(cigs[j]-1);
 		    p_rid[counter] = 2;
-		    p_rstrand[counter] = frags[tmp].strand_2;
+		    //p_rstrand[counter] = frags[tmp].strand_2;
+		    p_rstrand[counter] = p_strand[frags[tmp].strand_2];
 		    frags[tmp].len_2+=cigs[j];
 		    counter++;
 		  } else {
 		    if(INTEGER(totJunx)[0]>1){
 		      if((cigs[0]>1)&&(j<cigs[0])) {
-			if(length(chr)>1) SET_STRING_ELT(jchrom, jcounter, mkChar(frags[tmp].chr_2));
+			//if(length(chr)>1) SET_STRING_ELT(jchrom, jcounter, mkChar(frags[tmp].chr_2));
+			if(length(chr)>1) SET_STRING_ELT(jchrom, jcounter, mkChar(CHAR(STRING_ELT(chr, frags[tmp].strand_2))));
 			p_jstrs[jcounter] = frags[tmp].len_2;
 			frags[tmp].len_2 -= cigs[j];
 			p_jlen[jcounter] = frags[tmp].len_2-1;
@@ -140,17 +153,17 @@ SEXP procBam(SEXP qname, SEXP chr, SEXP start, SEXP mpos, SEXP cigar, SEXP stran
 		    }
 		  }
 		}
-		if(length(chr)>1) free(frags[tmp].chr_2);
+		//if(length(chr)>1) free(frags[tmp].chr_2);
   	      }
-	      free(frags[tmp].qname);
-	      if(length(chr)>1) free(frags[tmp].chr_1);
+	      //free(frags[tmp].qname);
+	      //if(length(chr)>1) free(frags[tmp].chr_1);
 	      free(cigs);
 	      bucket=bucket->next;
             }
 	  }
 	}
 	SEXP reads;
-	PROTECT(reads = allocVector(VECSXP, 9));
+	PROTECT(reads = allocVector(VECSXP, 10));
 	SET_VECTOR_ELT(reads, 0, len);
 	SET_VECTOR_ELT(reads, 1, strs);
 	SET_VECTOR_ELT(reads, 2, key);
@@ -160,6 +173,7 @@ SEXP procBam(SEXP qname, SEXP chr, SEXP start, SEXP mpos, SEXP cigar, SEXP stran
 	SET_VECTOR_ELT(reads, 6, jchrom);
         SET_VECTOR_ELT(reads, 7, jstrs);
         SET_VECTOR_ELT(reads, 8, jlen);
+        SET_VECTOR_ELT(reads, 9, rflag);
 	free(frags);
 	hash_destroy(fragsHashPtr);
 	UNPROTECT(18);

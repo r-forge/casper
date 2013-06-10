@@ -42,11 +42,11 @@ buildRD<-function(reads){
   en[!sel] <- reads$end[!sel]; en[sel] <- reads$start[sel]
   if(sum(grepl("chr", unique(reads$chrom)))>0) {
     ans<-GRanges(ranges=IRanges(start=st, end=en), seqnames=reads$chrom, rid=reads$rid, strand=reads$rstrand, XS=Rle(reads$strand), names=reads$key)
-    #names(ans) <- reads$key
   } else {
     ans<-GRanges(ranges=IRanges(start=st, end=en), seqnames=paste("chr", reads$chrom, sep=""), rid=reads$rid, strand=reads$rstrand, XS=Rle(reads$strand), names=reads$key)
     #names(ans) <- reads$key
   }
+  if("flag" %in% names(reads)) mcols(ans)$flag <- reads$flag
   return(ans)
 }
 
@@ -70,13 +70,12 @@ nbReads <- function(bam0) {
   c(tjunx=tjunx, treads=treads)
 }
 
-procB <- function(bam, strnd, seed=1, verbose=FALSE, rname, keep.junx){
-  echrom=FALSE
-  if(length(rname)>1) echrom=TRUE
+procB <- function(bam, strnd, seed=1, verbose=FALSE, rname, keep.junx=FALSE, keep.flag=FALSE){
+  echrom=TRUE
+  if(!rname=='null') echrom=FALSE
   lev=NULL
   if(class(bam$strand)=='factor') lev <- levels(bam$strand)
-  bam$rname<-as.character(bam$rname)
-  #bam<-uniquifyQname(bam, seed)
+  if(!echrom) bam$rname<-as.character(bam$rname)
   if(verbose) cat("Calculating total number of reads...\n")
   
   nreads <- nbReads(bam)
@@ -91,19 +90,24 @@ procB <- function(bam, strnd, seed=1, verbose=FALSE, rname, keep.junx){
   key=vector(mode="character", length=nreads)
   chrom=vector("character", length=1)
   if(echrom) chrom=vector(mode="character", length=nreads)
+  flag=vector(mode='integer', length=1)
+  if(keep.flag) flag=vector(mode='integer', length=nreads)
+  if(!("flag" %in% names(bam))) bam$flag <- 1
   strand=vector(mode="integer", length=nreads)
-  jchrom=vector("character", length=njunx)
+  jchrom=vector("character", length=1)
   if(echrom) jchrom=vector(mode="character", length=njunx)
   jstrs=vector(mode="integer", length=njunx)
   jlen=vector(mode="integer", length=njunx)
+  if(class(bam$rname)=='factor') bam$rname <- as.character(bam$rname)
   if(echrom) {
-    data<-.Call("procBam", bam$qname, bam$rname, bam$pos, bam$mpos, bam$cigar, as.numeric(bam$strand), length(bam$pos), as.integer(nreads), njunx, len, strs, key, chrom, rid, strand, jchrom, jstrs, jlen)
-  } else data<-.Call("procBam", bam$qname, rname, bam$pos, bam$mpos, bam$cigar, as.integer(bam$strand), length(bam$pos), as.integer(nreads), as.integer(njunx), len, strs, key, chrom, rid, strand, jchrom, jstrs, jlen)
-  names(data) <- c('end', 'start', 'key', 'chrom', 'rid', 'rstrand', 'jchrom', 'jstart', 'jend')
+    data<-.Call("procBam", bam$qname, bam$rname, bam$pos, bam$mpos, bam$cigar, as.integer(bam$strand), length(bam$pos), as.integer(nreads), as.integer(bam$flag), as.integer(njunx), len, strs, key, chrom, rid, strand, jchrom, jstrs, jlen, flag)
+  } else data<-.Call("procBam", bam$qname, rname, bam$pos, bam$mpos, bam$cigar, as.integer(bam$strand), length(bam$pos), as.integer(nreads), as.integer(bam$flag), as.integer(njunx), len, strs, key, chrom, rid, strand, jchrom, jstrs, jlen, flag)
+  names(data) <- c('end', 'start', 'key', 'chrom', 'rid', 'rstrand', 'jchrom', 'jstart', 'jend', 'flag')
   if(!echrom) {
     data$chrom <- rep(rname, length(data$start))
     data$jchrom <- rep(rname, length(data$jstart))
   }
+  if(!keep.flag) data$flag <- NULL
   if(keep.junx) {
     junx <- GRanges(ranges=IRanges(start=data$jstart[data$jstart!=0], end=data$jend[data$jstart!=0]), seqnames=data$jchrom[data$jstart!=0], XS=Rle(rep(strnd, sum(data$jstart!=0))))
     junx <- lapply(unique(as.character(seqnames(junx))), function(x){
@@ -135,32 +139,32 @@ procB <- function(bam, strnd, seed=1, verbose=FALSE, rname, keep.junx){
 }
 
 setMethod("procBam", signature(bam='list',stranded='missing',seed='missing', verbose='missing') ,
-          function(bam, stranded, seed, verbose, rname, keep.junx) procBam(bam=bam, stranded=FALSE, seed=as.integer(1), verbose=FALSE, rname=rname, keep.junx=keep.junx)
+          function(bam, stranded, seed, verbose, rname, keep.junx, keep.flag) procBam(bam=bam, stranded=FALSE, seed=as.integer(1), verbose=FALSE, rname=rname, keep.junx=keep.junx, keep.flag=keep.flag)
           )
 
 setMethod("procBam", signature(bam='list',stranded='missing',seed='missing', verbose='logical') ,
-          function(bam, stranded, seed, verbose, rname, keep.junx) procBam(bam=bam, stranded=FALSE, seed=as.integer(1), verbose=verbose, rname=rname, keep.junx=keep.junx)
+          function(bam, stranded, seed, verbose, rname, keep.junx, keep.flag) procBam(bam=bam, stranded=FALSE, seed=as.integer(1), verbose=verbose, rname=rname, keep.junx=keep.junx, keep.flag=keep.flag)
           )
 
 setMethod("procBam", signature(bam='list',stranded='missing',seed='integer', verbose='missing') ,
-          function(bam, stranded, seed, verbose, rname, keep.junx) procBam(bam=bam, stranded=FALSE, seed=seed, verbose=FALSE, keep.junx=keep.junx)
+          function(bam, stranded, seed, verbose, rname, keep.junx, keep.flag) procBam(bam=bam, stranded=FALSE, seed=seed, verbose=FALSE, keep.junx=keep.junx, keep.flag=keep.flag)
           )
 
 setMethod("procBam", signature(bam='list',stranded='logical',seed='missing', verbose='logical') ,
-          function(bam, stranded, seed, verbose, rname, keep.junx) procBam(bam=bam, stranded=stranded, seed=as.integer(1), verbose=verbose, keep.junx=keep.junx)
+          function(bam, stranded, seed, verbose, rname, keep.junx, keep.flag) procBam(bam=bam, stranded=stranded, seed=as.integer(1), verbose=verbose, keep.junx=keep.junx, keep.flag=keep.flag)
           )
 
 setMethod("procBam", signature(bam='list',stranded='logical',seed='integer', verbose='logical', rname='missing') ,
-          function(bam, stranded, seed, verbose, rname, keep.junx) procBam(bam=bam, stranded=stranded, seed=seed, verbose=verbose, rname="null", keep.junx=keep.junx)
+          function(bam, stranded, seed, verbose, rname, keep.junx, keep.flag) procBam(bam=bam, stranded=stranded, seed=seed, verbose=verbose, rname="null", keep.junx=keep.junx, keep.flag=keep.flag)
 )
 
 setMethod("procBam", signature(bam='list',stranded='logical',seed='integer', verbose='logical', rname='character') ,
-          function(bam, stranded, seed, verbose, rname, keep.junx) {
+          function(bam, stranded, seed, verbose, rname, keep.junx, keep.flag) {
             byList <- ifelse(class(bam[[1]])=='list', TRUE, FALSE)
             if(!byList) {
-              ans <- procBamF(bam=bam, stranded=stranded, seed=seed, verbose=verbose, rname=rname, keep.junx=keep.junx)
+              ans <- procBamF(bam=bam, stranded=stranded, seed=seed, verbose=verbose, rname=rname, keep.junx=keep.junx, keep.flag=keep.flag)
             } else {
-              ans <- lapply(bam, function(x) procBamF(bam=x, stranded=stranded, seed=seed, verbose=verbose, rname=rname, keep.junx=keep.junx))
+              ans <- lapply(bam, function(x) procBamF(bam=x, stranded=stranded, seed=seed, verbose=verbose, rname=rname, keep.junx=keep.junx, keep.flag=keep.flag))
               if(length(ans)>1) {
                 ans <- mergePbam(ans, fixNames=TRUE)
                 lens <- seqnames(ans@pbam)@lengths
@@ -206,14 +210,14 @@ mergePbam <- function(ans, fixNames=FALSE){
 }
 
     
-procBamF<-function(bam, stranded=FALSE, seed=1,  verbose=FALSE, rname, keep.junx){
+procBamF<-function(bam, stranded=FALSE, seed=1,  verbose=FALSE, rname, keep.junx, keep.flag=keep.flag){
   require(IRanges)
   if(stranded) {
     minus <- bam$tag$XS=='-'
     if(keep.junx) mjunx <- GRanges(IRanges(0,0), seqnames=1)
     if(sum(minus)>0){
       minus <- lapply(bam, '[', minus)
-      minus <- procB(minus, "-", seed=seed, verbose=verbose, rname=rname, keep.junx=keep.junx)
+      minus <- procB(minus, "-", seed=seed, verbose=verbose, rname=rname, keep.junx=keep.junx, keep.flag=keep.flag)
       if(keep.junx) mjunx <- minus$junx
       minus <- minus$pbam
     } else minus <- GRanges(IRanges(0,0), seqnames=1)
@@ -221,7 +225,7 @@ procBamF<-function(bam, stranded=FALSE, seed=1,  verbose=FALSE, rname, keep.junx
     mplus <- GRanges(IRanges(0,0), seqnames=1)
     if(sum(plus)>0){
       plus <- lapply(bam, '[', plus)
-      plus <- procB(plus, "+", seed=seed, verbose=verbose, rname=rname, keep.junx=keep.junx)
+      plus <- procB(plus, "+", seed=seed, verbose=verbose, rname=rname, keep.junx=keep.junx, keep.flag=keep.flag)
       if(keep.junx) pjunx <- plus$junx
       plus <- plus$pbam
     } else plus <- GRanges(IRanges(0,0), seqnames=1)
@@ -229,7 +233,7 @@ procBamF<-function(bam, stranded=FALSE, seed=1,  verbose=FALSE, rname, keep.junx
       ans <- list(plus=plus, pjunx=pjunx, minus=minus, mjunx=mjunx, stranded=TRUE)
     } else ans <- list(plus=plus, minus=minus, stranded=TRUE)
   } else {
-    pbam <- procB(bam, "*", seed=seed, verbose=verbose, rname=rname, keep.junx=keep.junx)
+    pbam <- procB(bam, "*", seed=seed, verbose=verbose, rname=rname, keep.junx=keep.junx, keep.flag=keep.flag)
     if(keep.junx) {
       ans <- list(pbam=pbam$pbam, junx=pbam$junx, stranded=FALSE)
     } else ans <- list(pbam=pbam$pbam, stranded=FALSE)

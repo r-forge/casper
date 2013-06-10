@@ -1,8 +1,8 @@
 startDist <- function(st,fragLength,txLength, nreads=NULL) {
-                                        # Estimate relative start distribution under left­truncation (st < 1 ­ fragLength/txLength)
-                                        # ­ st: relative start (i.e. start/txLength)
-                                        # ­ fragLength: fragment length
-                                        # ­ txLength: transcript length
+                                        # Estimate relative start distribution under left??truncation (st < 1 ?? fragLength/txLength)
+                                        # ?? st: relative start (i.e. start/txLength)
+                                        # ?? fragLength: fragment length
+                                        # ?? txLength: transcript length
                                         # Output: cumulative probability function (actually, a linear interpolation)
   if(!is.null(nreads)){
     if(nreads<length(st)){
@@ -81,7 +81,7 @@ getDistrsFrompBam <- function(DB, pbam, islandid=NULL, verbose=FALSE, nreads=4*1
   n <- levels(seqnames(frags))[levels(seqnames(frags)) %in% levels(seqnames(exonsRD))]
   fragsL<-frags[levels(seqnames(frags)) %in% n]
   over <- suppressWarnings(findOverlaps(fragsL, subset(exonsRD, width(exonsRD)>1000), type="within"))
-  if (length(subjectHits(over))==0) {
+  if (length(subjectHits(over))<10) {
     #over <- suppressWarnings(findOverlaps(fragsL, subset(exonsRD, width(exonsRD)>500), type="within"))
     ld <- array(0); names(ld) <- '300'
   } else {
